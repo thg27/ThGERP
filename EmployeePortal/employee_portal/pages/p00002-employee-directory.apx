@@ -72,6 +72,20 @@ page 2 (
             style: subtle
             position: end
         }
+        action EMP_DIR_AVATAR_LINK (
+            position: avatarLink
+            layout {
+                sequence: 10
+            }
+            behavior {
+                target: {
+                    page: 3
+                    items: {
+                        P3_EMPNO: &EMPLOYEE_ID.
+                    }
+                }
+            }
+        )
         column EMPLOYEE_ID (
             layout {
                 sequence: 10
@@ -233,7 +247,7 @@ page 2 (
     )
 
     region EMP_DIR_BREADCRUMB (
-        name: Breadcrumb
+        name: Employee Directory
         type: breadcrumb
         source {
             breadcrumb: @breadcrumb
@@ -250,5 +264,56 @@ page 2 (
             breadcrumbTemplate: @/breadcrumb
             templateOptions: #DEFAULT#
         }
+    )
+
+    button EMP_DIR_CREATE (
+        buttonName: CREATE_EMPLOYEE
+        label: Add Employee
+        layout {
+            sequence: 10
+            region: @EMP_DIR_BREADCRUMB
+            slot: NEXT
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 3
+                clearCache: 3
+                action: resetPagination
+            }
+            requiresConfirmation: false
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    dynamicAction refresh-employees-after-dialog (
+        name: Refresh Employees After Dialog
+        execution {
+            sequence: 10
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @EMP_DIR_RESULTS
+        }
+        action refresh-employees (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @EMP_DIR_RESULTS
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
     )
 )

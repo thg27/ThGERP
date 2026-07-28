@@ -1,0 +1,483 @@
+page 3 (
+    name: Employee
+    alias: EMPLOYEE-FORM
+    title: Employee
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/drawer
+        templateOptions: [
+            #DEFAULT#
+            js-dialog-class-t-Drawer--pullOutEnd
+        ]
+    }
+    dialog {
+        chained: false
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+    help {
+        helpText: Use this drawer form to review or update one employee record. Complete the required fields, review optional values before saving, and use the action buttons to create, apply changes, or delete the current record.
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: REGION_POSITION_03
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region form (
+        name: Employee
+        type: form
+        source {
+            location: localDatabase
+            tableName: EMP
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+        }
+    )
+
+    pageItem P3_EMPNO (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @form
+            slot: regionBody
+        }
+        source {
+            formRegion: @form
+            column: EMPNO
+            dataType: number
+            queryOnly: true
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P3_SUCCESS_MESSAGE (
+        type: hidden
+        layout {
+            sequence: 11
+            region: @form
+            slot: regionBody
+        }
+    )
+
+    pageItem P3_ENAME (
+        type: textField
+        label {
+            label: Name
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @form
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            width: 32
+        }
+        validation {
+            maxLength: 10
+            valueRequired: true
+        }
+        source {
+            formRegion: @form
+            column: ENAME
+            dataType: varchar2
+        }
+        help {
+            inlineHelpText: Employee full name
+            helpText: Enter the employee's full name as it should appear across reports and the directory.
+        }
+    )
+
+    pageItem P3_JOB (
+        type: textField
+        label {
+            label: Job
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @form
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 32
+        }
+        validation {
+            maxLength: 9
+        }
+        source {
+            formRegion: @form
+            column: JOB
+            dataType: varchar2
+        }
+        help {
+            inlineHelpText: Job title
+            helpText: Enter the employee's current job title, for example CLERK, SALESMAN, MANAGER, ANALYST, or PRESIDENT.
+        }
+    )
+
+    pageItem P3_MGR (
+        type: selectList
+        label {
+            label: Manager
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select ename as display_value,
+                       empno as return_value
+                  from emp
+                 order by ename
+                ```
+            displayNullValue: true
+        }
+        layout {
+            sequence: 40
+            region: @form
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        source {
+            formRegion: @form
+            column: MGR
+            dataType: number
+        }
+        help {
+            helpText: Choose the manager this employee reports to. Leave blank if the employee has no manager on file.
+        }
+    )
+
+    pageItem P3_HIREDATE (
+        type: datePicker
+        label {
+            label: Hire Date
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @form
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 32
+        }
+        source {
+            formRegion: @form
+            column: HIREDATE
+            dataType: date
+        }
+        help {
+            inlineHelpText: Date hired
+            helpText: Select the date the employee was hired using the application's default date format.
+        }
+    )
+
+    pageItem P3_SAL (
+        type: numberField
+        label {
+            label: Salary
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @form
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 32
+        }
+        source {
+            formRegion: @form
+            column: SAL
+            dataType: number
+        }
+        help {
+            inlineHelpText: Monthly salary
+            helpText: Enter the employee's monthly base salary using digits only.
+        }
+    )
+
+    pageItem P3_COMM (
+        type: numberField
+        label {
+            label: Commission
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @form
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 32
+        }
+        source {
+            formRegion: @form
+            column: COMM
+            dataType: number
+        }
+        help {
+            inlineHelpText: Optional commission
+            helpText: Enter a commission amount only for employees who earn one, such as sales roles.
+        }
+    )
+
+    pageItem P3_DEPTNO (
+        type: selectList
+        label {
+            label: Department
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select dname as display_value,
+                       deptno as return_value
+                  from dept
+                 order by dname
+                ```
+        }
+        layout {
+            sequence: 80
+            region: @form
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @form
+            column: DEPTNO
+            dataType: number
+        }
+        help {
+            helpText: Choose the department this employee belongs to.
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Cancel
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: CLOSE
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Create
+        layout {
+            sequence: 40
+            region: @buttons
+            slot: NEXT
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P3_EMPNO
+        }
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Delete
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: DELETE
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Are you sure you want to delete this employee record?
+            style: danger
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P3_EMPNO
+        }
+    )
+
+    button apply-changes (
+        buttonName: APPLY-CHANGES
+        label: Apply Changes
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: NEXT
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P3_EMPNO
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Cancel Dialog
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process close-dialog (
+        name: Close Dialog
+        type: closeDialog
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,APPLY-CHANGES,DELETE
+        }
+    )
+
+    process initialize-form-form (
+        name: Initialize form Form
+        type: formInitialization
+        formRegion: @form
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process set-success-message-form (
+        name: Set Success Message
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                :P3_SUCCESS_MESSAGE :=
+                    case :REQUEST
+                        when 'CREATE' then 'Employee was created successfully.'
+                        when 'APPLY-CHANGES' then 'Employee was updated successfully.'
+                        when 'DELETE' then 'Employee was deleted successfully.'
+                        else null
+                    end;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,APPLY-CHANGES,DELETE
+        }
+    )
+
+    process process-form-form (
+        name: Process form Form
+        type: formAutoRowProcessing
+        formRegion: @form
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: &P3_SUCCESS_MESSAGE.
+        }
+    )
+
+)
