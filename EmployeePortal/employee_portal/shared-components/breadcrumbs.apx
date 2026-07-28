@@ -15,7 +15,7 @@ breadcrumb breadcrumb (
     )
 
     entry employee-directory (
-        name: Employee Directory
+        name: Person
         pageNumber: 2
         appearance {
             parentEntry: @home

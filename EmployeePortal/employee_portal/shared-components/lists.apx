@@ -78,7 +78,7 @@ list navigation-menu (
     )
 
     entry employee-directory (
-        label: Employee Directory
+        label: Person
         icon {
             imageIconCssClasses: fa-users
         }
