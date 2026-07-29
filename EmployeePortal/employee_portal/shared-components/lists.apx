@@ -75,7 +75,7 @@ list navigation-menu (
               from dual
             union all
             select null as lvl,
-                   'Person (' || (select count(*) from emp) || ')' as label,
+                   'Person [' || (select count(*) from emp) || ']' as label,
                    'f?p=&APP_ID.:2:&APP_SESSION.::&DEBUG.:::' as target,
                    case when :APP_PAGE_ID = 2 then 'YES' else 'NO' end as is_current,
                    'fa-users' as icon_name,
