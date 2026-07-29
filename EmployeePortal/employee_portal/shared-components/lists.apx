@@ -61,36 +61,28 @@ list navigation-bar (
 
 list navigation-menu (
     name: Navigation Menu
-
-    entry home (
-        label: Home
-        icon {
-            imageIconCssClasses: fa-home
-        }
-        layout {
-            sequence: 10
-        }
-        link {
-            target: {
-                page: 1
-            }
-        }
-    )
-
-    entry employee-directory (
-        label: Person
-        icon {
-            imageIconCssClasses: fa-users
-        }
-        layout {
-            sequence: 20
-        }
-        link {
-            target: {
-                page: 2
-            }
-        }
-    )
-
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select null as lvl,
+                   'Home' as label,
+                   'f?p=&APP_ID.:1:&APP_SESSION.::&DEBUG.:::' as target,
+                   case when :APP_PAGE_ID = 1 then 'YES' else 'NO' end as is_current,
+                   'fa-home' as icon_name,
+                   null as icon_attrs,
+                   null as icon_alt_text
+              from dual
+            union all
+            select null as lvl,
+                   'Person (' || (select count(*) from emp) || ')' as label,
+                   'f?p=&APP_ID.:2:&APP_SESSION.::&DEBUG.:::' as target,
+                   case when :APP_PAGE_ID = 2 then 'YES' else 'NO' end as is_current,
+                   'fa-users' as icon_name,
+                   null as icon_attrs,
+                   null as icon_alt_text
+              from dual
+            ```
+    }
 )
 
