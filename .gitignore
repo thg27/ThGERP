@@ -24,3 +24,6 @@ EmployeePortal/
 
 # Lokale Sicherungskopien
 _alt/
+
+# Separates Projekt (Vendix POS, App 102)
+Apex/vendix-pos-app/
