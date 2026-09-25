@@ -164,7 +164,7 @@ body.apex-theme-redwood-light .t-Header {
   display: none !important;
 }
 
-/* Login-Seite (Portal): Firmenlogos mit Anschrift - Logo mit zentriertem Namen/Anschrift darunter, THG-EDV GmbH links oben, Thomas Gesslbauer GmbH rechts oben */
+/* Login-Seite (Portal): Firmenlogos mit Anschrift - Logo mit zentriertem Namen/Anschrift darunter, Thomas Gesslbauer GmbH links oben, THG-EDV GmbH rechts oben */
 .thg-login-firma {
   position: fixed;
   top: 3rem;
