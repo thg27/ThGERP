@@ -28,6 +28,7 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | KUND | KUND_ABTEILUNGEN | ABTE | Abteilungen der Ansprechpartner |
 | KUND | KUND_FUNKTIONEN | FUNK | Funktionen der Ansprechpartner |
 | ADMIN | ADMIN_APPLIKATIONEN | APPL | APEX-Applikationen (Module) für die Portal-Startseite |
+| ADMIN | ADMIN_MANDANTEN | MAND | Mandanten (THG-EDV GmbH, Thomas Geßlbauer GmbH) |
 
 ## Gruppencodes
 
@@ -35,10 +36,10 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 |---|---|
 | ALLG | Allgemeine, modulübergreifende Stammdaten |
 | KUND | Kundenstammdaten |
-| ADMIN | Administration der Anwendung (Applikationen, Portal-Konfiguration) |
+| ADMIN | Administration der Anwendung (Applikationen, Mandanten, Portal-Konfiguration) |
 
 ## Datenbankverbindung
 
 | SQLcl-Verbindung | Benutzer/Schema | Verbindungszeichenfolge |
 |---|---|---|
-| `sipa@pdb-thg` | SIPA | `dbthgprod.thg-edv.com:1521/pdbthg.sub04191118021.vcnthgprod.oraclevcn.com` |
+| `wksp_thgerp@pdbthg` | WKSP_THGERP | `dbthgprod.thg-edv.com:1521/pdbthg.sub04191118021.vcnthgprod.oraclevcn.com` |

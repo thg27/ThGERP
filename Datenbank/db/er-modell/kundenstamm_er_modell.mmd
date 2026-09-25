@@ -23,6 +23,7 @@ erDiagram
   KUND_STANDORT_TYPEN ||--o{ KUND_STANDORTE : ""
   ALLG_ZAHLUNGSBEDINGUNGEN ||--o{ KUND_KUNDEN : ""
   ALLG_MITARBEITER ||--o{ ALLG_MITARBEITER_KOMMUNIKATION : hat
+  ADMIN_MANDANTEN |o--o{ ALLG_MITARBEITER : "Standard-Mandant"
   ALLG_KOMMUNIKATIONSARTEN ||--o{ ALLG_MITARBEITER_KOMMUNIKATION : ""
   ALLG_KOMMUNIKATIONSARTEN ||--o{ KUND_STANDORT_KOMMUNIKATION : ""
   ALLG_KOMMUNIKATIONSARTEN ||--o{ KUND_ANSPRECHPARTNER_KOMMUNIKATION : ""
@@ -240,7 +241,9 @@ erDiagram
   }
   ALLG_MITARBEITER {
     number MITA_ID PK
+    number MITA_MAND_ID FK "Standard-Mandant"
     varchar2 MITA_KUERZEL UK
+    varchar2 MITA_BENUTZERNAME UK "APEX-Login"
     varchar2 MITA_NAME
     timestamp MITA_CREATED_ON "Audit"
     varchar2 MITA_CREATED_BY "Audit"
@@ -274,7 +277,7 @@ erDiagram
   }
   ADMIN_APPLIKATIONEN {
     number APPL_ID PK
-    number APPL_APEX_APP_ID UK "z.B. 10010"
+    number APPL_APEX_APP_ID UK "z.B. 20010"
     varchar2 APPL_APEX_ALIAS UK "z.B. THG-KUNDEN"
     varchar2 APPL_BEZEICHNUNG "Kacheltitel"
     varchar2 APPL_BESCHREIBUNG
@@ -287,6 +290,20 @@ erDiagram
     timestamp APPL_UPDATED_ON "Audit"
     varchar2 APPL_UPDATED_BY "Audit"
     number APPL_ROW_VERSION "Audit"
+  }
+  ADMIN_MANDANTEN {
+    number MAND_ID PK
+    varchar2 MAND_CODE UK "EDV TG"
+    varchar2 MAND_NAME
+    varchar2 MAND_KURZNAME
+    varchar2 MAND_LOGO_DATEI "Workspace-Datei"
+    number MAND_SORTIERUNG
+    varchar2 MAND_IST_AKTIV "Y oder N"
+    timestamp MAND_CREATED_ON "Audit"
+    varchar2 MAND_CREATED_BY "Audit"
+    timestamp MAND_UPDATED_ON "Audit"
+    varchar2 MAND_UPDATED_BY "Audit"
+    number MAND_ROW_VERSION "Audit"
   }
   KUND_KUNDENGRUPPEN {
     number KGRP_ID PK

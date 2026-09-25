@@ -14,6 +14,22 @@ list navigation-bar (
                    null as attribute1,
                    attribute2
               from (
+                    -- Mandant: aktueller Mandant, Untereinträge wechseln (App-Prozess "Mandant setzen")
+                    select 1 as the_level, :MANDANT_NAME as label, '#' as target,
+                           null as is_current_list_entry, 'fa-building-o' as image,
+                           null as attribute2, 5 as sortierung
+                      from dual
+                    union all
+                    select 2,
+                           MAND_NAME,
+                           apex_page.get_url(p_page => :APP_PAGE_ID, p_request => 'MANDANT_' || MAND_CODE),
+                           case when MAND_ID = :MANDANT_ID then 'YES' end,
+                           case when MAND_ID = :MANDANT_ID then 'fa-check' end,
+                           null,
+                           6 + MAND_SORTIERUNG / 100000
+                      from ADMIN_MANDANTEN
+                     where MAND_IST_AKTIV = 'Y'
+                    union all
                     -- Stilauswahl (Theme-Stil der gesamten Anwendung)
                     select 1 as the_level, 'Stil' as label, '#' as target,
                            null as is_current_list_entry, 'fa-paint-brush' as image,

@@ -5,12 +5,15 @@ Workspace-Dateien (#WORKSPACE_FILES#<name>) werden von allen ThG-Apps genutzt.
 Ablauf bei Änderungen: Quelldatei bearbeiten -> `python3 build_install.py` ->
 install_workspace_files.sql mit SQLcl (Schema WKSP_THGERP) ausführen -> beides committen.
 """
+import base64
 from pathlib import Path
 
 # Dateiname -> MIME-Typ (Reihenfolge = Reihenfolge im Skript)
 FILES = {
     "thg.css": "text/css",
     "thg-logo.svg": "image/svg+xml",
+    "thg-logo-edv.png": "image/png",   # Mandant EDV (THG-EDV GmbH), aus Vorlagen/Logo ThG edv.tif
+    "thg-logo-tg.png": "image/png",    # Mandant TG (Thomas Gesslbauer GmbH), aus Vorlagen/Logo Thomas Gesslbauer GmbH.jpg
 }
 WORKSPACE = "THGERP"
 CHUNK = 1000
@@ -30,14 +33,19 @@ def plsql_clob(text: str) -> str:
 
 blocks = []
 for name, mime in FILES.items():
-    content = (here / name).read_text(encoding="utf-8")
+    binaer = not mime.startswith("text/") and not mime.endswith("+xml")
+    if binaer:
+        # Binaerdateien (Bilder) als Base64, in der DB mit apex_web_service.clobbase642blob dekodiert
+        content = base64.b64encode((here / name).read_bytes()).decode("ascii")
+    else:
+        content = (here / name).read_text(encoding="utf-8")
     # Zeilenumbrueche als chr(10) erhalten: Literal darf Umbrueche enthalten,
     # SQLcl ueberliest aber Zeilen, die nur "/" enthalten -> kommt in CSS/SVG nicht vor.
     blocks.append(f"""
     -- {name} ({mime})
     dbms_lob.createtemporary(l_inhalt, true);
 {plsql_clob(content)}
-    workspace_datei(p_file_name => '{name}', p_mime_type => '{mime}', p_inhalt => l_inhalt);
+    workspace_datei(p_file_name => '{name}', p_mime_type => '{mime}', p_inhalt => l_inhalt, p_base64 => {'true' if binaer else 'false'});
     dbms_lob.freetemporary(l_inhalt);
 """)
 
@@ -47,7 +55,7 @@ sql = f"""-- ===================================================================
 --
 -- Einbindung in den Apps:
 --   Theme > CSS > File URLs:        #WORKSPACE_FILES#thg.css
---   Anwendung > Logo (Bild + Text): #WORKSPACE_FILES#thg-logo.svg
+--   Anwendung > Logo (Custom):      #WORKSPACE_FILES#thg-logo-<mandant>.png (ADMIN_MANDANTEN.MAND_LOGO_DATEI)
 -- (APEX kennt keine Subscription fuer Dateien, daher Workspace-Dateien statt App-Dateien.)
 --
 -- Wiederholbar: unveraenderte Dateien bleiben, geaenderte werden ersetzt.
@@ -64,13 +72,16 @@ declare
     procedure workspace_datei (
         p_file_name in varchar2,
         p_mime_type in varchar2,
-        p_inhalt    in clob)
+        p_inhalt    in clob,
+        p_base64    in boolean default false)
     is
     l_workspace_id number;
     l_file_id      number;
     l_alt          blob;
-    l_neu          blob := apex_util.clob_to_blob(p_clob => p_inhalt, p_charset => 'AL32UTF8');
+    l_neu          blob;
 begin
+    l_neu := case when p_base64 then apex_web_service.clobbase642blob(p_inhalt)
+                  else apex_util.clob_to_blob(p_clob => p_inhalt, p_charset => 'AL32UTF8') end;
     select workspace_id into l_workspace_id from apex_workspaces where workspace = '{WORKSPACE}';
     begin
         select workspace_file_id, file_content into l_file_id, l_alt
@@ -91,7 +102,7 @@ begin
         p_id           => l_file_id,
         p_file_name    => p_file_name,
         p_mime_type    => p_mime_type,
-        p_file_charset => 'utf-8',
+        p_file_charset => case when p_base64 then null else 'utf-8' end,
         p_file_content => l_neu);
     wwv_flow_imp.import_end;
     commit;

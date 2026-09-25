@@ -1,3 +1,49 @@
+appProcess mandant-setzen (
+    name: Mandant setzen
+    type: executeCode
+    source {
+        plsqlCode:
+            ```plsql
+            -- Mandant der Sitzung (globale Items MANDANT_*, gelten in allen ThG-Apps):
+            --   * Wechsel über die Navigationsleiste (Request MANDANT_<MAND_CODE>)
+            --   * sonst beim ersten Aufruf bzw. nach dem Login: Standard-Mandant des Mitarbeiters
+            --     (ALLG_MITARBEITER.MITA_MAND_ID), ersatzweise der erste aktive Mandant
+            declare
+                l_mand_id ADMIN_MANDANTEN.MAND_ID%type;
+            begin
+                if :REQUEST like 'MANDANT\_%' escape '\' then
+                    select max(MAND_ID) into l_mand_id
+                      from ADMIN_MANDANTEN
+                     where MAND_CODE = substr(:REQUEST, length('MANDANT_') + 1)
+                       and MAND_IST_AKTIV = 'Y';
+                elsif :MANDANT_ID is null or :MANDANT_BENUTZER is null or :MANDANT_BENUTZER <> :APP_USER then
+                    select max(MITA_MAND_ID) into l_mand_id
+                      from ALLG_MITARBEITER
+                      join ADMIN_MANDANTEN on MAND_ID = MITA_MAND_ID and MAND_IST_AKTIV = 'Y'
+                     where MITA_BENUTZERNAME = upper(:APP_USER);
+                    if l_mand_id is null then
+                        select min(MAND_ID) keep (dense_rank first order by MAND_SORTIERUNG, MAND_NAME) into l_mand_id
+                          from ADMIN_MANDANTEN
+                         where MAND_IST_AKTIV = 'Y';
+                    end if;
+                    :MANDANT_BENUTZER := :APP_USER;
+                end if;
+
+                if l_mand_id is not null then
+                    select MAND_ID, MAND_CODE, MAND_KURZNAME, MAND_LOGO_DATEI
+                      into :MANDANT_ID, :MANDANT_CODE, :MANDANT_NAME, :MANDANT_LOGO
+                      from ADMIN_MANDANTEN
+                     where MAND_ID = l_mand_id;
+                end if;
+            end;
+            ```
+    }
+    execution {
+        sequence: 5
+        point: beforeHeader
+    }
+)
+
 appProcess theme-stil-setzen (
     name: Theme-Stil setzen
     type: executeCode

@@ -25,5 +25,6 @@ whenever sqlerror exit failure rollback
 @@14_migration_vorbereitung.sql
 @@15_kundenstammblatt.sql
 @@16_rechtsformen_ausland.sql
+@@17_mandanten.sql
 
 prompt Installation abgeschlossen.

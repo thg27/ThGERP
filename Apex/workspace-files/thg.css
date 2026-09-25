@@ -6,10 +6,23 @@
   --ut-header-strip-size: 0;
 }
 
-/* Redwood: Header (Banner ganz oben) in dezentem Braun mit weisser Schrift */
+/* Mandantenfarben: Primaerfarbe (Banner) und Fokusfarbe (aktive Eingabefelder).
+   Der aktuelle Mandant steht im Logo-Markup der App (data-mandant="<MAND_CODE>", siehe ADMIN_MANDANTEN);
+   ohne Mandant (z.B. Apps mit einfachem Logo) gelten die Farben der THG-EDV GmbH. */
+:root,
+body:has([data-mandant="EDV"]) {
+  --thg-primaer: #108024;   /* THG-EDV GmbH: Gruen */
+  --thg-fokus: #e7f3e9;     /* helles Gruen fuer aktive Eingabefelder */
+}
+body:has([data-mandant="TG"]) {
+  --thg-primaer: #003096;   /* Thomas Gesslbauer GmbH: Blau */
+  --thg-fokus: #e6ecf7;     /* helles Blau */
+}
+
+/* Redwood: Header (Banner ganz oben) in der Mandantenfarbe mit weisser Schrift */
 body.apex-theme-redwood-light .t-Header {
-  --ut-header-background-color: #6b5444;
-  --ut-header-border-color: #6b5444;
+  --ut-header-background-color: var(--thg-primaer);
+  --ut-header-border-color: var(--thg-primaer);
   --ut-header-text-color: #fff;
   --ut-logo-text-color: #fff;
   color: #fff;
@@ -20,6 +33,21 @@ body.apex-theme-redwood-light .t-Header {
   height: 1.5rem;
   width: auto;
   margin-inline-end: .5rem;
+}
+
+/* Mandantenlogo (Logo-Typ "Custom"): Firmenlogo auf weissem Feld, da die Logos fuer hellen Grund gemacht sind */
+.thg-mandant-logo {
+  display: inline-flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-inline-end: .75rem;
+  vertical-align: middle;
+}
+.t-Header-logo .thg-mandant-logo img {
+  height: 2.25rem;
+  margin: 0;
 }
 
 /* Pflichtfelder: Text "Required" unter dem Feld ausblenden - die rote Markierung im Feld genuegt.
@@ -39,9 +67,6 @@ body.apex-theme-redwood-light .t-Header {
 
 /* Aktives Eingabefeld hervorheben (Hintergrund), damit sofort sichtbar ist, wo der Cursor steht;
    Radio-/Checkbox-Gruppen ausgenommen (dort wäre die ganze Gruppe eingefärbt) */
-.t-Form-fieldContainer:focus-within {
-  --thg-fokus: #f6ecd9;
-}
 .t-Form-fieldContainer:focus-within .t-Form-inputContainer :is(input:not([type=radio]):not([type=checkbox]), textarea, select),
 .t-Form-fieldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-fieldContainer-inner,
 .t-Form-fieldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-itemWrapper {
