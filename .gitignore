@@ -27,3 +27,6 @@ _alt/
 
 # Separates Projekt (Vendix POS, App 102)
 Apex/vendix-pos-app/
+
+# Vorlagen, nicht versioniert
+Vorlagen/
