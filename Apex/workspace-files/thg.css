@@ -98,3 +98,32 @@ body.apex-theme-redwood-light .t-Header {
 .ui-dialog.thg-dialog-schlicht .ui-dialog-titlebar::before {
   display: none !important;
 }
+
+/* Login-Seite (Portal): Firmenlogos mit Anschrift - THG-EDV GmbH links oben, Thomas Gesslbauer GmbH rechts oben */
+.thg-login-firma {
+  position: fixed;
+  top: 1.5rem;
+  font-size: .875rem;
+  line-height: 1.4;
+}
+.thg-login-firma--links  { left: 1.5rem;  text-align: left; }
+.thg-login-firma--rechts { right: 1.5rem; text-align: right; }
+.thg-login-firma img {
+  display: block;
+  height: 5rem;
+  margin-block-end: .5rem;
+}
+.thg-login-firma--rechts img { margin-inline-start: auto; }
+.thg-login-firma-name { font-weight: 600; }
+
+/* Schmale Bildschirme: Firmen nebeneinander ueber dem Anmeldeformular statt in den Ecken */
+@media (max-width: 800px) {
+  .thg-login-firmen {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .thg-login-firma { position: static; font-size: .75rem; }
+  .thg-login-firma img { height: 3rem; }
+}

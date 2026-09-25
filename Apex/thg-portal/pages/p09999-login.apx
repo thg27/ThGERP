@@ -15,6 +15,36 @@ page 9999 (
         formAutoComplete: false
     }
 
+    region firmen (
+        name: Firmen
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="thg-login-firmen">
+                  <div class="thg-login-firma thg-login-firma--links">
+                    <img src="#WORKSPACE_FILES#thg-logo-edv.png" alt="THG-EDV GmbH">
+                    <div class="thg-login-firma-name">THG-EDV GmbH</div>
+                    <div>Rosengasse 5, 8650 Kindberg</div>
+                  </div>
+                  <div class="thg-login-firma thg-login-firma--rechts">
+                    <img src="#WORKSPACE_FILES#thg-logo-tg.png" alt="Thomas Geßlbauer GmbH">
+                    <div class="thg-login-firma-name">Thomas Geßlbauer GmbH</div>
+                    <div>Maierleitn 1, 8661 St. Barbara</div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
     region app-name (
         name: Login
         title: ThG Portal
