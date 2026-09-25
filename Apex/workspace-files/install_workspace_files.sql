@@ -164,22 +164,22 @@ body.apex-theme-redwood-light .t-Header {
   display: none !important;
 }
 
-/* Login-Seite (Portal): Firmenlogos mit Anschrift - THG-EDV GmbH links oben, Thomas Gesslbauer GmbH rechts oben */
+/* Login-Seite (Portal): Firmenlogos mit Anschrift - Logo mit zentriertem Namen/Anschrift darunter, THG-EDV GmbH links oben, Thomas Gesslbauer GmbH rechts oben */
 .thg-login-firma {
   position: fixed;
-  top: 1.5rem;
+  top: 3rem;
   font-size: .875rem;
   line-height: 1.4;
+  text-align: center;
 }
-.thg-login-firma--links  { left: 1.5rem;  text-align: left; }
-.thg-login-firma--rechts { right: 1.5rem; text-align: right; }
-'));
-    dbms_lob.append(l_inhalt, to_clob('.thg-login-firma img {
+.thg-login-firma--links  { left: 4rem; }
+.thg-login-firma-'));
+    dbms_lob.append(l_inhalt, to_clob('-rechts { right: 4rem; }
+.thg-login-firma img {
   display: block;
-  height: 5rem;
-  margin-block-end: .5rem;
+  height: 10rem;
+  margin: 0 auto .75rem;
 }
-.thg-login-firma--rechts img { margin-inline-start: auto; }
 .thg-login-firma-name { font-weight: 600; }
 
 /* Schmale Bildschirme: Firmen nebeneinander ueber dem Anmeldeformular statt in den Ecken */
@@ -191,7 +191,7 @@ body.apex-theme-redwood-light .t-Header {
     padding: 1rem;
   }
   .thg-login-firma { position: static; font-size: .75rem; }
-  .thg-login-firma img { height: 3rem; }
+  .thg-login-firma img { height: 5rem; }
 }
 '));
     workspace_datei(p_file_name => 'thg.css', p_mime_type => 'text/css', p_inhalt => l_inhalt, p_base64 => false);
