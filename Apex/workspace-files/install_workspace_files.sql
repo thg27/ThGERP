@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Workspace-Dateien der ThG-Apps (Workspace THGERP) anlegen bzw. aktualisieren
--- GENERIERT mit build_install.py aus: thg.css, thg-logo.svg, thg-logo-edv.png, thg-logo-tg.png - nicht von Hand bearbeiten!
+-- GENERIERT mit build_install.py aus: thg.css, thg-logo.svg, thg-app-icon.svg, thg-logo-edv.png, thg-logo-tg.png - nicht von Hand bearbeiten!
 --
 -- Einbindung in den Apps:
 --   Theme > CSS > File URLs:        #WORKSPACE_FILES#thg.css
@@ -203,6 +203,29 @@ body.apex-theme-redwood-light .t-Header {
     dbms_lob.append(l_inhalt, to_clob('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="39" viewBox="0 0 64 39" fill="none"><title>ThG</title><text x="0" y="31" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="-0.5" fill="#ffffff">ThG</text></svg>
 '));
     workspace_datei(p_file_name => 'thg-logo.svg', p_mime_type => 'image/svg+xml', p_inhalt => l_inhalt, p_base64 => false);
+    dbms_lob.freetemporary(l_inhalt);
+
+    -- thg-app-icon.svg (image/svg+xml)
+    dbms_lob.createtemporary(l_inhalt, true);
+    dbms_lob.append(l_inhalt, to_clob('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>ThG</title>
+  <defs>
+    <!-- Farben aus den Firmenlogos: Blau (Thomas Gesslbauer GmbH), Gruen (ThG - edv GmbH), Rot (beide) -->
+    <linearGradient id="thg-verlauf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#003096"/>
+      <stop offset="1" stop-color="#108024"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#thg-verlauf)"/>
+  <!-- T: weiss, wie in beiden Logos -->
+  <path d="M92 112h208v64h-68v224h-72V176H92z" fill="#fff"/>
+  <!-- hG: rot, auf weissem Feld -->
+  <rect x="256" y="232" width="164" height="168" rx="36" fill="#fff"/>
+  <text x="338" y="364" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="120" font-weight="700" letter-spacing="-4" fill="#e83c00">hG</text>
+</svg>
+'));
+    workspace_datei(p_file_name => 'thg-app-icon.svg', p_mime_type => 'image/svg+xml', p_inhalt => l_inhalt, p_base64 => false);
     dbms_lob.freetemporary(l_inhalt);
 
     -- thg-logo-edv.png (image/png)

@@ -12,6 +12,7 @@ from pathlib import Path
 FILES = {
     "thg.css": "text/css",
     "thg-logo.svg": "image/svg+xml",
+    "thg-app-icon.svg": "image/svg+xml",  # App-Icon (Login-Seite), Farben aus beiden Firmenlogos
     "thg-logo-edv.png": "image/png",   # Mandant EDV (THG-EDV GmbH), aus Vorlagen/Logo ThG edv.tif
     "thg-logo-tg.png": "image/png",    # Mandant TG (Thomas Gesslbauer GmbH), aus Vorlagen/Logo Thomas Gesslbauer GmbH.jpg
 }
