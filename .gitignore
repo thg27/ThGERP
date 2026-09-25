@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+._*
+
+# Persönliche Claude-Code-Einstellungen (Freigaben pro Rechner)
+.claude/settings.local.json
+**/.claude/settings.local.json
+
+# Zugangsdaten / lokale Dateien
+.env
+*.env
+wallet*/
+*.log
+*.zip
+
+# Vorlage/Basis, wird nicht versioniert
+Apex/strategic-planner/
+
+# Temp-Dateien des Netzlaufwerks (SMB)
+.smbdelete*
+
+# Separates Projekt, nicht Teil von ThGERP
+EmployeePortal/

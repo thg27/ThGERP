@@ -1,0 +1,104 @@
+list navigation-bar (
+    name: Navigation Bar
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select the_level,
+                   label,
+                   target,
+                   is_current_list_entry,
+                   image,
+                   null as image_attribute,
+                   null as image_alt_attribute,
+                   null as attribute1,
+                   attribute2
+              from (
+                    -- Stilauswahl (Theme-Stil der gesamten Anwendung)
+                    select 1 as the_level, 'Stil' as label, '#' as target,
+                           null as is_current_list_entry, 'fa-paint-brush' as image,
+                           null as attribute2, 10 as sortierung
+                      from dual
+                    union all
+                    select 2,
+                           s.name,
+                           apex_page.get_url(p_page => :APP_PAGE_ID, p_request => 'THEME_STYLE_' || s.theme_style_id),
+                           case when s.is_current = 'Yes' then 'YES' end,
+                           case when s.is_current = 'Yes' then 'fa-check' end,
+                           null,
+                           11
+                      from apex_application_theme_styles s
+                     where s.application_id = :APP_ID
+                       and s.is_public = 'Yes'
+                    union all
+                    -- Benutzer mit Abmelden
+                    select 1, :APP_USER, '#', null, 'fa-user', 'has-username', 20
+                      from dual
+                    union all
+                    select 2, '---', 'separator', null, null, null, 21
+                      from dual
+                    union all
+                    select 2, 'Abmelden', '&LOGOUT_URL.', null, 'fa-sign-out', null, 22
+                      from dual
+                   )
+             where :APP_USER <> 'nobody'
+             order by sortierung, label
+            ```
+    }
+)
+
+list navigation-menu (
+    name: Navigation Menu
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select 1 as the_level,
+                   label,
+                   target,
+                   is_current_list_entry,
+                   image,
+                   null as image_attribute,
+                   null as image_alt_attribute
+              from (select 'Dashboard' as label,
+                           apex_page.get_url(p_page => 1) as target,
+                           case when :APP_PAGE_ID = 1 then 'YES' end as is_current_list_entry,
+                           'fa-home' as image,
+                           0 as sortierung
+                      from dual
+                    union all
+                    select APPL_BEZEICHNUNG,
+                           apex_page.get_url(p_application => APPL_APEX_ALIAS,
+                                             p_page        => APPL_ZIELSEITE),
+                           null,
+                           APPL_ICON,
+                           APPL_SORTIERUNG
+                      from ADMIN_APPLIKATIONEN
+                     where APPL_IST_AKTIV = 'Y')
+             order by sortierung, label
+            ```
+    }
+)
+
+list module (
+    name: Module
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select 1                          as the_level,
+                   APPL_BEZEICHNUNG           as label,
+                   apex_page.get_url(p_application => APPL_APEX_ALIAS,
+                                     p_page        => APPL_ZIELSEITE)
+                                              as target,
+                   null                       as is_current_list_entry,
+                   APPL_ICON                  as image,
+                   null                       as image_attribute,
+                   null                       as image_alt_attribute,
+                   APPL_BESCHREIBUNG          as attribute1
+              from ADMIN_APPLIKATIONEN
+             where APPL_IST_AKTIV = 'Y'
+             order by APPL_SORTIERUNG, APPL_BEZEICHNUNG
+            ```
+    }
+)

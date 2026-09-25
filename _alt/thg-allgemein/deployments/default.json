@@ -1,0 +1,13 @@
+{
+  "app": {
+    "id": 10010
+  },
+  "workspace": {
+    "name": "SIPA"
+  },
+  "subscription": {
+    "masterApps": {
+      "10000": 10000
+    }
+  }
+}

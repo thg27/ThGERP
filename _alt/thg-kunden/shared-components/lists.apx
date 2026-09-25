@@ -1,0 +1,247 @@
+list navigation-bar (
+    name: Navigation Bar
+
+    entry --- (
+        label: ---
+        layout {
+            sequence: 20
+            parentEntry: @app-user
+        }
+        link {
+            target: {
+                type: url
+                url: separator
+            }
+        }
+        serverSideCondition {
+            type: userIsAuthenticated
+        }
+    )
+
+    entry app-user (
+        label: &APP_USER.
+        icon {
+            imageIconCssClasses: fa-user
+        }
+        layout {
+            sequence: 10
+        }
+        link {
+            target: {
+                type: url
+                url: #
+            }
+        }
+        userDefinedAttributes {
+            2: has-username
+        }
+    )
+
+    entry sign-out (
+        label: Abmelden
+        icon {
+            imageIconCssClasses: fa-sign-out
+        }
+        layout {
+            sequence: 30
+            parentEntry: @app-user
+        }
+        link {
+            target: {
+                type: url
+                url: &LOGOUT_URL.
+            }
+        }
+        serverSideCondition {
+            type: userIsAuthenticated
+        }
+    )
+
+)
+
+list navigation-menu (
+    name: Navigation Menu
+
+    entry portal (
+        label: Portal
+        icon {
+            imageIconCssClasses: fa-th-large
+        }
+        layout {
+            sequence: 5
+        }
+        link {
+            target: {
+                type: url
+                url: f?p=MARCHLER-PORTAL:HOME:&SESSION.::&DEBUG.
+            }
+        }
+    )
+
+    entry home (
+        label: Startseite
+        icon {
+            imageIconCssClasses: fa-home
+        }
+        layout {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry kunden (
+        label: Kunden
+        icon {
+            imageIconCssClasses: fa-address-book
+        }
+        layout {
+            sequence: 20
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                10
+                11
+            ]
+        }
+    )
+
+
+    entry administration (
+        label: Administration
+        icon {
+            imageIconCssClasses: fa-gears
+        }
+        layout {
+            sequence: 90
+        }
+        link {
+            target: {
+                page: 100
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                100
+                110
+                111
+                120
+                121
+                130
+                131
+                140
+                141
+                150
+                151
+                160
+                161
+                170
+                171
+                180
+                181
+            ]
+        }
+    )
+
+    entry wertelisten (
+        label: Wertelisten
+        icon {
+            imageIconCssClasses: fa-list-ul
+        }
+        layout {
+            sequence: 10
+            parentEntry: @administration
+        }
+        link {
+            target: {
+                page: 100
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                100
+                110
+                111
+                120
+                121
+                130
+                131
+                140
+                141
+                150
+                151
+                160
+                161
+                170
+                171
+                180
+                181
+            ]
+        }
+    )
+
+)
+
+list wertelisten-kunden (
+    name: Wertelisten - Kunden
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select 1 as the_level,
+                   label,
+                   apex_page.get_url(p_page => seite, p_clear_cache => seite) as target,
+                   null as is_current_list_entry,
+                   image,
+                   null as image_attribute,
+                   null as image_alt_attribute,
+                   beschreibung as attribute1,
+                   to_char(anzahl) as attribute2
+              from (
+                    select 'Kundengruppen' as label, 110 as seite, 'fa-tags' as image, 'Hauptgruppen der Kunden (OEM, Wiederverkäufer, Endkunde …)' as beschreibung,
+                           (select count(*) from KUND_KUNDENGRUPPEN) as anzahl
+                      from dual
+                    union all
+                    select 'Branchen' as label, 120 as seite, 'fa-industry' as image, 'Branchen der Kunden' as beschreibung,
+                           (select count(*) from KUND_BRANCHEN) as anzahl
+                      from dual
+                    union all
+                    select 'Unterkategorien' as label, 130 as seite, 'fa-sitemap' as image, 'Unterkategorien je Branche' as beschreibung,
+                           (select count(*) from KUND_UNTERKATEGORIEN) as anzahl
+                      from dual
+                    union all
+                    select 'Abteilungen' as label, 140 as seite, 'fa-building-o' as image, 'Abteilungen der Ansprechpersonen' as beschreibung,
+                           (select count(*) from KUND_ABTEILUNGEN) as anzahl
+                      from dual
+                    union all
+                    select 'Funktionen' as label, 150 as seite, 'fa-id-badge' as image, 'Funktionen der Ansprechpersonen (Geschäftsführer, Abteilungsleiter …)' as beschreibung,
+                           (select count(*) from KUND_FUNKTIONEN) as anzahl
+                      from dual
+                    union all
+                    select 'Rechtsformen' as label, 160 as seite, 'fa-bank' as image, 'Rechtsformen von Firmenkunden (GmbH, KG, d.o.o. …)' as beschreibung,
+                           (select count(*) from KUND_RECHTSFORMEN) as anzahl
+                      from dual
+                    union all
+                    select 'Standorttypen' as label, 170 as seite, 'fa-map-marker' as image, 'Hauptsitz, Filiale, Lager, Rechnungs-/Lieferadresse …' as beschreibung,
+                           (select count(*) from KUND_STANDORT_TYPEN) as anzahl
+                      from dual
+                    union all
+                    select 'Betreuungsrollen' as label, 180 as seite, 'fa-users' as image, 'Rollen der Mitarbeiter in der Kundenbetreuung' as beschreibung,
+                           (select count(*) from KUND_BETREUUNGSROLLEN) as anzahl
+                      from dual
+                   )
+             order by label
+            ```
+    }
+)

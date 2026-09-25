@@ -1,0 +1,194 @@
+breadcrumb breadcrumb (
+    name: Breadcrumb
+
+    entry home (
+        name: Startseite
+        pageNumber: 1
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry kunden (
+        name: Kunden
+        pageNumber: 10
+        execution {
+            sequence: 20
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+    entry kunde (
+        name: Kunde
+        pageNumber: 11
+        execution {
+            sequence: 30
+        }
+        appearance {
+            parentEntry: @kunden
+        }
+        link {
+            target: {
+                page: 11
+            }
+        }
+    )
+
+
+    entry wertelisten (
+        name: Wertelisten
+        pageNumber: 100
+        execution {
+            sequence: 100
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 100
+            }
+        }
+    )
+
+    entry werteliste-110 (
+        name: Kundengruppen
+        pageNumber: 110
+        execution {
+            sequence: 110
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 110
+            }
+        }
+    )
+
+    entry werteliste-120 (
+        name: Branchen
+        pageNumber: 120
+        execution {
+            sequence: 120
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 120
+            }
+        }
+    )
+
+    entry werteliste-130 (
+        name: Unterkategorien
+        pageNumber: 130
+        execution {
+            sequence: 130
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 130
+            }
+        }
+    )
+
+    entry werteliste-140 (
+        name: Abteilungen
+        pageNumber: 140
+        execution {
+            sequence: 140
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 140
+            }
+        }
+    )
+
+    entry werteliste-150 (
+        name: Funktionen
+        pageNumber: 150
+        execution {
+            sequence: 150
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 150
+            }
+        }
+    )
+
+    entry werteliste-160 (
+        name: Rechtsformen
+        pageNumber: 160
+        execution {
+            sequence: 160
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 160
+            }
+        }
+    )
+
+    entry werteliste-170 (
+        name: Standorttypen
+        pageNumber: 170
+        execution {
+            sequence: 170
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 170
+            }
+        }
+    )
+
+    entry werteliste-180 (
+        name: Betreuungsrollen
+        pageNumber: 180
+        execution {
+            sequence: 180
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 180
+            }
+        }
+    )
+
+)

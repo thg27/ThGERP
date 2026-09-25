@@ -1,0 +1,175 @@
+lov lov-boolean (
+    name: LOV_BOOLEAN
+    source {
+        location: staticValues
+    }
+
+    entry false (
+        sequence: 2
+        display: Nein
+        return: FALSE
+    )
+
+    entry true (
+        sequence: 1
+        display: Ja
+        return: TRUE
+    )
+
+)
+
+lov lov-ja-nein (
+    name: LOV_JA_NEIN
+    source {
+        location: staticValues
+    }
+
+    entry ja (
+        sequence: 1
+        display: Ja
+        return: Y
+    )
+
+    entry nein (
+        sequence: 2
+        display: Nein
+        return: N
+    )
+
+)
+
+lov lov-kunden-typ (
+    name: LOV_KUNDEN_TYP
+    source {
+        location: staticValues
+    }
+
+    entry firma (
+        sequence: 1
+        display: Firma
+        return: FIRMA
+    )
+
+    entry privat (
+        sequence: 2
+        display: Privat
+        return: PRIVAT
+    )
+
+)
+
+lov lov-kunden-status (
+    name: LOV_KUNDEN_STATUS
+    source {
+        location: staticValues
+    }
+
+    entry aktiv (
+        sequence: 1
+        display: Aktiv
+        return: AKTIV
+    )
+
+
+    entry inaktiv (
+        sequence: 2
+        display: Inaktiv
+        return: INAKTIV
+    )
+
+)
+
+lov lov-anrede (
+    name: LOV_ANREDE
+    source {
+        location: staticValues
+    }
+
+    entry herr (
+        sequence: 1
+        display: Herr
+        return: Herr
+    )
+
+    entry frau (
+        sequence: 2
+        display: Frau
+        return: Frau
+    )
+
+)
+
+lov lov-rechtsformen (
+    name: LOV_RECHTSFORMEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select RFRM_KURZ || ' – ' || RFRM_BEZEICHNUNG as d,
+                   RFRM_ID as r
+              from KUND_RECHTSFORMEN
+             order by RFRM_KURZ
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-zahlungsbedingungen (
+    name: LOV_ZAHLUNGSBEDINGUNGEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select ZBED_BEZEICHNUNG as d,
+                   ZBED_ID as r
+              from ALLG_ZAHLUNGSBEDINGUNGEN
+             order by ZBED_ZIEL_TAGE, ZBED_BEZEICHNUNG
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-kunden (
+    name: LOV_KUNDEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select KUND_NUMMER || ' – ' ||
+                   case KUND_TYP when 'FIRMA' then KUND_FIRMENNAME
+                                 else KUND_NACHNAME || nvl2(KUND_VORNAME, ' ' || KUND_VORNAME, null) end as d,
+                   KUND_ID as r
+              from KUND_KUNDEN
+             order by KUND_NUMMER
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-branchen (
+    name: LOV_BRANCHEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select BRAN_BEZEICHNUNG as d,
+                   BRAN_ID as r
+              from KUND_BRANCHEN
+             where BRAN_IST_AKTIV = 'Y'
+             order by BRAN_SORTIERUNG nulls last, BRAN_BEZEICHNUNG
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)

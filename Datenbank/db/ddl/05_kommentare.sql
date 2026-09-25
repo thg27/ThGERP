@@ -1,0 +1,230 @@
+-- =====================================================================
+-- Kundenstamm-Datenmodell (Gruppen KUND, ALLG)
+-- 05 – Tabellen- und Spaltenkommentare
+-- Erzeugt: 2026-09-23
+-- Voraussetzung: Oracle 12.2+ (Objektnamen > 30 Zeichen), getestet fuer 19c
+-- =====================================================================
+
+comment on table ALLG_LAENDER is 'Laender (ISO-3166-1 Alpha-2) inkl. EU-Kennzeichen und Verfuegbarkeit eines Adressregisters [Alias LAND]';
+comment on column ALLG_LAENDER.LAND_CODE is 'ISO-Laendercode, z.B. AT, DE';
+comment on column ALLG_LAENDER.LAND_BEZEICHNUNG is 'Bezeichnung des Landes';
+comment on column ALLG_LAENDER.LAND_IST_EU is 'Y = EU-Mitgliedsstaat (relevant fuer Reverse Charge)';
+comment on column ALLG_LAENDER.LAND_HAT_REGISTER is 'Y = amtliches Adressregister vorhanden, manuelle Adresserfassung nicht erlaubt';
+comment on column ALLG_LAENDER.LAND_CREATED_ON is 'Audit: angelegt am';
+comment on column ALLG_LAENDER.LAND_CREATED_BY is 'Audit: angelegt von';
+comment on column ALLG_LAENDER.LAND_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column ALLG_LAENDER.LAND_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column ALLG_LAENDER.LAND_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table ALLG_ZAHLUNGSBEDINGUNGEN is 'Zahlungsbedingungen (Zahlungsziel, Skonto) [Alias ZBED]';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_BEZEICHNUNG is 'Bezeichnung, z.B. 30 Tage netto';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_ZIEL_TAGE is 'Zahlungsziel in Tagen';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_SKONTO_TAGE is 'Skontofrist in Tagen';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_SKONTO_PROZENT is 'Skonto in Prozent';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_CREATED_ON is 'Audit: angelegt am';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_CREATED_BY is 'Audit: angelegt von';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column ALLG_ZAHLUNGSBEDINGUNGEN.ZBED_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table ALLG_KOMMUNIKATIONSARTEN is 'Kommunikationsarten (E-Mail, Telefon, Mobil, Fax ...) [Alias KART]';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_CODE is 'Technischer Code fuer Programmlogik, z.B. EMAIL, TEL';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_BEZEICHNUNG is 'Anzeigetext';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_SORTIERUNG is 'Sortierreihenfolge in Listen';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_CREATED_ON is 'Audit: angelegt am';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_CREATED_BY is 'Audit: angelegt von';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column ALLG_KOMMUNIKATIONSARTEN.KART_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table ALLG_MITARBEITER is 'Eigene Mitarbeiter (intern), modulübergreifend verwendet [Alias MITA]';
+comment on column ALLG_MITARBEITER.MITA_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column ALLG_MITARBEITER.MITA_KUERZEL is 'Eindeutiges Mitarbeiterkuerzel';
+comment on column ALLG_MITARBEITER.MITA_NAME is 'Vor- und Nachname';
+comment on column ALLG_MITARBEITER.MITA_CREATED_ON is 'Audit: angelegt am';
+comment on column ALLG_MITARBEITER.MITA_CREATED_BY is 'Audit: angelegt von';
+comment on column ALLG_MITARBEITER.MITA_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column ALLG_MITARBEITER.MITA_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column ALLG_MITARBEITER.MITA_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table ALLG_MITARBEITER_KOMMUNIKATION is 'Kommunikationsdaten der Mitarbeiter [Alias MKOM]';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_MITA_ID is 'FK: Mitarbeiter';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_KART_ID is 'FK: Kommunikationsart';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_WERT is 'E-Mail-Adresse bzw. Nummer';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_BEZEICHNUNG is 'Freitext, z.B. Buero, privat';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_IST_BEVORZUGT is 'Y = bevorzugter Eintrag je Kommunikationsart';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_CREATED_ON is 'Audit: angelegt am';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_CREATED_BY is 'Audit: angelegt von';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column ALLG_MITARBEITER_KOMMUNIKATION.MKOM_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table ALLG_ADRESSREGISTER is 'Importierte Kopie des amtlichen Adressregisters (AT: BEV, © Österreichisches Adressregister) [Alias AREG]';
+comment on column ALLG_ADRESSREGISTER.AREG_ADRCD is 'Adresscode des Registers (BEV: 7-stellig)';
+comment on column ALLG_ADRESSREGISTER.AREG_LAND_CODE is 'FK: Land des Registers';
+comment on column ALLG_ADRESSREGISTER.AREG_GKZ is 'Gemeindekennziffer';
+comment on column ALLG_ADRESSREGISTER.AREG_GEMEINDE is 'Gemeindename';
+comment on column ALLG_ADRESSREGISTER.AREG_ORTSCHAFT is 'Ortschaft';
+comment on column ALLG_ADRESSREGISTER.AREG_PLZ is 'Postleitzahl';
+comment on column ALLG_ADRESSREGISTER.AREG_STRASSE is 'Strassenname';
+comment on column ALLG_ADRESSREGISTER.AREG_HAUSNUMMER is 'Hausnummer inkl. Zusatz lt. Register';
+comment on column ALLG_ADRESSREGISTER.AREG_LAT is 'Breitengrad (WGS84)';
+comment on column ALLG_ADRESSREGISTER.AREG_LON is 'Laengengrad (WGS84)';
+comment on column ALLG_ADRESSREGISTER.AREG_IST_AKTIV is 'N = im aktuellen Stichtag nicht mehr enthalten (nie loeschen)';
+comment on column ALLG_ADRESSREGISTER.AREG_STICHTAG is 'Stichtag des Registerauszugs';
+comment on column ALLG_ADRESSREGISTER.AREG_CREATED_ON is 'Audit: angelegt am';
+comment on column ALLG_ADRESSREGISTER.AREG_CREATED_BY is 'Audit: angelegt von';
+comment on column ALLG_ADRESSREGISTER.AREG_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column ALLG_ADRESSREGISTER.AREG_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column ALLG_ADRESSREGISTER.AREG_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table ALLG_ADRESSEN is 'Verwendete Adressen: aus Adressregister uebernommen oder manuell (nur Laender ohne Register) [Alias ADRE]';
+comment on column ALLG_ADRESSEN.ADRE_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column ALLG_ADRESSEN.ADRE_AREG_ADRCD is 'FK: Adresscode im Register (nur bei Quelle REGISTER)';
+comment on column ALLG_ADRESSEN.ADRE_LAND_CODE is 'FK: Land';
+comment on column ALLG_ADRESSEN.ADRE_QUELLE is 'REGISTER = aus Adressregister, MANUELL = manuell erfasst';
+comment on column ALLG_ADRESSEN.ADRE_STRASSE is 'Strasse (Kopie zum Zeitpunkt der Uebernahme)';
+comment on column ALLG_ADRESSEN.ADRE_HAUSNUMMER is 'Hausnummer';
+comment on column ALLG_ADRESSEN.ADRE_ZUSATZ is 'Stiege, Tuer, Top';
+comment on column ALLG_ADRESSEN.ADRE_PLZ is 'Postleitzahl';
+comment on column ALLG_ADRESSEN.ADRE_ORT is 'Ort';
+comment on column ALLG_ADRESSEN.ADRE_REGION is 'Region/Bundesstaat (fuer Auslandsadressen)';
+comment on column ALLG_ADRESSEN.ADRE_LAT is 'Breitengrad (WGS84)';
+comment on column ALLG_ADRESSEN.ADRE_LON is 'Laengengrad (WGS84)';
+comment on column ALLG_ADRESSEN.ADRE_REG_STICHTAG is 'Stichtag des Registers bei Uebernahme';
+comment on column ALLG_ADRESSEN.ADRE_CREATED_ON is 'Audit: angelegt am';
+comment on column ALLG_ADRESSEN.ADRE_CREATED_BY is 'Audit: angelegt von';
+comment on column ALLG_ADRESSEN.ADRE_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column ALLG_ADRESSEN.ADRE_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column ALLG_ADRESSEN.ADRE_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_RECHTSFORMEN is 'Rechtsformen (GmbH, KG, e.U. ...) [Alias RFRM]';
+comment on column KUND_RECHTSFORMEN.RFRM_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_RECHTSFORMEN.RFRM_KURZ is 'Kurzbezeichnung, z.B. GmbH';
+comment on column KUND_RECHTSFORMEN.RFRM_BEZEICHNUNG is 'Langbezeichnung';
+comment on column KUND_RECHTSFORMEN.RFRM_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_RECHTSFORMEN.RFRM_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_RECHTSFORMEN.RFRM_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_RECHTSFORMEN.RFRM_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_RECHTSFORMEN.RFRM_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_STANDORT_TYPEN is 'Standorttypen (Hauptsitz, Filiale, Lager ...) [Alias STYP]';
+comment on column KUND_STANDORT_TYPEN.STYP_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_STANDORT_TYPEN.STYP_BEZEICHNUNG is 'Bezeichnung des Standorttyps';
+comment on column KUND_STANDORT_TYPEN.STYP_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_STANDORT_TYPEN.STYP_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_STANDORT_TYPEN.STYP_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_STANDORT_TYPEN.STYP_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_STANDORT_TYPEN.STYP_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_BETREUUNGSROLLEN is 'Rollen eines Mitarbeiters in der Kundenbetreuung [Alias BROL]';
+comment on column KUND_BETREUUNGSROLLEN.BROL_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_BETREUUNGSROLLEN.BROL_CODE is 'Technischer Code, z.B. SB, PL';
+comment on column KUND_BETREUUNGSROLLEN.BROL_BEZEICHNUNG is 'Anzeigetext, z.B. Sachbearbeiter';
+comment on column KUND_BETREUUNGSROLLEN.BROL_SORTIERUNG is 'Sortierreihenfolge in Listen';
+comment on column KUND_BETREUUNGSROLLEN.BROL_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_BETREUUNGSROLLEN.BROL_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_BETREUUNGSROLLEN.BROL_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_BETREUUNGSROLLEN.BROL_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_BETREUUNGSROLLEN.BROL_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_KUNDEN is 'Kundenstamm (Firmen und Privatpersonen) inkl. Konzernhierarchie [Alias KUND]';
+comment on column KUND_KUNDEN.KUND_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_KUNDEN.KUND_PARENT_KUND_ID is 'FK: Uebergeordneter Kunde (Konzernmutter)';
+comment on column KUND_KUNDEN.KUND_RE_KUND_ID is 'FK: Abweichender Rechnungsempfaenger';
+comment on column KUND_KUNDEN.KUND_RFRM_ID is 'FK: Rechtsform';
+comment on column KUND_KUNDEN.KUND_ZBED_ID is 'FK: Zahlungsbedingung';
+comment on column KUND_KUNDEN.KUND_NUMMER is 'Fachliche Kundennummer';
+comment on column KUND_KUNDEN.KUND_TYP is 'FIRMA oder PRIVAT';
+comment on column KUND_KUNDEN.KUND_FIRMENNAME is 'Firmenname (bei Typ FIRMA)';
+comment on column KUND_KUNDEN.KUND_ANREDE is 'Anrede';
+comment on column KUND_KUNDEN.KUND_VORNAME is 'Vorname (bei Typ PRIVAT)';
+comment on column KUND_KUNDEN.KUND_NACHNAME is 'Nachname (bei Typ PRIVAT)';
+comment on column KUND_KUNDEN.KUND_UID_NUMMER is 'Umsatzsteuer-Identifikationsnummer, z.B. ATU12345678';
+comment on column KUND_KUNDEN.KUND_FIRMENBUCHNR is 'Firmenbuchnummer, z.B. FN 123456a';
+comment on column KUND_KUNDEN.KUND_EMAIL_RECHNUNG is 'Zieladresse fuer Rechnungsversand';
+comment on column KUND_KUNDEN.KUND_KREDITLIMIT is 'Kreditlimit';
+comment on column KUND_KUNDEN.KUND_STATUS is 'AKTIV, GESPERRT, INAKTIV';
+comment on column KUND_KUNDEN.KUND_KUNDE_SEIT is 'Kunde seit';
+comment on column KUND_KUNDEN.KUND_DSGVO_MARKETING_AM is 'Datum der Einwilligung zu Marketing/Newsletter';
+comment on column KUND_KUNDEN.KUND_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_KUNDEN.KUND_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_KUNDEN.KUND_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_KUNDEN.KUND_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_KUNDEN.KUND_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_KUNDEN_MITARBEITER is 'Zuordnung Mitarbeiter zu Kunde je Betreuungsrolle (mit Historie) [Alias KMIT]';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_KUND_ID is 'FK: Kunde';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_MITA_ID is 'FK: Mitarbeiter';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_BROL_ID is 'FK: Betreuungsrolle';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_IST_HAUPTVERANTW is 'Y = hauptverantwortlich je Kunde und Rolle';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_GUELTIG_VON is 'Zustaendig ab';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_GUELTIG_BIS is 'Zustaendig bis (leer = aktuell)';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_BEMERKUNG is 'Bemerkung';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_KUNDEN_MITARBEITER.KMIT_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_STANDORTE is 'Standorte eines Kunden (Hauptsitz, Filialen, Lager ...) [Alias KSTO]';
+comment on column KUND_STANDORTE.KSTO_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_STANDORTE.KSTO_KUND_ID is 'FK: Kunde';
+comment on column KUND_STANDORTE.KSTO_STYP_ID is 'FK: Standorttyp';
+comment on column KUND_STANDORTE.KSTO_ADRE_ID is 'FK: Adresse';
+comment on column KUND_STANDORTE.KSTO_BEZEICHNUNG is 'Bezeichnung, z.B. Filiale Graz';
+comment on column KUND_STANDORTE.KSTO_IST_HAUPTSITZ is 'Y = Hauptsitz (genau einer je Kunde)';
+comment on column KUND_STANDORTE.KSTO_IST_RECHNUNGSADR is 'Y = Rechnungsadresse';
+comment on column KUND_STANDORTE.KSTO_IST_LIEFERADR is 'Y = Lieferadresse';
+comment on column KUND_STANDORTE.KSTO_GUELTIG_VON is 'Gueltig ab';
+comment on column KUND_STANDORTE.KSTO_GUELTIG_BIS is 'Gueltig bis (statt Loeschen)';
+comment on column KUND_STANDORTE.KSTO_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_STANDORTE.KSTO_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_STANDORTE.KSTO_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_STANDORTE.KSTO_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_STANDORTE.KSTO_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_STANDORT_KOMMUNIKATION is 'Kommunikationsdaten der Kundenstandorte [Alias SKOM]';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_KSTO_ID is 'FK: Standort';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_KART_ID is 'FK: Kommunikationsart';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_WERT is 'E-Mail-Adresse bzw. Nummer';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_BEZEICHNUNG is 'Freitext, z.B. Zentrale';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_IST_BEVORZUGT is 'Y = bevorzugter Eintrag je Kommunikationsart';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_STANDORT_KOMMUNIKATION.SKOM_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_ANSPRECHPARTNER is 'Ansprechpartner (externe Personen) an einem Kundenstandort [Alias ANSP]';
+comment on column KUND_ANSPRECHPARTNER.ANSP_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_ANSPRECHPARTNER.ANSP_KSTO_ID is 'FK: Standort';
+comment on column KUND_ANSPRECHPARTNER.ANSP_ANREDE is 'Anrede';
+comment on column KUND_ANSPRECHPARTNER.ANSP_TITEL is 'Titel, z.B. Dr., Ing.';
+comment on column KUND_ANSPRECHPARTNER.ANSP_VORNAME is 'Vorname';
+comment on column KUND_ANSPRECHPARTNER.ANSP_NACHNAME is 'Nachname';
+comment on column KUND_ANSPRECHPARTNER.ANSP_FUNKTION is 'Funktion, z.B. Einkauf';
+comment on column KUND_ANSPRECHPARTNER.ANSP_IST_HAUPTKONTAKT is 'Y = Hauptkontakt am Standort';
+comment on column KUND_ANSPRECHPARTNER.ANSP_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_ANSPRECHPARTNER.ANSP_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_ANSPRECHPARTNER.ANSP_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_ANSPRECHPARTNER.ANSP_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_ANSPRECHPARTNER.ANSP_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+
+comment on table KUND_ANSPRECHPARTNER_KOMMUNIKATION is 'Kommunikationsdaten der Ansprechpartner [Alias AKOM]';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_ANSP_ID is 'FK: Ansprechpartner';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_KART_ID is 'FK: Kommunikationsart';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_WERT is 'E-Mail-Adresse bzw. Nummer';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_BEZEICHNUNG is 'Freitext, z.B. Durchwahl';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_IST_BEVORZUGT is 'Y = bevorzugter Eintrag je Kommunikationsart';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_CREATED_ON is 'Audit: angelegt am';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_CREATED_BY is 'Audit: angelegt von';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column KUND_ANSPRECHPARTNER_KOMMUNIKATION.AKOM_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';

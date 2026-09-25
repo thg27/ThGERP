@@ -1,0 +1,45 @@
+lov lov-boolean (
+    name: LOV_BOOLEAN
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/10000/lov-boolean
+    }
+
+    entry false (
+        sequence: 2
+        display: Nein
+        return: FALSE
+    )
+
+    entry true (
+        sequence: 1
+        display: Ja
+        return: TRUE
+    )
+
+)
+
+lov lov-ja-nein (
+    name: LOV_JA_NEIN
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/10000/lov-ja-nein
+    }
+
+    entry ja (
+        sequence: 1
+        display: Ja
+        return: Y
+    )
+
+    entry nein (
+        sequence: 2
+        display: Nein
+        return: N
+    )
+
+)

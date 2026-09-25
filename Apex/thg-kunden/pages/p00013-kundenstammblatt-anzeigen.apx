@@ -1,0 +1,150 @@
+page 13 (
+    name: Kundenstammblatt anzeigen
+    alias: KUNDENSTAMMBLATT-ANZEIGEN
+    title: Kundenstammblatt
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1000
+        height: 860
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region vorschau (
+        name: Vorschau
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                -- PDF von Seite 12 (inline); wird per JavaScript als Blob geladen (DA "PDF laden"),
+                -- da die App das Einbetten eigener Seiten in Frames verbietet (Browser Security: Deny)
+                return '<iframe id="stammblatt-pdf" title="Kundenstammblatt" '
+                    || 'style="width:100%;height:calc(100vh - 40px);border:0;display:block" data-src="'
+                    || apex_escape.html_attribute(
+                           apex_page.get_url(p_page      => 12,
+                                             p_items     => 'P12_KUND_ID',
+                                             p_values    => :P13_KUND_ID,
+                                             -- ohne Dialog-Behandlung (sonst "#action$a-dialog-close")
+                                             p_plain_url => true))
+                    || '" data-dateiname="'
+                    || apex_escape.html_attribute(KUND_STAMMBLATT.dateiname(:P13_KUND_ID))
+                    || '"></iframe>';
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P13_KUND_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @vorschau
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    dynamicAction pdf-laden (
+        name: PDF laden, Drucken/Herunterladen in die Titelleiste
+        execution {
+            sequence: 10
+        }
+        when {
+            event: ready
+        }
+
+        action native-js-pdf-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    var f = document.getElementById('stammblatt-pdf'),
+                        pdfUrl = null;
+
+                    // Titelleiste liegt im aufrufenden Fenster: Titeltext leeren,
+                    // Buttons Drucken/Herunterladen links neben das X setzen
+                    if (window.frameElement && parent.apex) {
+                        var $p = parent.apex.jQuery,
+                            $bar = $p(window.frameElement).closest('.ui-dialog').children('.ui-dialog-titlebar'),
+                            $box = $p('<span class="thg-pdf-aktionen"></span>').css({
+                                position: 'absolute', right: '12px', top: '50%',
+                                transform: 'translateY(-50%)', display: 'flex',
+                                alignItems: 'center', gap: '8px'
+                            });
+                        function knopf(text, icon, fn) {
+                            return $p('<button type="button" class="t-Button t-Button--small t-Button--iconLeft" disabled>'
+                                      + '<span class="t-Icon t-Icon--left fa ' + icon + '" aria-hidden="true"></span>'
+                                      + '<span class="t-Button-label">' + text + '</span></button>')
+                                   .on('click', fn);
+                        }
+                        // ohne Redwood-Musterstreifen oben (thg.css)
+                        $bar.closest('.ui-dialog').addClass('thg-dialog-schlicht');
+                        $bar.find('.ui-dialog-title').text('');
+                        $bar.children('.thg-pdf-aktionen').remove();  // nur falls schon vorhanden
+                        $box.append(
+                            knopf('Drucken', 'fa-print', function () {
+                                f.contentWindow.focus();
+                                f.contentWindow.print();
+                            }),
+                            knopf('Herunterladen', 'fa-download', function () {
+                                var a = document.createElement('a');
+                                a.href = pdfUrl;
+                                a.download = f.dataset.dateiname;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            })
+                        );
+                        // X ausblenden, stattdessen Button Schliessen in derselben Zeile
+                        $bar.children('.ui-dialog-titlebar-close').hide();
+                        $box.append(knopf('Schließen', 'fa-times', function () {
+                            apex.navigation.dialog.cancel(true);
+                        }).prop('disabled', false));
+                        $bar.append($box);
+                    }
+
+                    // PDF holen und als Blob-URL anzeigen (Frame-Sperre der App greift fuer blob: nicht);
+                    // Viewer ohne Werkzeugleiste und Seitenvorschau
+                    fetch(f.dataset.src, { credentials: 'same-origin' })
+                        .then(function (r) {
+                            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                            return r.blob();
+                        })
+                        .then(function (b) {
+                            pdfUrl = URL.createObjectURL(new Blob([b], { type: 'application/pdf' }));
+                            f.src = pdfUrl + '#toolbar=0&navpanes=0&view=FitH';
+                            if ($box) { $box.find('button').prop('disabled', false); }
+                        })
+                        .catch(function (e) {
+                            apex.message.showErrors([{ type: 'error', location: 'page',
+                                message: 'Kundenstammblatt konnte nicht geladen werden (' + e.message + ').' }]);
+                        });
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+)

@@ -1,0 +1,13 @@
+{
+  "app": {
+    "id": 20010
+  },
+  "workspace": {
+    "name": "THGERP"
+  },
+  "subscription": {
+    "masterApps": {
+      "20000": 20000
+    }
+  }
+}

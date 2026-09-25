@@ -1,0 +1,32 @@
+appProcess theme-stil-setzen (
+    name: Theme-Stil setzen
+    type: executeCode
+    source {
+        plsqlCode:
+            ```plsql
+            -- Stilauswahl aus der Navigationsleiste (Request THEME_STYLE_<id>):
+            -- setzt den Theme-Stil für alle Marchler-Apps aus ADMIN_APPLIKATIONEN (inkl. Portal)
+            declare
+                l_style_id number;
+            begin
+                if :REQUEST like 'THEME\_STYLE\_%' escape '\' then
+                    l_style_id := to_number(substr(:REQUEST, length('THEME_STYLE_') + 1));
+                    for a in (select s.application_id, s.theme_number
+                                from apex_application_theme_styles s
+                               where s.theme_style_id = l_style_id
+                                 and s.is_public = 'Yes'
+                                 and s.application_id in (select APPL_APEX_APP_ID from ADMIN_APPLIKATIONEN))
+                    loop
+                        apex_theme.set_current_style(p_application_id => a.application_id,
+                                                     p_theme_number   => a.theme_number,
+                                                     p_id             => to_char(l_style_id));
+                    end loop;
+                end if;
+            end;
+            ```
+    }
+    execution {
+        sequence: 10
+        point: beforeHeader
+    }
+)

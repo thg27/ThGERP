@@ -1,0 +1,65 @@
+page 12 (
+    name: Kundenstammblatt
+    alias: KUNDENSTAMMBLATT
+    title: Kundenstammblatt
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region stammblatt (
+        name: Kundenstammblatt
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P12_KUND_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @stammblatt
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    process pdf-herunterladen (
+        name: Kundenstammblatt als PDF ausliefern (inline, fuer die Vorschau auf Seite 13)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_pdf blob := KUND_STAMMBLATT.pdf(:P12_KUND_ID);
+                begin
+                    apex_http.download(
+                        p_blob         => l_pdf,
+                        p_content_type => 'application/pdf',
+                        p_filename     => KUND_STAMMBLATT.dateiname(:P12_KUND_ID),
+                        p_is_inline    => true);
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P12_KUND_ID
+        }
+    )
+)

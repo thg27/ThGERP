@@ -1,0 +1,438 @@
+page 11 (
+    name: Applikation
+    alias: APPLIKATION
+    title: Applikation
+    pageGroup: @administration
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/drawer
+        templateOptions: [
+            #DEFAULT#
+            js-dialog-class-t-Drawer--pullOutEnd
+        ]
+    }
+    dialog {
+        chained: false
+        resizable: false
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @administration-rights
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region applikation (
+        name: Applikation
+        type: form
+        source {
+            location: localDatabase
+            tableName: ADMIN_APPLIKATIONEN
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+    pageItem P11_APPL_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @applikation
+            slot: regionBody
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P11_APPL_BEZEICHNUNG (
+        type: textField
+        label {
+            label: Bezeichnung
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_BEZEICHNUNG
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 100
+        }
+    )
+
+    pageItem P11_APPL_BESCHREIBUNG (
+        type: textarea
+        label {
+            label: Beschreibung
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_BESCHREIBUNG
+            dataType: varchar2
+        }
+    )
+
+    pageItem P11_APPL_APEX_APP_ID (
+        type: numberField
+        label {
+            label: APEX-App-ID
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_APEX_APP_ID
+            dataType: number
+        }
+    )
+
+    pageItem P11_APPL_APEX_ALIAS (
+        type: textField
+        label {
+            label: APEX-App-Alias
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_APEX_ALIAS
+            dataType: varchar2
+        }
+    )
+
+    pageItem P11_APPL_ZIELSEITE (
+        type: textField
+        label {
+            label: Zielseite (Alias oder Nr.)
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_ZIELSEITE
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: HOME
+        }
+    )
+
+    pageItem P11_APPL_ICON (
+        type: textField
+        label {
+            label: Icon (Font APEX, z.B. fa-gear)
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_ICON
+            dataType: varchar2
+        }
+    )
+
+    pageItem P11_APPL_SORTIERUNG (
+        type: numberField
+        label {
+            label: Sortierung
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_SORTIERUNG
+            dataType: number
+        }
+    )
+
+    pageItem P11_APPL_IST_AKTIV (
+        type: switch
+        label {
+            label: Im Portal anzeigen
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @applikation
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @applikation
+            column: APPL_IST_AKTIV
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Abbrechen
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Löschen
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: delete
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+                t-Button--simple
+            ]
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Applikation wirklich löschen? Besser „Im Portal anzeigen“ ausschalten.
+            style: danger
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_APPL_ID
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_APPL_ID
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Anlegen
+        layout {
+            sequence: 40
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P11_APPL_ID
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process initialize-form-applikation (
+        name: Formular Applikation initialisieren
+        type: formInitialization
+        formRegion: @applikation
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process process-form-applikation (
+        name: Formular Applikation verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @applikation
+        execution {
+            sequence: 10
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE,DELETE
+        }
+    )
+
+)

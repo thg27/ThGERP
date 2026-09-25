@@ -1,0 +1,49 @@
+breadcrumb breadcrumb (
+    name: Breadcrumb
+
+    entry home (
+        name: Administration
+        pageNumber: 1
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry applikationen (
+        name: Applikationen
+        pageNumber: 10
+        appearance {
+            parentEntry: @home
+        }
+        execution {
+            sequence: 20
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+    entry aktivitaetsprotokoll (
+        name: Aktivitätsprotokoll
+        pageNumber: 50
+        appearance {
+            parentEntry: @home
+        }
+        execution {
+            sequence: 30
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+    )
+
+)

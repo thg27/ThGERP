@@ -1,0 +1,94 @@
+page 100 (
+    name: Look Up Values
+    alias: LOOK-UP-VALUES
+    title: Look Up Values
+    pageGroup: @administration
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @administration-rights
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Look Up Values
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 5
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                t-BreadcrumbRegion--useRegionTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region look-up-values (
+        name: Look Up Values
+        type: list
+        source {
+            list: @admin-lookup-values
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+        }
+        componentAppearance {
+            listTemplate: @/media-list
+            templateOptions: [
+                #DEFAULT#
+                t-MediaList--showBadges
+            ]
+        }
+    )
+
+    button up (
+        buttonName: UP
+        label: Zurück zur Startseite
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: up
+        }
+        appearance {
+            buttonTemplate: @/icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+            icon: fa-arrow-up
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 1
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)

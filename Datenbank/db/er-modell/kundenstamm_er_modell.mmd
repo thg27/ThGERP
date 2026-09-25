@@ -1,0 +1,375 @@
+erDiagram
+  KUND_KUNDENGRUPPEN ||--o{ KUND_KUNDEN : ""
+  KUND_KUNDEN ||--o{ KUND_KUNDEN_BRANCHEN : "in Branche"
+  KUND_BRANCHEN ||--o{ KUND_KUNDEN_BRANCHEN : ""
+  KUND_BRANCHEN ||--o{ KUND_UNTERKATEGORIEN : hat
+  KUND_KUNDEN_BRANCHEN ||--o{ KUND_KUNDEN_UNTERKATEGORIEN : ""
+  KUND_UNTERKATEGORIEN ||--o{ KUND_KUNDEN_UNTERKATEGORIEN : ""
+  KUND_ABTEILUNGEN ||--o{ KUND_ANSPRECHPARTNER : ""
+  KUND_FUNKTIONEN ||--o{ KUND_ANSPRECHPARTNER : ""
+  KUND_KUNDEN ||--o{ KUND_KUNDEN : "ist Mutter von"
+  KUND_KUNDEN ||--|{ KUND_STANDORTE : hat
+  KUND_KUNDEN ||--o{ KUND_KUNDEN_MITARBEITER : "wird betreut"
+  ALLG_MITARBEITER ||--o{ KUND_KUNDEN_MITARBEITER : betreut
+  KUND_BETREUUNGSROLLEN ||--o{ KUND_KUNDEN_MITARBEITER : "in Rolle"
+  ALLG_ADRESSEN ||--o{ KUND_STANDORTE : "liegt an"
+  ALLG_ADRESSREGISTER |o--o{ ALLG_ADRESSEN : Quelle
+  ALLG_LAENDER ||--o{ ALLG_ADRESSEN : ""
+  ALLG_LAENDER ||--o{ ALLG_ADRESSREGISTER : ""
+  KUND_STANDORTE ||--o{ KUND_ANSPRECHPARTNER : hat
+  KUND_STANDORTE ||--o{ KUND_STANDORT_KOMMUNIKATION : hat
+  KUND_ANSPRECHPARTNER ||--o{ KUND_ANSPRECHPARTNER_KOMMUNIKATION : hat
+  KUND_RECHTSFORMEN ||--o{ KUND_KUNDEN : ""
+  KUND_STANDORT_TYPEN ||--o{ KUND_STANDORTE : ""
+  ALLG_ZAHLUNGSBEDINGUNGEN ||--o{ KUND_KUNDEN : ""
+  ALLG_MITARBEITER ||--o{ ALLG_MITARBEITER_KOMMUNIKATION : hat
+  ALLG_KOMMUNIKATIONSARTEN ||--o{ ALLG_MITARBEITER_KOMMUNIKATION : ""
+  ALLG_KOMMUNIKATIONSARTEN ||--o{ KUND_STANDORT_KOMMUNIKATION : ""
+  ALLG_KOMMUNIKATIONSARTEN ||--o{ KUND_ANSPRECHPARTNER_KOMMUNIKATION : ""
+  KUND_KUNDEN {
+    number KUND_ID PK
+    number KUND_PARENT_KUND_ID FK
+    number KUND_RE_KUND_ID FK "Rechnungsempf."
+    number KUND_RFRM_ID FK
+    number KUND_ZBED_ID FK
+    number KUND_KGRP_ID FK "Kundengruppe"
+    varchar2 KUND_NUMMER UK "6-stellig automatisch"
+    varchar2 KUND_TYP "FIRMA oder PRIVAT"
+    varchar2 KUND_FIRMENNAME
+    varchar2 KUND_ANREDE
+    varchar2 KUND_VORNAME
+    varchar2 KUND_NACHNAME
+    varchar2 KUND_UID_NUMMER
+    varchar2 KUND_FIRMENBUCHNR
+    varchar2 KUND_EMAIL_RECHNUNG
+    number KUND_KREDITLIMIT
+    varchar2 KUND_STATUS "AKTIV oder INAKTIV"
+    date KUND_KUNDE_SEIT
+    date KUND_DSGVO_MARKETING_AM
+    varchar2 KUND_KURZNAME UK "Suchbegriff"
+    varchar2 KUND_NAMENSZUSATZ
+    varchar2 KUND_SPRACHE "de oder en"
+    varchar2 KUND_UNTERNEHMENSGROESSE "KU K M G"
+    varchar2 KUND_MITARBEITER_ANZAHL
+    varchar2 KUND_BUCHHALTUNGSNR
+    varchar2 KUND_ZAHLUNGSBED_TEXT
+    varchar2 KUND_LIEFERBEDINGUNG
+    varchar2 KUND_RABATT_TEXT
+    clob KUND_BEMERKUNG
+    number KUND_ALT_ID UK "Altsystem"
+    number KUND_ALT_SI_ID "Altsystem SI"
+    timestamp KUND_CREATED_ON "Audit"
+    varchar2 KUND_CREATED_BY "Audit"
+    timestamp KUND_UPDATED_ON "Audit"
+    varchar2 KUND_UPDATED_BY "Audit"
+    number KUND_ROW_VERSION "Audit"
+  }
+  KUND_KUNDEN_MITARBEITER {
+    number KMIT_ID PK
+    number KMIT_KUND_ID FK
+    number KMIT_MITA_ID FK
+    number KMIT_BROL_ID FK
+    varchar2 KMIT_IST_HAUPTVERANTW "Y oder N"
+    date KMIT_GUELTIG_VON
+    date KMIT_GUELTIG_BIS
+    varchar2 KMIT_BEMERKUNG
+    timestamp KMIT_CREATED_ON "Audit"
+    varchar2 KMIT_CREATED_BY "Audit"
+    timestamp KMIT_UPDATED_ON "Audit"
+    varchar2 KMIT_UPDATED_BY "Audit"
+    number KMIT_ROW_VERSION "Audit"
+  }
+  KUND_BETREUUNGSROLLEN {
+    number BROL_ID PK
+    varchar2 BROL_CODE UK "SB PL AD BH"
+    varchar2 BROL_BEZEICHNUNG
+    number BROL_SORTIERUNG
+    timestamp BROL_CREATED_ON "Audit"
+    varchar2 BROL_CREATED_BY "Audit"
+    timestamp BROL_UPDATED_ON "Audit"
+    varchar2 BROL_UPDATED_BY "Audit"
+    number BROL_ROW_VERSION "Audit"
+  }
+  KUND_STANDORTE {
+    number KSTO_ID PK
+    number KSTO_KUND_ID FK
+    number KSTO_STYP_ID FK
+    number KSTO_ADRE_ID FK
+    varchar2 KSTO_BEZEICHNUNG
+    varchar2 KSTO_IST_HAUPTSITZ "Y oder N"
+    varchar2 KSTO_IST_RECHNUNGSADR "Y oder N"
+    varchar2 KSTO_IST_LIEFERADR "Y oder N"
+    date KSTO_GUELTIG_VON
+    date KSTO_GUELTIG_BIS
+    timestamp KSTO_CREATED_ON "Audit"
+    varchar2 KSTO_CREATED_BY "Audit"
+    timestamp KSTO_UPDATED_ON "Audit"
+    varchar2 KSTO_UPDATED_BY "Audit"
+    number KSTO_ROW_VERSION "Audit"
+  }
+  KUND_STANDORT_KOMMUNIKATION {
+    number SKOM_ID PK
+    number SKOM_KSTO_ID FK "Standort"
+    number SKOM_KART_ID FK
+    varchar2 SKOM_WERT "Adresse oder Nummer"
+    varchar2 SKOM_BEZEICHNUNG "z.B. Buero, Zentrale"
+    varchar2 SKOM_IST_BEVORZUGT "Y oder N"
+    timestamp SKOM_CREATED_ON "Audit"
+    varchar2 SKOM_CREATED_BY "Audit"
+    timestamp SKOM_UPDATED_ON "Audit"
+    varchar2 SKOM_UPDATED_BY "Audit"
+    number SKOM_ROW_VERSION "Audit"
+  }
+  KUND_ANSPRECHPARTNER {
+    number ANSP_ID PK
+    number ANSP_KSTO_ID FK
+    number ANSP_ABTE_ID FK "Abteilung"
+    number ANSP_FUNK_ID FK "Funktion"
+    varchar2 ANSP_ANREDE
+    varchar2 ANSP_TITEL
+    varchar2 ANSP_VORNAME
+    varchar2 ANSP_NACHNAME
+    varchar2 ANSP_FUNKTION
+    varchar2 ANSP_IST_HAUPTKONTAKT "Y oder N"
+    varchar2 ANSP_DURCHWAHL
+    varchar2 ANSP_BEWERTUNG "A B C U X"
+    date ANSP_GEBURTSDATUM
+    varchar2 ANSP_IST_INFOMAIL "Y oder N"
+    date ANSP_INFOMAIL_AM
+    varchar2 ANSP_BEMERKUNG
+    number ANSP_ALT_ID UK "Altsystem"
+    timestamp ANSP_CREATED_ON "Audit"
+    varchar2 ANSP_CREATED_BY "Audit"
+    timestamp ANSP_UPDATED_ON "Audit"
+    varchar2 ANSP_UPDATED_BY "Audit"
+    number ANSP_ROW_VERSION "Audit"
+  }
+  KUND_ANSPRECHPARTNER_KOMMUNIKATION {
+    number AKOM_ID PK
+    number AKOM_ANSP_ID FK "Ansprechpartner"
+    number AKOM_KART_ID FK
+    varchar2 AKOM_WERT "Adresse oder Nummer"
+    varchar2 AKOM_BEZEICHNUNG "z.B. Buero, Zentrale"
+    varchar2 AKOM_IST_BEVORZUGT "Y oder N"
+    timestamp AKOM_CREATED_ON "Audit"
+    varchar2 AKOM_CREATED_BY "Audit"
+    timestamp AKOM_UPDATED_ON "Audit"
+    varchar2 AKOM_UPDATED_BY "Audit"
+    number AKOM_ROW_VERSION "Audit"
+  }
+  KUND_RECHTSFORMEN {
+    number RFRM_ID PK
+    varchar2 RFRM_KURZ UK "GmbH KG eU"
+    varchar2 RFRM_BEZEICHNUNG
+    timestamp RFRM_CREATED_ON "Audit"
+    varchar2 RFRM_CREATED_BY "Audit"
+    timestamp RFRM_UPDATED_ON "Audit"
+    varchar2 RFRM_UPDATED_BY "Audit"
+    number RFRM_ROW_VERSION "Audit"
+  }
+  KUND_STANDORT_TYPEN {
+    number STYP_ID PK
+    varchar2 STYP_BEZEICHNUNG UK "Hauptsitz Filiale Lager"
+    timestamp STYP_CREATED_ON "Audit"
+    varchar2 STYP_CREATED_BY "Audit"
+    timestamp STYP_UPDATED_ON "Audit"
+    varchar2 STYP_UPDATED_BY "Audit"
+    number STYP_ROW_VERSION "Audit"
+  }
+  ALLG_ADRESSEN {
+    number ADRE_ID PK
+    varchar2 ADRE_AREG_ADRCD FK "nur bei REGISTER"
+    varchar2 ADRE_LAND_CODE FK
+    varchar2 ADRE_QUELLE "REGISTER MANUELL MIGRATION"
+    varchar2 ADRE_STRASSE
+    varchar2 ADRE_HAUSNUMMER
+    varchar2 ADRE_ZUSATZ "Stiege Tuer Top"
+    varchar2 ADRE_PLZ
+    varchar2 ADRE_ORT
+    varchar2 ADRE_REGION "fuer Ausland"
+    number ADRE_LAT
+    number ADRE_LON
+    date ADRE_REG_STICHTAG
+    timestamp ADRE_CREATED_ON "Audit"
+    varchar2 ADRE_CREATED_BY "Audit"
+    timestamp ADRE_UPDATED_ON "Audit"
+    varchar2 ADRE_UPDATED_BY "Audit"
+    number ADRE_ROW_VERSION "Audit"
+  }
+  ALLG_ADRESSREGISTER {
+    varchar2 AREG_ADRCD PK "BEV Adresscode"
+    varchar2 AREG_LAND_CODE FK
+    varchar2 AREG_GKZ "Gemeindekennziffer"
+    varchar2 AREG_GEMEINDE
+    varchar2 AREG_ORTSCHAFT
+    varchar2 AREG_PLZ
+    varchar2 AREG_STRASSE
+    varchar2 AREG_HAUSNUMMER
+    number AREG_LAT
+    number AREG_LON
+    varchar2 AREG_IST_AKTIV "Y oder N"
+    date AREG_STICHTAG
+    timestamp AREG_CREATED_ON "Audit"
+    varchar2 AREG_CREATED_BY "Audit"
+    timestamp AREG_UPDATED_ON "Audit"
+    varchar2 AREG_UPDATED_BY "Audit"
+    number AREG_ROW_VERSION "Audit"
+  }
+  ALLG_LAENDER {
+    varchar2 LAND_CODE PK "ISO AT DE"
+    varchar2 LAND_BEZEICHNUNG
+    varchar2 LAND_IST_EU "Y oder N"
+    varchar2 LAND_HAT_REGISTER "Y oder N"
+    timestamp LAND_CREATED_ON "Audit"
+    varchar2 LAND_CREATED_BY "Audit"
+    timestamp LAND_UPDATED_ON "Audit"
+    varchar2 LAND_UPDATED_BY "Audit"
+    number LAND_ROW_VERSION "Audit"
+  }
+  ALLG_ZAHLUNGSBEDINGUNGEN {
+    number ZBED_ID PK
+    varchar2 ZBED_BEZEICHNUNG UK
+    number ZBED_ZIEL_TAGE
+    number ZBED_SKONTO_TAGE
+    number ZBED_SKONTO_PROZENT
+    timestamp ZBED_CREATED_ON "Audit"
+    varchar2 ZBED_CREATED_BY "Audit"
+    timestamp ZBED_UPDATED_ON "Audit"
+    varchar2 ZBED_UPDATED_BY "Audit"
+    number ZBED_ROW_VERSION "Audit"
+  }
+  ALLG_MITARBEITER {
+    number MITA_ID PK
+    varchar2 MITA_KUERZEL UK
+    varchar2 MITA_NAME
+    timestamp MITA_CREATED_ON "Audit"
+    varchar2 MITA_CREATED_BY "Audit"
+    timestamp MITA_UPDATED_ON "Audit"
+    varchar2 MITA_UPDATED_BY "Audit"
+    number MITA_ROW_VERSION "Audit"
+  }
+  ALLG_MITARBEITER_KOMMUNIKATION {
+    number MKOM_ID PK
+    number MKOM_MITA_ID FK "Mitarbeiter"
+    number MKOM_KART_ID FK
+    varchar2 MKOM_WERT "Adresse oder Nummer"
+    varchar2 MKOM_BEZEICHNUNG "z.B. Buero, Zentrale"
+    varchar2 MKOM_IST_BEVORZUGT "Y oder N"
+    timestamp MKOM_CREATED_ON "Audit"
+    varchar2 MKOM_CREATED_BY "Audit"
+    timestamp MKOM_UPDATED_ON "Audit"
+    varchar2 MKOM_UPDATED_BY "Audit"
+    number MKOM_ROW_VERSION "Audit"
+  }
+  ALLG_KOMMUNIKATIONSARTEN {
+    number KART_ID PK
+    varchar2 KART_CODE UK "EMAIL TEL MOBIL FAX WEB"
+    varchar2 KART_BEZEICHNUNG
+    number KART_SORTIERUNG
+    timestamp KART_CREATED_ON "Audit"
+    varchar2 KART_CREATED_BY "Audit"
+    timestamp KART_UPDATED_ON "Audit"
+    varchar2 KART_UPDATED_BY "Audit"
+    number KART_ROW_VERSION "Audit"
+  }
+  ADMIN_APPLIKATIONEN {
+    number APPL_ID PK
+    number APPL_APEX_APP_ID UK "z.B. 10010"
+    varchar2 APPL_APEX_ALIAS UK "z.B. THG-KUNDEN"
+    varchar2 APPL_BEZEICHNUNG "Kacheltitel"
+    varchar2 APPL_BESCHREIBUNG
+    varchar2 APPL_ZIELSEITE "Standard HOME"
+    varchar2 APPL_ICON "fa-..."
+    number APPL_SORTIERUNG
+    varchar2 APPL_IST_AKTIV "Y oder N"
+    timestamp APPL_CREATED_ON "Audit"
+    varchar2 APPL_CREATED_BY "Audit"
+    timestamp APPL_UPDATED_ON "Audit"
+    varchar2 APPL_UPDATED_BY "Audit"
+    number APPL_ROW_VERSION "Audit"
+  }
+  KUND_KUNDENGRUPPEN {
+    number KGRP_ID PK
+    varchar2 KGRP_CODE UK "OEM WV EK"
+    varchar2 KGRP_BEZEICHNUNG
+    number KGRP_SORTIERUNG
+    varchar2 KGRP_IST_AKTIV "Y oder N"
+    timestamp KGRP_CREATED_ON "Audit"
+    varchar2 KGRP_CREATED_BY "Audit"
+    timestamp KGRP_UPDATED_ON "Audit"
+    varchar2 KGRP_UPDATED_BY "Audit"
+    number KGRP_ROW_VERSION "Audit"
+  }
+  KUND_BRANCHEN {
+    number BRAN_ID PK
+    varchar2 BRAN_BEZEICHNUNG UK
+    number BRAN_BEWERTUNG "1 bis 5"
+    number BRAN_SORTIERUNG
+    varchar2 BRAN_IST_AKTIV "Y oder N"
+    number BRAN_ALT_ID UK "Altsystem"
+    timestamp BRAN_CREATED_ON "Audit"
+    varchar2 BRAN_CREATED_BY "Audit"
+    timestamp BRAN_UPDATED_ON "Audit"
+    varchar2 BRAN_UPDATED_BY "Audit"
+    number BRAN_ROW_VERSION "Audit"
+  }
+  KUND_UNTERKATEGORIEN {
+    number UKAT_ID PK
+    number UKAT_BRAN_ID FK
+    varchar2 UKAT_BEZEICHNUNG UK "je Branche"
+    number UKAT_BEWERTUNG "1 bis 5"
+    number UKAT_SORTIERUNG
+    varchar2 UKAT_IST_AKTIV "Y oder N"
+    number UKAT_ALT_ID UK "Altsystem"
+    timestamp UKAT_CREATED_ON "Audit"
+    varchar2 UKAT_CREATED_BY "Audit"
+    timestamp UKAT_UPDATED_ON "Audit"
+    varchar2 UKAT_UPDATED_BY "Audit"
+    number UKAT_ROW_VERSION "Audit"
+  }
+  KUND_KUNDEN_BRANCHEN {
+    number KBRA_ID PK
+    number KBRA_KUND_ID FK
+    number KBRA_BRAN_ID FK
+    timestamp KBRA_CREATED_ON "Audit"
+    varchar2 KBRA_CREATED_BY "Audit"
+    timestamp KBRA_UPDATED_ON "Audit"
+    varchar2 KBRA_UPDATED_BY "Audit"
+    number KBRA_ROW_VERSION "Audit"
+  }
+  KUND_KUNDEN_UNTERKATEGORIEN {
+    number KUKA_ID PK
+    number KUKA_KBRA_ID FK
+    number KUKA_UKAT_ID FK "zur Branche passend"
+    timestamp KUKA_CREATED_ON "Audit"
+    varchar2 KUKA_CREATED_BY "Audit"
+    timestamp KUKA_UPDATED_ON "Audit"
+    varchar2 KUKA_UPDATED_BY "Audit"
+    number KUKA_ROW_VERSION "Audit"
+  }
+  KUND_ABTEILUNGEN {
+    number ABTE_ID PK
+    varchar2 ABTE_CODE UK
+    varchar2 ABTE_BEZEICHNUNG
+    number ABTE_SORTIERUNG
+    varchar2 ABTE_IST_AKTIV "Y oder N"
+    number ABTE_ALT_ID UK "Altsystem"
+    timestamp ABTE_CREATED_ON "Audit"
+    varchar2 ABTE_CREATED_BY "Audit"
+    timestamp ABTE_UPDATED_ON "Audit"
+    varchar2 ABTE_UPDATED_BY "Audit"
+    number ABTE_ROW_VERSION "Audit"
+  }
+  KUND_FUNKTIONEN {
+    number FUNK_ID PK
+    varchar2 FUNK_CODE UK
+    varchar2 FUNK_BEZEICHNUNG
+    number FUNK_SORTIERUNG
+    varchar2 FUNK_IST_AKTIV "Y oder N"
+    number FUNK_ALT_ID UK "Altsystem"
+    timestamp FUNK_CREATED_ON "Audit"
+    varchar2 FUNK_CREATED_BY "Audit"
+    timestamp FUNK_UPDATED_ON "Audit"
+    varchar2 FUNK_UPDATED_BY "Audit"
+    number FUNK_ROW_VERSION "Audit"
+  }
