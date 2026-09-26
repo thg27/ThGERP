@@ -1365,7 +1365,7 @@ def breadcrumbs():
     )
 
     entry artikel-bearbeiten (
-        name: &P11_TITEL.
+        name: Artikel bearbeiten
         pageNumber: 11
         execution {
             sequence: 30

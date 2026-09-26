@@ -38,3 +38,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 ## Git
 - Repository: https://github.com/thg27/ThGERP (Branch `main`)
 - Nach Änderungen committen, Commit-Nachricht beschreibt den Inhalt
+
+## Wissensdatenbank
+- `Wissensdatenbank/` sammelt Praxiswissen (Oracle SQL, PL/SQL, APEX, SQLcl, ORDS, Git/GitHub, Datenmodell, Troubleshooting); Aufbau und Konventionen in `Wissensdatenbank/README.md`.
+- Laufend pflegen: Wenn bei der Arbeit eine Lösung, ein Muster, ein Stolperstein oder eine Fehlerursache gefunden wird, die wieder vorkommen kann, einen Eintrag anlegen oder den bestehenden aktualisieren und im Index (`README.md` des Bereichs) eintragen. Neue Bereiche bei Bedarf ergänzen.
+- Vor der Lösung eines Problems zuerst in der Wissensdatenbank nachsehen.
