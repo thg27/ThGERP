@@ -117,6 +117,25 @@ list admin-konfiguration (
         }
     )
 
+    entry mandanten (
+        label: Mandanten
+        icon {
+            imageIconCssClasses: fa-building-o
+        }
+        layout {
+            sequence: 20
+        }
+        link {
+            target: {
+                page: 20
+                clearCache: 20
+            }
+        }
+        userDefinedAttributes {
+            1: Firmen (ThG - edv GmbH, Thomas Geßlbauer GmbH): Firmendaten, Adresse, Bankverbindungen, Kommunikation für Briefkopf und Rechnung
+        }
+    )
+
 )
 
 list admin-monitoring (

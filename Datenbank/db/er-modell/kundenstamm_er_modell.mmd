@@ -24,6 +24,10 @@ erDiagram
   ALLG_ZAHLUNGSBEDINGUNGEN ||--o{ KUND_KUNDEN : ""
   ALLG_MITARBEITER ||--o{ ALLG_MITARBEITER_KOMMUNIKATION : hat
   ADMIN_MANDANTEN |o--o{ ALLG_MITARBEITER : "Standard-Mandant"
+  ALLG_ADRESSEN |o--o{ ADMIN_MANDANTEN : "Firmenadresse"
+  ADMIN_MANDANTEN ||--o{ ADMIN_MANDANT_BANKVERBINDUNGEN : hat
+  ADMIN_MANDANTEN ||--o{ ADMIN_MANDANT_KOMMUNIKATION : hat
+  ALLG_KOMMUNIKATIONSARTEN ||--o{ ADMIN_MANDANT_KOMMUNIKATION : ""
   ALLG_KOMMUNIKATIONSARTEN ||--o{ ALLG_MITARBEITER_KOMMUNIKATION : ""
   ALLG_KOMMUNIKATIONSARTEN ||--o{ KUND_STANDORT_KOMMUNIKATION : ""
   ALLG_KOMMUNIKATIONSARTEN ||--o{ KUND_ANSPRECHPARTNER_KOMMUNIKATION : ""
@@ -293,12 +297,17 @@ erDiagram
   }
   ADMIN_MANDANTEN {
     number MAND_ID PK
+    number MAND_ADRE_ID FK "Firmenadresse"
     varchar2 MAND_CODE UK "EDV TG"
     varchar2 MAND_NAME
     varchar2 MAND_KURZNAME
     varchar2 MAND_LOGO_DATEI "Workspace-Datei"
     number MAND_SORTIERUNG
     varchar2 MAND_IST_AKTIV "Y oder N"
+    varchar2 MAND_UID_NUMMER
+    varchar2 MAND_FIRMENBUCHNR
+    varchar2 MAND_FIRMENBUCHGERICHT
+    varchar2 MAND_FIRMENSITZ
     timestamp MAND_CREATED_ON "Audit"
     varchar2 MAND_CREATED_BY "Audit"
     timestamp MAND_UPDATED_ON "Audit"
@@ -389,4 +398,32 @@ erDiagram
     timestamp FUNK_UPDATED_ON "Audit"
     varchar2 FUNK_UPDATED_BY "Audit"
     number FUNK_ROW_VERSION "Audit"
+  }
+  ADMIN_MANDANT_BANKVERBINDUNGEN {
+    number MBNK_ID PK
+    number MBNK_MAND_ID FK "Mandant"
+    varchar2 MBNK_IBAN UK
+    varchar2 MBNK_BANK
+    varchar2 MBNK_BIC
+    varchar2 MBNK_IST_BEVORZUGT "hoechstens 1 je Mandant"
+    varchar2 MBNK_IST_AKTIV "Y oder N"
+    number MBNK_SORTIERUNG
+    timestamp MBNK_CREATED_ON "Audit"
+    varchar2 MBNK_CREATED_BY "Audit"
+    timestamp MBNK_UPDATED_ON "Audit"
+    varchar2 MBNK_UPDATED_BY "Audit"
+    number MBNK_ROW_VERSION "Audit"
+  }
+  ADMIN_MANDANT_KOMMUNIKATION {
+    number MAKO_ID PK
+    number MAKO_MAND_ID FK "Mandant"
+    number MAKO_KART_ID FK "Kommunikationsart"
+    varchar2 MAKO_WERT
+    varchar2 MAKO_BEZEICHNUNG
+    varchar2 MAKO_IST_BEVORZUGT "hoechstens 1 je Art"
+    timestamp MAKO_CREATED_ON "Audit"
+    varchar2 MAKO_CREATED_BY "Audit"
+    timestamp MAKO_UPDATED_ON "Audit"
+    varchar2 MAKO_UPDATED_BY "Audit"
+    number MAKO_ROW_VERSION "Audit"
   }

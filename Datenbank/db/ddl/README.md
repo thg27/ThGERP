@@ -8,7 +8,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 
 | Datei | Inhalt |
 |---|---|
-| 00_install.sql | ruft 01–14 auf, bricht bei Fehler ab |
+| 00_install.sql | ruft 01–18 auf (ohne 14), bricht bei Fehler ab |
 | 01_tabellen.sql | Tabellen, PK/UK/Check-Constraints |
 | 02_fremdschluessel.sql | Fremdschlüssel + FK-Indizes |
 | 03_indizes.sql | fachliche Unique-Indizes, Suchindizes |
@@ -25,6 +25,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 15_kundenstammblatt.sql | Package AS_PDF (lib/as_pdf, MIT) und KUND_STAMMBLATT: Kundenstammblatt als PDF (`KUND_STAMMBLATT.pdf(kund_id)`), genutzt von App 20020 Seite 12; wiederholbar |
 | 16_rechtsformen_ausland.sql | Ausländische Rechtsformen der Altdaten (d.o.o., d.d., s.p., s.r.o., a.s., Kft., Zrt., Sp. z o.o., S.R.L., S.p.A., S.A., Ltd., eGen); wiederholbar |
 | 17_mandanten.sql | ADMIN_MANDANTEN (THG-EDV GmbH, Thomas Geßlbauer GmbH) und in ALLG_MITARBEITER Benutzername (Login) und Standard-Mandant; wiederholbar |
+| 18_mandanten_firmendaten.sql | Firmendaten der Mandanten (Adresse, UID, Firmenbuch), ADMIN_MANDANT_BANKVERBINDUNGEN, ADMIN_MANDANT_KOMMUNIKATION; Daten aus den Ausgangsrechnungen; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

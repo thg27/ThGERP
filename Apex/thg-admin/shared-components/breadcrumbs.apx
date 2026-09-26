@@ -30,6 +30,22 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry mandanten (
+        name: Mandanten
+        pageNumber: 20
+        appearance {
+            parentEntry: @home
+        }
+        execution {
+            sequence: 25
+        }
+        link {
+            target: {
+                page: 20
+            }
+        }
+    )
+
     entry aktivitaetsprotokoll (
         name: Aktivitätsprotokoll
         pageNumber: 50

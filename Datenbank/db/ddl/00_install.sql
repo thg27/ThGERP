@@ -25,5 +25,6 @@ whenever sqlerror exit failure rollback
 @@15_kundenstammblatt.sql
 @@16_rechtsformen_ausland.sql
 @@17_mandanten.sql
+@@18_mandanten_firmendaten.sql
 
 prompt Installation abgeschlossen.

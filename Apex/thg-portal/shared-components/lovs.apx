@@ -173,3 +173,40 @@ lov lov-branchen (
         display: D
     }
 )
+
+lov lov-kommunikationsarten (
+    name: LOV_KOMMUNIKATIONSARTEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select KART_BEZEICHNUNG as d,
+                   KART_ID as r
+              from ALLG_KOMMUNIKATIONSARTEN
+             order by KART_SORTIERUNG, KART_BEZEICHNUNG
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-laender (
+    name: LOV_LAENDER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select LAND_BEZEICHNUNG || ' (' || LAND_CODE || ')' as d,
+                   LAND_CODE as r
+              from ALLG_LAENDER
+             where LAND_CODE <> 'XX'
+             order by case LAND_CODE when 'AT' then 0 when 'DE' then 1 when 'CH' then 2 else 3 end, LAND_BEZEICHNUNG
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)

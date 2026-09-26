@@ -29,6 +29,8 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | KUND | KUND_FUNKTIONEN | FUNK | Funktionen der Ansprechpartner |
 | ADMIN | ADMIN_APPLIKATIONEN | APPL | APEX-Applikationen (Module) für die Portal-Startseite |
 | ADMIN | ADMIN_MANDANTEN | MAND | Mandanten (THG-EDV GmbH, Thomas Geßlbauer GmbH) |
+| ADMIN | ADMIN_MANDANT_BANKVERBINDUNGEN | MBNK | Bankverbindungen der Mandanten (Rechnungsfuß) |
+| ADMIN | ADMIN_MANDANT_KOMMUNIKATION | MAKO | Kommunikationsdaten der Mandanten (Briefkopf) |
 
 ## Gruppencodes
 

@@ -26,6 +26,8 @@ drop table ALLG_ADRESSEN cascade constraints purge;
 drop table ALLG_ADRESSREGISTER cascade constraints purge;
 drop table ALLG_MITARBEITER_KOMMUNIKATION cascade constraints purge;
 drop table ALLG_MITARBEITER cascade constraints purge;
+drop table ADMIN_MANDANT_KOMMUNIKATION cascade constraints purge;
+drop table ADMIN_MANDANT_BANKVERBINDUNGEN cascade constraints purge;
 drop table ADMIN_MANDANTEN cascade constraints purge;
 drop table ALLG_KOMMUNIKATIONSARTEN cascade constraints purge;
 drop table ALLG_ZAHLUNGSBEDINGUNGEN cascade constraints purge;

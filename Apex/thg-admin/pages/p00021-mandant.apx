@@ -1,0 +1,1214 @@
+page 21 (
+    name: Mandant
+    alias: MANDANT
+    title: Mandant
+    pageGroup: @administration
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1000
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        authorizationScheme: @administration-rights
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 90
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region mandant (
+        name: Mandant
+        type: form
+        source {
+            location: localDatabase
+            tableName: ADMIN_MANDANTEN
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+            ]
+        }
+    )
+
+    region allgemein (
+        name: Allgemein
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @mandant
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region firmenbuch (
+        name: Adresse und Firmenbuch
+        type: staticContent
+        layout {
+            sequence: 20
+            parentRegion: @mandant
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P21_MAND_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @mandant
+            slot: regionBody
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P21_MAND_ADRE_ID (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @mandant
+            slot: regionBody
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_ADRE_ID
+            dataType: number
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P21_MAND_CODE (
+        type: textField
+        label {
+            label: Code (z.B. EDV, TG)
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_CODE
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 10
+        }
+    )
+
+    pageItem P21_MAND_NAME (
+        type: textField
+        label {
+            label: Firmenname
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 9
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_NAME
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 100
+        }
+    )
+
+    pageItem P21_MAND_KURZNAME (
+        type: textField
+        label {
+            label: Kurzname (Banner)
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_KURZNAME
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 30
+        }
+    )
+
+    pageItem P21_MAND_LOGO_DATEI (
+        type: textField
+        label {
+            label: Logo (Workspace-Datei, z.B. thg-logo-edv.png)
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_LOGO_DATEI
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 255
+        }
+    )
+
+    pageItem P21_MAND_SORTIERUNG (
+        type: numberField
+        label {
+            label: Sortierung
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_SORTIERUNG
+            dataType: number
+        }
+    )
+
+    pageItem P21_MAND_IST_AKTIV (
+        type: switch
+        label {
+            label: Aktiv (auswählbar)
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_IST_AKTIV
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
+    pageItem P21_ADRE_STRASSE (
+        type: textField
+        label {
+            label: Straße
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @firmenbuch
+            slot: regionBody
+            columnSpan: 9
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P21_ADRE_HAUSNUMMER (
+        type: textField
+        label {
+            label: Hausnummer
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @firmenbuch
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            maxLength: 50
+        }
+    )
+
+    pageItem P21_ADRE_PLZ (
+        type: textField
+        label {
+            label: PLZ
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @firmenbuch
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            maxLength: 10
+        }
+    )
+
+    pageItem P21_ADRE_ORT (
+        type: textField
+        label {
+            label: Ort
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @firmenbuch
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            maxLength: 100
+        }
+    )
+
+    pageItem P21_ADRE_LAND_CODE (
+        type: selectList
+        label {
+            label: Land
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @firmenbuch
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-laender
+            displayNullValue: false
+            displayExtraValues: false
+        }
+        default {
+            type: static
+            staticValue: AT
+        }
+    )
+
+    pageItem P21_MAND_UID_NUMMER (
+        type: textField
+        label {
+            label: UID-Nummer
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @firmenbuch
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_UID_NUMMER
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 20
+        }
+    )
+
+    pageItem P21_MAND_FIRMENBUCHNR (
+        type: textField
+        label {
+            label: Firmenbuchnummer
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @firmenbuch
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_FIRMENBUCHNR
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 20
+        }
+    )
+
+    pageItem P21_MAND_FIRMENBUCHGERICHT (
+        type: textField
+        label {
+            label: Firmenbuchgericht
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @firmenbuch
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_FIRMENBUCHGERICHT
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 100
+        }
+    )
+
+    pageItem P21_MAND_FIRMENSITZ (
+        type: textField
+        label {
+            label: Firmensitz
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @firmenbuch
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mandant
+            column: MAND_FIRMENSITZ
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 100
+        }
+    )
+
+    region bankverbindungen (
+        name: Bankverbindungen
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select MBNK_ID, MBNK_MAND_ID, MBNK_BANK, MBNK_IBAN, MBNK_BIC,
+                       MBNK_IST_BEVORZUGT, MBNK_IST_AKTIV, MBNK_SORTIERUNG
+                  from ADMIN_MANDANT_BANKVERBINDUNGEN
+                 where MBNK_MAND_ID = :P21_MAND_ID
+                 order by MBNK_SORTIERUNG, MBNK_BANK
+                ```
+            pageItemsToSubmit: [
+                P21_MAND_ID
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        messages {
+            whenNoDataFound: Keine Bankverbindungen erfasst.
+        }
+        toolbar {
+            controls: [
+                actionsMenu
+                saveButton
+            ]
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P21_MAND_ID
+        }
+
+        savedReport PRIMARY (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+        displayColumn (
+            column: @APEX$ROW_ACTION
+            layout {
+                sequence: 0
+            }
+        )
+        displayColumn (
+            column: @MBNK_ID
+            layout {
+                sequence: 1
+            }
+        )
+        displayColumn (
+            column: @MBNK_MAND_ID
+            layout {
+                sequence: 2
+            }
+        )
+        displayColumn (
+            column: @MBNK_BANK
+            layout {
+                sequence: 3
+            }
+        )
+        displayColumn (
+            column: @MBNK_IBAN
+            layout {
+                sequence: 4
+            }
+        )
+        displayColumn (
+            column: @MBNK_BIC
+            layout {
+                sequence: 5
+            }
+        )
+        displayColumn (
+            column: @MBNK_IST_BEVORZUGT
+            layout {
+                sequence: 6
+            }
+        )
+        displayColumn (
+            column: @MBNK_IST_AKTIV
+            layout {
+                sequence: 7
+            }
+        )
+        displayColumn (
+            column: @MBNK_SORTIERUNG
+            layout {
+                sequence: 8
+            }
+        )
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column MBNK_ID (
+            type: hidden
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: MBNK_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column MBNK_MAND_ID (
+            type: hidden
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: MBNK_MAND_ID
+                dataType: number
+            }
+            default {
+                type: item
+                item: P21_MAND_ID
+            }
+        )
+
+        column MBNK_BANK (
+            type: textField
+            heading {
+                heading: Bank
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: MBNK_BANK
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+                maxLength: 100
+            }
+        )
+
+        column MBNK_IBAN (
+            type: textField
+            heading {
+                heading: IBAN
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: MBNK_IBAN
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+                maxLength: 34
+            }
+        )
+
+        column MBNK_BIC (
+            type: textField
+            heading {
+                heading: BIC
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: MBNK_BIC
+                dataType: varchar2
+            }
+            validation {
+                maxLength: 11
+            }
+        )
+
+        column MBNK_IST_BEVORZUGT (
+            type: selectList
+            heading {
+                heading: Standard
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: MBNK_IST_BEVORZUGT
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ja-nein
+                displayNullValue: false
+                displayExtraValues: false
+            }
+            default {
+                type: static
+                staticValue: N
+            }
+        )
+
+        column MBNK_IST_AKTIV (
+            type: selectList
+            heading {
+                heading: Aktiv
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: MBNK_IST_AKTIV
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ja-nein
+                displayNullValue: false
+                displayExtraValues: false
+            }
+            default {
+                type: static
+                staticValue: Y
+            }
+        )
+
+        column MBNK_SORTIERUNG (
+            type: numberField
+            heading {
+                heading: Sortierung
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: MBNK_SORTIERUNG
+                dataType: number
+            }
+        )
+
+    )
+
+    region kommunikation (
+        name: Kommunikation
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select MAKO_ID, MAKO_MAND_ID, MAKO_KART_ID, MAKO_WERT, MAKO_BEZEICHNUNG, MAKO_IST_BEVORZUGT
+                  from ADMIN_MANDANT_KOMMUNIKATION
+                 where MAKO_MAND_ID = :P21_MAND_ID
+                ```
+            pageItemsToSubmit: [
+                P21_MAND_ID
+            ]
+        }
+        layout {
+            sequence: 40
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        messages {
+            whenNoDataFound: Keine Kommunikationsdaten erfasst.
+        }
+        toolbar {
+            controls: [
+                actionsMenu
+                saveButton
+            ]
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P21_MAND_ID
+        }
+
+        savedReport PRIMARY (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+        displayColumn (
+            column: @APEX$ROW_ACTION
+            layout {
+                sequence: 0
+            }
+        )
+        displayColumn (
+            column: @MAKO_ID
+            layout {
+                sequence: 1
+            }
+        )
+        displayColumn (
+            column: @MAKO_MAND_ID
+            layout {
+                sequence: 2
+            }
+        )
+        displayColumn (
+            column: @MAKO_KART_ID
+            layout {
+                sequence: 3
+            }
+        )
+        displayColumn (
+            column: @MAKO_WERT
+            layout {
+                sequence: 4
+            }
+        )
+        displayColumn (
+            column: @MAKO_BEZEICHNUNG
+            layout {
+                sequence: 5
+            }
+        )
+        displayColumn (
+            column: @MAKO_IST_BEVORZUGT
+            layout {
+                sequence: 6
+            }
+        )
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column MAKO_ID (
+            type: hidden
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: MAKO_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column MAKO_MAND_ID (
+            type: hidden
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: MAKO_MAND_ID
+                dataType: number
+            }
+            default {
+                type: item
+                item: P21_MAND_ID
+            }
+        )
+
+        column MAKO_KART_ID (
+            type: selectList
+            heading {
+                heading: Art
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: MAKO_KART_ID
+                dataType: number
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-kommunikationsarten
+                displayNullValue: false
+                displayExtraValues: false
+            }
+        )
+
+        column MAKO_WERT (
+            type: textField
+            heading {
+                heading: Wert
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: MAKO_WERT
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+                maxLength: 255
+            }
+        )
+
+        column MAKO_BEZEICHNUNG (
+            type: textField
+            heading {
+                heading: Bezeichnung
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: MAKO_BEZEICHNUNG
+                dataType: varchar2
+            }
+            validation {
+                maxLength: 100
+            }
+        )
+
+        column MAKO_IST_BEVORZUGT (
+            type: selectList
+            heading {
+                heading: Im Briefkopf
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: MAKO_IST_BEVORZUGT
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ja-nein
+                displayNullValue: false
+                displayExtraValues: false
+            }
+            default {
+                type: static
+                staticValue: Y
+            }
+        )
+
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Abbrechen
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P21_MAND_ID
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Anlegen
+        layout {
+            sequence: 40
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P21_MAND_ID
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process initialize-form-mandant (
+        name: Formular Mandant initialisieren
+        type: formInitialization
+        formRegion: @mandant
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process adresse-laden (
+        name: Adresse laden
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                for a in (select * from ALLG_ADRESSEN where ADRE_ID = :P21_MAND_ADRE_ID) loop
+                    :P21_ADRE_STRASSE    := a.ADRE_STRASSE;
+                    :P21_ADRE_HAUSNUMMER := a.ADRE_HAUSNUMMER;
+                    :P21_ADRE_PLZ        := a.ADRE_PLZ;
+                    :P21_ADRE_ORT        := a.ADRE_ORT;
+                    :P21_ADRE_LAND_CODE  := a.ADRE_LAND_CODE;
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P21_MAND_ADRE_ID
+        }
+    )
+
+    process adresse-speichern (
+        name: Adresse speichern
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Firmenadresse in ALLG_ADRESSEN anlegen bzw. aendern (vor dem Speichern des Mandanten).
+                -- Neue Adressen: MANUELL nur fuer Laender ohne Adressregister, sonst MIGRATION
+                -- (Adressregister AT noch nicht importiert; Trigger ADRE_BIU laesst MANUELL fuer AT nicht zu).
+                if :P21_MAND_ADRE_ID is not null then
+                    update ALLG_ADRESSEN
+                       set ADRE_STRASSE    = :P21_ADRE_STRASSE,
+                           ADRE_HAUSNUMMER = :P21_ADRE_HAUSNUMMER,
+                           ADRE_PLZ        = :P21_ADRE_PLZ,
+                           ADRE_ORT        = :P21_ADRE_ORT,
+                           ADRE_LAND_CODE  = :P21_ADRE_LAND_CODE
+                     where ADRE_ID = :P21_MAND_ADRE_ID;
+                elsif :P21_ADRE_ORT is not null then
+                    declare
+                        l_quelle ALLG_ADRESSEN.ADRE_QUELLE%type;
+                    begin
+                        select case LAND_HAT_REGISTER when 'Y' then 'MIGRATION' else 'MANUELL' end
+                          into l_quelle
+                          from ALLG_LAENDER
+                         where LAND_CODE = :P21_ADRE_LAND_CODE;
+                        insert into ALLG_ADRESSEN (ADRE_LAND_CODE, ADRE_QUELLE, ADRE_STRASSE, ADRE_HAUSNUMMER, ADRE_PLZ, ADRE_ORT)
+                        values (:P21_ADRE_LAND_CODE, l_quelle, :P21_ADRE_STRASSE, :P21_ADRE_HAUSNUMMER, :P21_ADRE_PLZ, :P21_ADRE_ORT)
+                        returning ADRE_ID into :P21_MAND_ADRE_ID;
+                    end;
+                end if;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    process process-form-mandant (
+        name: Formular Mandant verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @mandant
+        execution {
+            sequence: 10
+        }
+    )
+
+    process bankverbindungen-speichern (
+        name: Bankverbindungen speichern
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @bankverbindungen
+        execution {
+            sequence: 20
+        }
+    )
+
+    process kommunikation-speichern (
+        name: Kommunikation speichern
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @kommunikation
+        execution {
+            sequence: 30
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+)
