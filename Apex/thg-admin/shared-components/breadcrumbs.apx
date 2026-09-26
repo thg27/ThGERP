@@ -46,6 +46,22 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry mitarbeiter (
+        name: Mitarbeiter
+        pageNumber: 30
+        appearance {
+            parentEntry: @home
+        }
+        execution {
+            sequence: 27
+        }
+        link {
+            target: {
+                page: 30
+            }
+        }
+    )
+
     entry aktivitaetsprotokoll (
         name: Aktivitätsprotokoll
         pageNumber: 50

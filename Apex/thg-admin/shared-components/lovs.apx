@@ -86,3 +86,47 @@ lov lov-laender (
         display: D
     }
 )
+
+lov lov-apex-benutzer (
+    name: LOV_APEX_BENUTZER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select user_name || nvl2(email, ' (' || email || ')', null) as d,
+                   user_name as r
+              from apex_workspace_apex_users
+             where workspace_name = 'THGERP'
+             order by user_name
+            ```
+    }
+    subscription {
+        master: @/20000/lov-apex-benutzer
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-mandanten (
+    name: LOV_MANDANTEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select MAND_NAME as d,
+                   MAND_ID as r
+              from ADMIN_MANDANTEN
+             where MAND_IST_AKTIV = 'Y'
+             order by MAND_SORTIERUNG, MAND_NAME
+            ```
+    }
+    subscription {
+        master: @/20000/lov-mandanten
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)

@@ -1,0 +1,611 @@
+page 31 (
+    name: Mitarbeiter bearbeiten
+    alias: MITARBEITER-BEARBEITEN
+    title: Mitarbeiter
+    pageGroup: @administration
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 900
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: firstItemOnPage
+    }
+    security {
+        authorizationScheme: @administration-rights
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 90
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region mitarbeiter (
+        name: Mitarbeiter
+        type: form
+        source {
+            location: localDatabase
+            tableName: ALLG_MITARBEITER
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+    pageItem P31_MITA_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @mitarbeiter
+            slot: regionBody
+        }
+        source {
+            formRegion: @mitarbeiter
+            column: MITA_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P31_MITA_KUERZEL (
+        type: textField
+        label {
+            label: Kürzel
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @mitarbeiter
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mitarbeiter
+            column: MITA_KUERZEL
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 10
+        }
+    )
+
+    pageItem P31_MITA_NAME (
+        type: textField
+        label {
+            label: Name
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @mitarbeiter
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 9
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mitarbeiter
+            column: MITA_NAME
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 100
+        }
+    )
+
+    pageItem P31_MITA_BENUTZERNAME (
+        type: selectList
+        label {
+            label: APEX-Benutzername (Login)
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @mitarbeiter
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mitarbeiter
+            column: MITA_BENUTZERNAME
+            dataType: varchar2
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-apex-benutzer
+            displayNullValue: true
+            nullDisplayValue: - kein Login -
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P31_MITA_MAND_ID (
+        type: selectList
+        label {
+            label: Standard-Mandant beim Login
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @mitarbeiter
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mitarbeiter
+            column: MITA_MAND_ID
+            dataType: number
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-mandanten
+            displayNullValue: true
+            nullDisplayValue: - erster aktiver Mandant -
+            displayExtraValues: false
+        }
+    )
+
+    region kommunikation (
+        name: Kommunikation
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select MKOM_ID, MKOM_MITA_ID, MKOM_KART_ID, MKOM_WERT, MKOM_BEZEICHNUNG, MKOM_IST_BEVORZUGT
+                  from ALLG_MITARBEITER_KOMMUNIKATION
+                 where MKOM_MITA_ID = :P31_MITA_ID
+                ```
+            pageItemsToSubmit: [
+                P31_MITA_ID
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        messages {
+            whenNoDataFound: Keine Kommunikationsdaten erfasst.
+        }
+        toolbar {
+            controls: [
+                actionsMenu
+                saveButton
+            ]
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P31_MITA_ID
+        }
+
+        savedReport PRIMARY (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 0
+                }
+            )
+            displayColumn (
+                column: @MKOM_KART_ID
+                layout {
+                    sequence: 1
+                }
+            )
+            displayColumn (
+                column: @MKOM_WERT
+                layout {
+                    sequence: 2
+                }
+            )
+            displayColumn (
+                column: @MKOM_BEZEICHNUNG
+                layout {
+                    sequence: 3
+                }
+            )
+            displayColumn (
+                column: @MKOM_IST_BEVORZUGT
+                layout {
+                    sequence: 4
+                }
+            )
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 5
+            }
+        )
+
+        column MKOM_ID (
+            type: hidden
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: MKOM_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column MKOM_MITA_ID (
+            type: hidden
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: MKOM_MITA_ID
+                dataType: number
+            }
+            default {
+                type: item
+                item: P31_MITA_ID
+            }
+        )
+
+        column MKOM_KART_ID (
+            type: selectList
+            heading {
+                heading: Art
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: MKOM_KART_ID
+                dataType: number
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-kommunikationsarten
+                displayNullValue: false
+                displayExtraValues: false
+            }
+        )
+
+        column MKOM_WERT (
+            type: textField
+            heading {
+                heading: Wert
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: MKOM_WERT
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+                maxLength: 255
+            }
+        )
+
+        column MKOM_BEZEICHNUNG (
+            type: textField
+            heading {
+                heading: Bezeichnung
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: MKOM_BEZEICHNUNG
+                dataType: varchar2
+            }
+            validation {
+                maxLength: 100
+            }
+        )
+
+        column MKOM_IST_BEVORZUGT (
+            type: selectList
+            heading {
+                heading: Bevorzugt
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: MKOM_IST_BEVORZUGT
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ja-nein
+                displayNullValue: false
+                displayExtraValues: false
+            }
+            default {
+                type: static
+                staticValue: Y
+            }
+        )
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Abbrechen
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Löschen
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: delete
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+                t-Button--simple
+            ]
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P31_MITA_ID
+        }
+        confirmation {
+            message: Mitarbeiter wirklich löschen? Nicht möglich, solange er als Bearbeiter auf Rechnungen steht.
+            style: danger
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P31_MITA_ID
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Anlegen
+        layout {
+            sequence: 40
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P31_MITA_ID
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    validation kuerzel-eindeutig (
+        name: Kürzel eindeutig
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: noRowsReturned
+            sqlQuery:
+                ```sql
+                select 1 from ALLG_MITARBEITER
+                 where upper(MITA_KUERZEL) = upper(:P31_MITA_KUERZEL)
+                   and MITA_ID <> nvl(:P31_MITA_ID, -1)
+                ```
+        }
+        error {
+            errorMessage: Dieses Kürzel ist bereits vergeben.
+            associatedItem: @P31_MITA_KUERZEL
+        }
+    )
+
+    validation benutzer-eindeutig (
+        name: Benutzername nur einem Mitarbeiter zugeordnet
+        execution {
+            sequence: 20
+        }
+        validation {
+            type: noRowsReturned
+            sqlQuery:
+                ```sql
+                select 1 from ALLG_MITARBEITER
+                 where MITA_BENUTZERNAME = upper(:P31_MITA_BENUTZERNAME)
+                   and MITA_ID <> nvl(:P31_MITA_ID, -1)
+                ```
+        }
+        error {
+            errorMessage: Dieser Benutzername ist bereits einem anderen Mitarbeiter zugeordnet.
+            associatedItem: @P31_MITA_BENUTZERNAME
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P31_MITA_BENUTZERNAME
+        }
+    )
+
+    process initialize-form-mitarbeiter (
+        name: Formular Mitarbeiter initialisieren
+        type: formInitialization
+        formRegion: @mitarbeiter
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process process-form-mitarbeiter (
+        name: Formular Mitarbeiter verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @mitarbeiter
+        execution {
+            sequence: 10
+        }
+    )
+
+    process kommunikation-speichern (
+        name: Kommunikation speichern
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @kommunikation
+        execution {
+            sequence: 20
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE,DELETE
+        }
+    )
+
+)

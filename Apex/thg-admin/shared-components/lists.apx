@@ -136,6 +136,25 @@ list admin-konfiguration (
         }
     )
 
+    entry mitarbeiter (
+        label: Mitarbeiter
+        icon {
+            imageIconCssClasses: fa-users
+        }
+        layout {
+            sequence: 30
+        }
+        link {
+            target: {
+                page: 30
+                clearCache: 30
+            }
+        }
+        userDefinedAttributes {
+            1: Eigene Mitarbeiter: Kürzel, Name, Login (APEX-Benutzer), Standard-Mandant, Kommunikation
+        }
+    )
+
 )
 
 list admin-monitoring (

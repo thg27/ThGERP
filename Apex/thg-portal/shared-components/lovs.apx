@@ -386,3 +386,22 @@ lov lov-einheiten-code (
         display: D
     }
 )
+
+lov lov-apex-benutzer (
+    name: LOV_APEX_BENUTZER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select user_name || nvl2(email, ' (' || email || ')', null) as d,
+                   user_name as r
+              from apex_workspace_apex_users
+             where workspace_name = 'THGERP'
+             order by user_name
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
