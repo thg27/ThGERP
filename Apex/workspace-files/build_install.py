@@ -11,6 +11,7 @@ from pathlib import Path
 # Dateiname -> MIME-Typ (Reihenfolge = Reihenfolge im Skript)
 FILES = {
     "thg.css": "text/css",
+    "thg.js": "text/javascript",  # Logo-Klick: Pruefung ungespeicherter Aenderungen, dann Portal-Startseite
     "thg-logo.svg": "image/svg+xml",
     "thg-app-icon.svg": "image/svg+xml",  # App-Icon (Login-Seite), Farben aus beiden Firmenlogos
     "thg-logo-edv.png": "image/png",   # Mandant EDV (THG-EDV GmbH), aus Vorlagen/Logo ThG edv.tif

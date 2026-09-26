@@ -11,7 +11,10 @@ bis er im Portal gewechselt wird.
   `scope: global` in **jeder** App (gleiche Namen) → der Wert gilt app-übergreifend in der Sitzung.
 - Portal: App-Prozess „Mandant setzen“ (Wechsel per Request `MANDANT_<CODE>` aus der Navigationsleiste).
 - Sub-Apps: App-Prozess „Mandant vorbelegen“ – setzt nur, wenn noch leer (direkter Einstieg), wechselt nie.
-- Anzeige in allen Sub-Apps: Eintrag `&MANDANT_NAME.` in der Navigationsleiste (ohne Auswahl), Klick führt ins Portal.
+- Anzeige in allen Sub-Apps: Eintrag `&MANDANT_NAME.` in der Navigationsleiste, nicht klickbar
+  (`linkAttributes: tabindex="-1" aria-disabled="true" style="pointer-events:none;cursor:default"`).
+- Logo-Klick (alle Apps): `thg.js` fängt den Klick ab, prüft `apex.page.isChanged()` (inkl. Grids), fragt bei
+  Änderungen nach und wechselt mit `apex.navigation.redirect('f?p=THG-PORTAL:HOME:<Sitzung>', true)` ins Portal.
 - Logo: `logo { type: custom }` mit `data-mandant="&MANDANT_CODE."` → Bannerfarbe per `thg.css`, Bild `#WORKSPACE_FILES#&MANDANT_LOGO.`.
 - Alles für die Sub-Apps erzeugt `Apex/generator/mandant_in_apps.py` (wiederholbar).
 

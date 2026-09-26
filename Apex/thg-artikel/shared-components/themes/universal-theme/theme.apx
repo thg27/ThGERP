@@ -9,6 +9,7 @@ theme universal-theme (
         fileUrls: [
             #APEX_FILES#libraries/apex/#MIN_DIRECTORY#widget.stickyWidget#MIN#.js?v=#APEX_VERSION#
             #THEME_FILES#js/theme42#MIN#.js?v=#APEX_VERSION#
+            #WORKSPACE_FILES#thg.js
         ]
     }
     css {

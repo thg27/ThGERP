@@ -12,9 +12,9 @@ list navigation-bar (
         link {
             target: {
                 type: url
-                url: f?p=THG-PORTAL:HOME:&SESSION.::&DEBUG.
+                url: #
             }
-            linkAttributes: title="Mandant wechseln im Portal"
+            linkAttributes: tabindex="-1" aria-disabled="true" style="pointer-events:none;cursor:default" title="Mandant (Wechsel nur im Portal)"
         }
     )
 

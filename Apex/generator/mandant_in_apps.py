@@ -7,7 +7,7 @@ Die Sub-Apps belegen den Mandanten nur vor, wenn noch keiner gesetzt ist (Einsti
 aendern ihn aber nie – gewechselt wird nur im Portal.
 Theme-Stil: Prozess "Theme-Stil" (Portal und Sub-Apps) setzt den beim Mitarbeiter gespeicherten Stil einmal je
 Sitzung fuer alle Apps; im Portal speichert die Stilauswahl (Request THEME_STYLE_<id>) den Stil beim Mitarbeiter.
-Navigationsleiste: Eintrag mit dem aktuellen Mandanten (nur Anzeige; Klick fuehrt ins Portal zum Wechseln).
+Navigationsleiste: Eintrag mit dem aktuellen Mandanten (nur Anzeige, nicht klickbar; Wechsel im Portal).
 Aufruf (wiederholbar):  python3 Apex/generator/mandant_in_apps.py
 """
 import re
@@ -132,9 +132,9 @@ NAV_EINTRAG = """    entry mandant (
         link {
             target: {
                 type: url
-                url: f?p=THG-PORTAL:HOME:&SESSION.::&DEBUG.
+                url: #
             }
-            linkAttributes: title="Mandant wechseln im Portal"
+            linkAttributes: tabindex="-1" aria-disabled="true" style="pointer-events:none;cursor:default" title="Mandant (Wechsel nur im Portal)"
         }
     )
 
@@ -150,7 +150,8 @@ for app, text in SUB_APPS.items():
     p.write_text(PROZESS + "\n" + THEME_PROZESS + ("\n" + s if s.strip() else ""), encoding="utf-8")
     p = sc / "lists.apx"
     s = p.read_text(encoding="utf-8")
-    if "    entry mandant (" not in s:
+    s = re.sub(r"    entry mandant \(.*?\n    \)\n\n", "", s, flags=re.S)
+    if True:
         s = s.replace("list navigation-bar (\n    name: Navigation Bar\n\n",
                       "list navigation-bar (\n    name: Navigation Bar\n\n" + NAV_EINTRAG, 1)
         assert "    entry mandant (" in s, app

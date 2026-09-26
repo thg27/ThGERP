@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Workspace-Dateien der ThG-Apps (Workspace THGERP) anlegen bzw. aktualisieren
--- GENERIERT mit build_install.py aus: thg.css, thg-logo.svg, thg-app-icon.svg, thg-logo-edv.png, thg-logo-tg.png - nicht von Hand bearbeiten!
+-- GENERIERT mit build_install.py aus: thg.css, thg.js, thg-logo.svg, thg-app-icon.svg, thg-logo-edv.png, thg-logo-tg.png - nicht von Hand bearbeiten!
 --
 -- Einbindung in den Apps:
 --   Theme > CSS > File URLs:        #WORKSPACE_FILES#thg.css
@@ -206,6 +206,39 @@ body .t-Header .t-NavigationBar-item .t-Button {
 }
 '));
     workspace_datei(p_file_name => 'thg.css', p_mime_type => 'text/css', p_inhalt => l_inhalt, p_base64 => false);
+    dbms_lob.freetemporary(l_inhalt);
+
+    -- thg.js (text/javascript)
+    dbms_lob.createtemporary(l_inhalt, true);
+    dbms_lob.append(l_inhalt, to_clob('/* ThG: gemeinsames JavaScript aller ThG-Apps (Workspace-Datei, eingebunden im Theme wie thg.css) */
+
+/* Klick auf das Logo im Banner: zuerst auf ungespeicherte Aenderungen pruefen (Seitenelemente und Grids),
+   dann zur Startseite der Portal-App wechseln (gleiche Sitzung). */
+document.addEventListener("click", function (ereignis) {
+    var logo = ereignis.target.closest(".t-Header-logo-link");
+    if (!logo || !window.apex) {
+        return;
+    }
+    ereignis.preventDefault();
+    var sitzung = (apex.env && apex.env.APP_SESSION) || apex.item("pInstance").getValue();
+    var ziel = "f?p=THG-PORTAL:HOME:" + sitzung;
+    var wechseln = function () {
+        apex.navigation.redirect(ziel, true);   // true: eigene Abfrage statt Standardwarnung
+    };
+    if (apex.page.isChanged()) {
+        apex.message.confirm("Es gibt ungespeicherte Änderungen. Trotzdem zum Portal wechseln? Die Änderungen gehen verloren.",
+            function (ok) {
+                if (ok) {
+                    wechsel'));
+    dbms_lob.append(l_inhalt, to_clob('n();
+                }
+            });
+    } else {
+        wechseln();
+    }
+}, true);
+'));
+    workspace_datei(p_file_name => 'thg.js', p_mime_type => 'text/javascript', p_inhalt => l_inhalt, p_base64 => false);
     dbms_lob.freetemporary(l_inhalt);
 
     -- thg-logo.svg (image/svg+xml)
