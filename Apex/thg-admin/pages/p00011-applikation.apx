@@ -18,17 +18,6 @@ page 11 (
     navigation {
         cursorFocus: doNotFocusCursor
     }
-    javaScript {
-        executeWhenPageLoads:
-            ```javascript-browser
-            // Icon-Vorschau zur Auswahl anzeigen
-            function thgIconVorschau() {
-                $("#thg-icon-vorschau").attr("class", "fa fa-3x " + ($v("P11_APPL_ICON") || ""));
-            }
-            $("#P11_APPL_ICON").on("change", thgIconVorschau);
-            thgIconVorschau();
-            ```
-    }
     security {
         authorizationScheme: @administration-rights
         pageAccessProtection: argumentsMustHaveChecksum
@@ -227,7 +216,7 @@ page 11 (
     )
 
     pageItem P11_APPL_ICON (
-        type: selectList
+        type: selectOne
         label {
             label: Icon
             alignment: left
@@ -250,34 +239,6 @@ page 11 (
         lov {
             type: sharedComponent
             lov: @lov-icons
-            displayNullValue: true
-            nullDisplayValue: - kein Icon -
-            displayExtraValues: true
-        }
-    )
-
-    pageItem P11_ICON_VORSCHAU (
-        type: displayOnly
-        label {
-            label: Vorschau
-            alignment: left
-        }
-        layout {
-            sequence: 75
-            region: @applikation
-            slot: regionBody
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        settings {
-            format: html
-        }
-        default {
-            type: static
-            staticValue: <span id="thg-icon-vorschau" class="fa fa-3x" aria-hidden="true"></span>
         }
     )
 

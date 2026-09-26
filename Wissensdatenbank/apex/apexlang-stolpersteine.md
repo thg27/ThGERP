@@ -38,3 +38,6 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
   `apex.region("…")` braucht die Region `advanced { htmlDomId: applikationen }`; sonst greifen Handler nicht
   (Klicks ohne Wirkung, keine Fehlermeldung). Handler besser an `document` binden (`$(document).on("click", "#id .klasse", …)`),
   damit sie auch nach dem Aktualisieren der Region wirken.
+- **Icons in einer Auswahlliste:** Seitenelement `type: selectOne` mit einer SQL-LOV, die eine Icon-Spalte liefert
+  (`columnMapping { return: R  display: D  icon: ICON }`, Icon-Spalte z. B. `'fa ' || r`). Statische LOVs haben
+  keine Icon-Spalte. `selectOne` kennt kein `displayExtraValues` (→ INVALID_PROPERTY).

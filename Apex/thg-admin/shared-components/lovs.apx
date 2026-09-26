@@ -134,267 +134,62 @@ lov lov-mandanten (
 lov lov-icons (
     name: LOV_ICONS
     source {
-        location: staticValues
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select d, r, 'fa ' || r as icon
+              from (select 'Kacheln' as d, 'fa-th-large' as r, 1 as s from dual
+                union all select 'Startseite' as d, 'fa-home' as r, 2 as s from dual
+                union all select 'Zahnrad' as d, 'fa-gear' as r, 3 as s from dual
+                union all select 'Zahnräder' as d, 'fa-gears' as r, 4 as s from dual
+                union all select 'Werkzeug' as d, 'fa-wrench' as r, 5 as s from dual
+                union all select 'Adressbuch' as d, 'fa-address-book' as r, 6 as s from dual
+                union all select 'Personen' as d, 'fa-users' as r, 7 as s from dual
+                union all select 'Person' as d, 'fa-user' as r, 8 as s from dual
+                union all select 'Gebäude' as d, 'fa-building-o' as r, 9 as s from dual
+                union all select 'Industrie' as d, 'fa-industry' as r, 10 as s from dual
+                union all select 'Würfel (Artikel)' as d, 'fa-cube' as r, 11 as s from dual
+                union all select 'Würfel (Lager)' as d, 'fa-cubes' as r, 12 as s from dual
+                union all select 'Archiv' as d, 'fa-archive' as r, 13 as s from dual
+                union all select 'Lieferung' as d, 'fa-truck' as r, 14 as s from dual
+                union all select 'Einkaufswagen' as d, 'fa-shopping-cart' as r, 15 as s from dual
+                union all select 'Euro' as d, 'fa-eur' as r, 16 as s from dual
+                union all select 'Geld' as d, 'fa-money' as r, 17 as s from dual
+                union all select 'Kreditkarte' as d, 'fa-credit-card' as r, 18 as s from dual
+                union all select 'Rechner' as d, 'fa-calculator' as r, 19 as s from dual
+                union all select 'Dokument' as d, 'fa-file-text-o' as r, 20 as s from dual
+                union all select 'Ordner' as d, 'fa-folder-open-o' as r, 21 as s from dual
+                union all select 'Buch' as d, 'fa-book' as r, 22 as s from dual
+                union all select 'Drucker' as d, 'fa-print' as r, 23 as s from dual
+                union all select 'Brief' as d, 'fa-envelope-o' as r, 24 as s from dual
+                union all select 'Telefon' as d, 'fa-phone' as r, 25 as s from dual
+                union all select 'Kalender' as d, 'fa-calendar' as r, 26 as s from dual
+                union all select 'Uhr' as d, 'fa-clock-o' as r, 27 as s from dual
+                union all select 'Aufgaben' as d, 'fa-tasks' as r, 28 as s from dual
+                union all select 'Erledigt' as d, 'fa-check-square-o' as r, 29 as s from dual
+                union all select 'Aktentasche' as d, 'fa-briefcase' as r, 30 as s from dual
+                union all select 'Balkendiagramm' as d, 'fa-bar-chart' as r, 31 as s from dual
+                union all select 'Kreisdiagramm' as d, 'fa-pie-chart' as r, 32 as s from dual
+                union all select 'Liniendiagramm' as d, 'fa-line-chart' as r, 33 as s from dual
+                union all select 'Tabelle' as d, 'fa-table' as r, 34 as s from dual
+                union all select 'Liste' as d, 'fa-list-ul' as r, 35 as s from dual
+                union all select 'Etiketten' as d, 'fa-tags' as r, 36 as s from dual
+                union all select 'Datenbank' as d, 'fa-database' as r, 37 as s from dual
+                union all select 'Server' as d, 'fa-server' as r, 38 as s from dual
+                union all select 'Cloud' as d, 'fa-cloud' as r, 39 as s from dual
+                union all select 'Globus' as d, 'fa-globe' as r, 40 as s from dual
+                union all select 'Ort' as d, 'fa-map-marker' as r, 41 as s from dual
+                union all select 'Schloss' as d, 'fa-lock' as r, 42 as s from dual
+                union all select 'Schlüssel' as d, 'fa-key' as r, 43 as s from dual)
+             order by s
+            ```
     }
     subscription {
         master: @/20000/lov-icons
     }
-
-    entry icon-th-large (
-        sequence: 1
-        display: Kacheln (fa-th-large)
-        return: fa-th-large
-    )
-
-    entry icon-home (
-        sequence: 2
-        display: Startseite (fa-home)
-        return: fa-home
-    )
-
-    entry icon-gear (
-        sequence: 3
-        display: Zahnrad (fa-gear)
-        return: fa-gear
-    )
-
-    entry icon-gears (
-        sequence: 4
-        display: Zahnräder (fa-gears)
-        return: fa-gears
-    )
-
-    entry icon-wrench (
-        sequence: 5
-        display: Werkzeug (fa-wrench)
-        return: fa-wrench
-    )
-
-    entry icon-address-book (
-        sequence: 6
-        display: Adressbuch (fa-address-book)
-        return: fa-address-book
-    )
-
-    entry icon-users (
-        sequence: 7
-        display: Personen (fa-users)
-        return: fa-users
-    )
-
-    entry icon-user (
-        sequence: 8
-        display: Person (fa-user)
-        return: fa-user
-    )
-
-    entry icon-building-o (
-        sequence: 9
-        display: Gebäude (fa-building-o)
-        return: fa-building-o
-    )
-
-    entry icon-industry (
-        sequence: 10
-        display: Industrie (fa-industry)
-        return: fa-industry
-    )
-
-    entry icon-cube (
-        sequence: 11
-        display: Würfel (Artikel) (fa-cube)
-        return: fa-cube
-    )
-
-    entry icon-cubes (
-        sequence: 12
-        display: Würfel (Lager) (fa-cubes)
-        return: fa-cubes
-    )
-
-    entry icon-archive (
-        sequence: 13
-        display: Archiv (fa-archive)
-        return: fa-archive
-    )
-
-    entry icon-truck (
-        sequence: 14
-        display: Lieferung (fa-truck)
-        return: fa-truck
-    )
-
-    entry icon-shopping-cart (
-        sequence: 15
-        display: Einkaufswagen (fa-shopping-cart)
-        return: fa-shopping-cart
-    )
-
-    entry icon-eur (
-        sequence: 16
-        display: Euro (fa-eur)
-        return: fa-eur
-    )
-
-    entry icon-money (
-        sequence: 17
-        display: Geld (fa-money)
-        return: fa-money
-    )
-
-    entry icon-credit-card (
-        sequence: 18
-        display: Kreditkarte (fa-credit-card)
-        return: fa-credit-card
-    )
-
-    entry icon-calculator (
-        sequence: 19
-        display: Rechner (fa-calculator)
-        return: fa-calculator
-    )
-
-    entry icon-file-text-o (
-        sequence: 20
-        display: Dokument (fa-file-text-o)
-        return: fa-file-text-o
-    )
-
-    entry icon-folder-open-o (
-        sequence: 21
-        display: Ordner (fa-folder-open-o)
-        return: fa-folder-open-o
-    )
-
-    entry icon-book (
-        sequence: 22
-        display: Buch (fa-book)
-        return: fa-book
-    )
-
-    entry icon-print (
-        sequence: 23
-        display: Drucker (fa-print)
-        return: fa-print
-    )
-
-    entry icon-envelope-o (
-        sequence: 24
-        display: Brief (fa-envelope-o)
-        return: fa-envelope-o
-    )
-
-    entry icon-phone (
-        sequence: 25
-        display: Telefon (fa-phone)
-        return: fa-phone
-    )
-
-    entry icon-calendar (
-        sequence: 26
-        display: Kalender (fa-calendar)
-        return: fa-calendar
-    )
-
-    entry icon-clock-o (
-        sequence: 27
-        display: Uhr (fa-clock-o)
-        return: fa-clock-o
-    )
-
-    entry icon-tasks (
-        sequence: 28
-        display: Aufgaben (fa-tasks)
-        return: fa-tasks
-    )
-
-    entry icon-check-square-o (
-        sequence: 29
-        display: Erledigt (fa-check-square-o)
-        return: fa-check-square-o
-    )
-
-    entry icon-briefcase (
-        sequence: 30
-        display: Aktentasche (fa-briefcase)
-        return: fa-briefcase
-    )
-
-    entry icon-bar-chart (
-        sequence: 31
-        display: Balkendiagramm (fa-bar-chart)
-        return: fa-bar-chart
-    )
-
-    entry icon-pie-chart (
-        sequence: 32
-        display: Kreisdiagramm (fa-pie-chart)
-        return: fa-pie-chart
-    )
-
-    entry icon-line-chart (
-        sequence: 33
-        display: Liniendiagramm (fa-line-chart)
-        return: fa-line-chart
-    )
-
-    entry icon-table (
-        sequence: 34
-        display: Tabelle (fa-table)
-        return: fa-table
-    )
-
-    entry icon-list-ul (
-        sequence: 35
-        display: Liste (fa-list-ul)
-        return: fa-list-ul
-    )
-
-    entry icon-tags (
-        sequence: 36
-        display: Etiketten (fa-tags)
-        return: fa-tags
-    )
-
-    entry icon-database (
-        sequence: 37
-        display: Datenbank (fa-database)
-        return: fa-database
-    )
-
-    entry icon-server (
-        sequence: 38
-        display: Server (fa-server)
-        return: fa-server
-    )
-
-    entry icon-cloud (
-        sequence: 39
-        display: Cloud (fa-cloud)
-        return: fa-cloud
-    )
-
-    entry icon-globe (
-        sequence: 40
-        display: Globus (fa-globe)
-        return: fa-globe
-    )
-
-    entry icon-map-marker (
-        sequence: 41
-        display: Ort (fa-map-marker)
-        return: fa-map-marker
-    )
-
-    entry icon-lock (
-        sequence: 42
-        display: Schloss (fa-lock)
-        return: fa-lock
-    )
-
-    entry icon-key (
-        sequence: 43
-        display: Schlüssel (fa-key)
-        return: fa-key
-    )
+    columnMapping {
+        return: R
+        display: D
+        icon: ICON
+    }
 )
