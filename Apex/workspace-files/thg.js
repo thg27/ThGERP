@@ -25,3 +25,12 @@ document.addEventListener("click", function (ereignis) {
         wechseln();
     }
 }, true);
+
+/* Region Display Selector: Registerkarte "Show All" auf Deutsch (deutsche APEX-Systemtexte nicht installiert) */
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".apex-rds a").forEach(function (a) {
+        if (a.textContent.trim() === "Show All") {
+            a.querySelector("span") ? (a.querySelector("span").textContent = "Alle") : (a.textContent = "Alle");
+        }
+    });
+});

@@ -238,6 +238,15 @@ document.addEventListener("click", function (ereignis) {
         wechseln();
     }
 }, true);
+
+/* Region Display Selector: Registerkarte "Show All" auf Deutsch (deutsche APEX-Systemtexte nicht installiert) */
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".apex-rds a").forEach(function (a) {
+        if (a.textContent.trim() === "Show All") {
+            a.querySelector("span") ? (a.querySelector("span").textContent = "Alle") : (a.textContent = "Alle");
+        }
+    });
+});
 '));
     workspace_datei(p_file_name => 'thg.js', p_mime_type => 'text/javascript', p_inhalt => l_inhalt, p_base64 => false);
     dbms_lob.freetemporary(l_inhalt);
