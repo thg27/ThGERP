@@ -5,21 +5,20 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
 
 ## Status / offene Entscheidungen
 - Workspace `THGERP`, Schema `WKSP_THGERP`, SQLcl-Verbindung `wksp_thgerp@pdbthg` (Host dbthgprod, für ERP-Entwicklung freigegeben).
-- App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN.
+- App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20040 THG-ARTIKEL (geplant).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (2026-09-26): `ADMIN_APPLIKATIONEN` (07), Workspace-Dateien, App 20000. Die übrigen DDL-Skripte und die Sub-Apps sind noch nicht eingespielt.
+- Installiert (Stand 2026-09-26): alle DDL-Skripte 01–20 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20030; Kunden aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
-- Mandantenfähigkeit (zwei Firmen: THG-EDV GmbH, Thomas Geßlbauer GmbH)
-- Farben in `thg.css` (Header-Braun `#6b5444`, Fokus `#f6ecd9`) auf THG-EDV-Farben umstellen
+- Mandantenfähigkeit: Mandanten, Firmendaten und Bannerfarben sind umgesetzt (ADMIN_MANDANTEN, globale Items MANDANT_*); Sub-Apps zeigen noch das feste Logo
 
 ## Datenbank-Standards
 Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
-- Gruppencodes: `KUND` (Kundenstamm), `ALLG` (allgemeine Stammdaten), `ADMIN` (Administration, bewusst 5-stellig)
+- Gruppencodes: `KUND` (Kundenstamm), `ALLG` (allgemeine Stammdaten), `ADMIN` (Administration, bewusst 5-stellig), `ARTI` (Artikelstamm), `FAKT` (Fakturierung)
 - Tabellen-Aliase: `Datenbank/db/aliase.md` – vor jeder neuen Tabelle prüfen und dort eintragen
 - DDL-Skripte: `Datenbank/db/ddl` (nummeriert, `00_install.sql` ruft alle auf)
-- ER-Modell: `Datenbank/db/er-modell/kundenstamm_er_modell.mmd` ist die Quelle; nach Modelländerungen `.mmd` anpassen und PDF/SVG/PNG/HTML neu erzeugen
+- ER-Modelle: `Datenbank/db/er-modell/kundenstamm_er_modell.mmd` und `artikel_fakturierung_er_modell.mmd` (generiert aus `ddl/generator/gen_19_20_…`) sind die Quellen; nach Modelländerungen `.mmd` anpassen und mit `python3 build_er_modell.py` PDF/SVG/PNG/HTML neu erzeugen
 - Zieldatenbank: Oracle AI Database 26ai (Objektnamen bis 128 Zeichen)
 - Nie auf Produktion ausführen. Vor jedem DDL/DML auf der Datenbank Rückfrage.
 - Vor einer Installation in ein bestehendes Schema prüfen, ob Constraint-, Index- oder Triggernamen dort schon existieren –

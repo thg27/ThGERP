@@ -5,6 +5,18 @@
 -- Voraussetzung: Oracle 12.2+ (Objektnamen > 30 Zeichen), getestet fuer 19c
 -- =====================================================================
 
+drop table FAKT_ZAHLUNGEN cascade constraints purge;
+drop table FAKT_RECHNUNGSPOSITIONEN cascade constraints purge;
+drop table FAKT_RECHNUNGEN cascade constraints purge;
+drop table FAKT_NUMMERNKREISE cascade constraints purge;
+drop table ARTI_ARTIKEL_DATEIEN cascade constraints purge;
+drop table ARTI_ARTIKEL_ZUSATZWERTE cascade constraints purge;
+drop table ARTI_ZUSATZFELDER cascade constraints purge;
+drop table ARTI_ARTIKEL cascade constraints purge;
+drop table ARTI_ARTIKELGRUPPEN cascade constraints purge;
+drop table ALLG_TEXTVORLAGEN cascade constraints purge;
+drop table ALLG_MWST_SAETZE cascade constraints purge;
+drop table ALLG_EINHEITEN cascade constraints purge;
 drop table ADMIN_APPLIKATIONEN cascade constraints purge;
 drop table KUND_KUNDEN_UNTERKATEGORIEN cascade constraints purge;
 drop table KUND_KUNDEN_BRANCHEN cascade constraints purge;

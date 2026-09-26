@@ -31,6 +31,18 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | ADMIN | ADMIN_MANDANTEN | MAND | Mandanten (THG-EDV GmbH, Thomas Geßlbauer GmbH) |
 | ADMIN | ADMIN_MANDANT_BANKVERBINDUNGEN | MBNK | Bankverbindungen der Mandanten (Rechnungsfuß) |
 | ADMIN | ADMIN_MANDANT_KOMMUNIKATION | MAKO | Kommunikationsdaten der Mandanten (Briefkopf) |
+| ALLG | ALLG_EINHEITEN | EINH | Mengeneinheiten (Stk., Std., Pauschale …) |
+| ALLG | ALLG_MWST_SAETZE | MWST | Umsatzsteuersätze (0/10/20 %) |
+| ALLG | ALLG_TEXTVORLAGEN | TXVL | Textvorlagen für Belege (Zahlungsbedingungen, Vor-/Schlusstext) |
+| ARTI | ARTI_ARTIKELGRUPPEN | AGRP | Artikelgruppen |
+| ARTI | ARTI_ARTIKEL | ARTI | Artikelstamm |
+| ARTI | ARTI_ZUSATZFELDER | ZUSF | Definition der Zusatzfelder am Artikel |
+| ARTI | ARTI_ARTIKEL_ZUSATZWERTE | AZUW | Werte der Zusatzfelder je Artikel |
+| ARTI | ARTI_ARTIKEL_DATEIEN | ADAT | Dateien (Anhänge) zum Artikel |
+| FAKT | FAKT_NUMMERNKREISE | NKRS | Nummernkreise je Mandant, Belegart, Jahr |
+| FAKT | FAKT_RECHNUNGEN | RECH | Ausgangsrechnungen (Kopf) |
+| FAKT | FAKT_RECHNUNGSPOSITIONEN | RPOS | Rechnungspositionen |
+| FAKT | FAKT_ZAHLUNGEN | ZAHL | Zahlungseingänge zu Rechnungen |
 
 ## Gruppencodes
 
@@ -38,6 +50,8 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 |---|---|
 | ALLG | Allgemeine, modulübergreifende Stammdaten |
 | KUND | Kundenstammdaten |
+| ARTI | Artikelstammdaten |
+| FAKT | Fakturierung (Rechnungen, später weitere Belege) |
 | ADMIN | Administration der Anwendung (Applikationen, Mandanten, Portal-Konfiguration) |
 
 ## Datenbankverbindung

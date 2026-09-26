@@ -1,12 +1,12 @@
-// Rendert kundenstamm_er_modell.html (nach build_er_modell.py) zu SVG, PNG und PDF.
-// Aufruf: NODE_PATH=<npx-Cache>/node_modules node render_er_modell.cjs
+// Rendert <modell>.html (nach build_er_modell.py) zu SVG, PNG und PDF.
+// Aufruf: NODE_PATH=<npx-Cache>/node_modules node render_er_modell.cjs <modell>
 // (Puppeteer aus dem npx-Cache von @mermaid-js/mermaid-cli)
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
 (async () => {
-  const name = 'kundenstamm_er_modell';
+  const name = process.argv[2] || 'kundenstamm_er_modell';
   const html = path.join(__dirname, name + '.html');
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
