@@ -196,7 +196,7 @@ FAKT = [
     ('RECH_SUMME_MWST', BETRAG, 'N', '0', 'Summe Umsatzsteuer'),
     ('RECH_SUMME_BRUTTO', BETRAG, 'N', '0', 'Gesamtbetrag'),
     ('RECH_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill DokumentRechnung.ID), fuer die Datenuebernahme'),
-  ], [('RECH_NUMMER_UK', 'U', 'RECH_MAND_ID, RECH_NUMMER'), ('RECH_ALT_ID_UK', 'U', 'RECH_ALT_ID'),
+  ], [('RECH_ALT_ID_UK', 'U', 'RECH_ALT_ID'),
       ('RECH_STATUS_CK', 'C', "RECH_STATUS in ('ENTWURF', 'OFFEN', 'BEZAHLT', 'STORNIERT')"),
       ('RECH_NUMMER_CK', 'C', "RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null"),
       ('RECH_LEISTUNG_CK', 'C', 'RECH_LEISTUNG_BIS is null or RECH_LEISTUNG_VON is null or RECH_LEISTUNG_BIS >= RECH_LEISTUNG_VON'),
@@ -208,7 +208,8 @@ FAKT = [
       ('RECH_MITA_FK', 'R', 'RECH_MITA_ID references ALLG_MITARBEITER (MITA_ID)'),
       ('RECH_ZBED_FK', 'R', 'RECH_ZBED_ID references ALLG_ZAHLUNGSBEDINGUNGEN (ZBED_ID)'),
       ('RECH_EMPF_LAND_FK', 'R', 'RECH_EMPF_LAND_CODE references ALLG_LAENDER (LAND_CODE)')],
-  [('RECH_MAND_I', 'RECH_MAND_ID'), ('RECH_KUND_I', 'RECH_KUND_ID'), ('RECH_KSTO_I', 'RECH_KSTO_ID'),
+  [('RECH_NUMMER_UI', "case when RECH_NUMMER is not null then RECH_MAND_ID end, RECH_NUMMER", True),
+   ('RECH_MAND_I', 'RECH_MAND_ID'), ('RECH_KUND_I', 'RECH_KUND_ID'), ('RECH_KSTO_I', 'RECH_KSTO_ID'),
    ('RECH_ANSP_I', 'RECH_ANSP_ID'), ('RECH_MITA_I', 'RECH_MITA_ID'), ('RECH_ZBED_I', 'RECH_ZBED_ID'),
    ('RECH_EMPF_LAND_I', 'RECH_EMPF_LAND_CODE'), ('RECH_DATUM_I', 'RECH_DATUM')], ''),
 

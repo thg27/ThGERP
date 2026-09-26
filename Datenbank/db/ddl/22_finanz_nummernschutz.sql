@@ -4,6 +4,7 @@
 --      FAKT_RECHNUNGEN: Nummer und Mandant einer abgeschlossenen Rechnung unveraenderlich,
 --                       Nummer nur ueber FAKT_RECHNUNG.abschliessen; Loeschen nur ueber FAKT_RECHNUNG.loeschen
 --      FAKT_NUMMERNKREISE: zuletzt vergebene Nummer nur ueber das Package FAKT_RECHNUNG
+--      RECH_NUMMER_UI statt RECH_NUMMER_UK (mehrere Entwuerfe ohne Nummer je Mandant)
 -- Voraussetzung: 20, 21 (Package FAKT_RECHNUNG mit g_intern)
 -- Erzeugt: 2026-09-26
 -- Wiederholbar (Trigger-Namen werden vorher geprueft).
@@ -11,6 +12,20 @@
 
 set define off
 set serveroutput on size unlimited
+
+-- Rechnungsnummer eindeutig je Mandant nur fuer vergebene Nummern: der urspruengliche Unique-Constraint
+-- (RECH_MAND_ID, RECH_NUMMER) liess nur einen Entwurf (Nummer leer) je Mandant zu -> funktionsbasierter Unique-Index
+declare
+    l_n pls_integer;
+begin
+    select count(*) into l_n from user_constraints where constraint_name = 'RECH_NUMMER_UK' and table_name = 'FAKT_RECHNUNGEN';
+    if l_n > 0 then
+        execute immediate 'alter table FAKT_RECHNUNGEN drop constraint RECH_NUMMER_UK drop index';
+        dbms_output.put_line('RECH_NUMMER_UK entfernt');
+    end if;
+    DDL_UTIL.index_('FAKT_RECHNUNGEN', 'RECH_NUMMER_UI', q'~case when RECH_NUMMER is not null then RECH_MAND_ID end, RECH_NUMMER~', true);
+end;
+/
 
 begin
     DDL_UTIL.trigger_pruefen('RECH_NUMMER_BUD', 'FAKT_RECHNUNGEN');

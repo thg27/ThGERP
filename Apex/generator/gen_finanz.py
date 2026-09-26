@@ -312,7 +312,7 @@ def seite_11():
 
 """
     a = "allgemein"
-    s += item("P11_RECH_BETREFF", "textField", "Betreff (leer: „Rechnung <Nummer>“)", 10, a, col="RECH_BETREFF",
+    s += item("P11_RECH_BETREFF", "textField", "Betreff (leer: „Rechnung“ + Nummer)", 10, a, col="RECH_BETREFF",
               maxlen=200, spalten=6, **f)
     s += item("P11_RECH_DATUM", "datePicker", "Datum", 20, a, col="RECH_DATUM", dtype="date", req=True,
               neue_zeile=False, spalten=3, extra="""        default {
@@ -665,6 +665,9 @@ def seite_11():
             type: requestIsContainedInValue
             value: CREATE,SAVE,ABSCHLIESSEN
         }
+        successMessage {
+            successMessage: Rechnung gespeichert.
+        }
     )
 
     process empfaenger-uebernehmen (
@@ -699,7 +702,7 @@ def seite_11():
                     a        ARTI_ARTIKEL%rowtype;
                     l_mwst   ALLG_MWST_SAETZE.MWST_PROZENT%type;
                     l_einh   ALLG_EINHEITEN.EINH_CODE%type;
-                    l_pos    number := :RPOS_POSITION;
+                    l_pos    number := to_number(:RPOS_POSITION);
                 begin
                     select RECH_STATUS into l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
                     if l_status <> 'ENTWURF' then
@@ -710,7 +713,7 @@ def seite_11():
                         return;
                     end if;
                     if :RPOS_ARTI_ID is not null then
-                        select * into a from ARTI_ARTIKEL where ARTI_ID = :RPOS_ARTI_ID;
+                        select * into a from ARTI_ARTIKEL where ARTI_ID = to_number(:RPOS_ARTI_ID);
                         select MWST_PROZENT into l_mwst from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
                         select max(EINH_CODE) into l_einh from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
                     end if;
@@ -723,26 +726,26 @@ def seite_11():
                               (RPOS_RECH_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTIKELNUMMER,
                                RPOS_NAME, RPOS_BESCHREIBUNG, RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT,
                                RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO)
-                        values (:P11_RECH_ID, :RPOS_ARTI_ID, l_pos, :RPOS_KAPITEL, :RPOS_UNTERKAPITEL, a.ARTI_NUMMER,
-                                coalesce(:RPOS_NAME, a.ARTI_NAME), coalesce(:RPOS_BESCHREIBUNG, a.ARTI_BESCHREIBUNG),
-                                nvl(:RPOS_MENGE, 1), coalesce(:RPOS_EINHEIT, l_einh), coalesce(:RPOS_EINZELPREIS, a.ARTI_VK_PREIS, 0),
-                                :RPOS_RABATT_PROZENT, coalesce(:RPOS_MWST_PROZENT, l_mwst, 20), nvl(:RPOS_IST_OPTIONAL, 'N'),
+                        values (:P11_RECH_ID, to_number(:RPOS_ARTI_ID), l_pos, :RPOS_KAPITEL, :RPOS_UNTERKAPITEL, a.ARTI_NUMMER,
+                                coalesce(:RPOS_NAME, a.ARTI_NAME), coalesce(to_clob(:RPOS_BESCHREIBUNG), a.ARTI_BESCHREIBUNG),
+                                nvl(to_number(:RPOS_MENGE), 1), coalesce(:RPOS_EINHEIT, l_einh), coalesce(to_number(:RPOS_EINZELPREIS), a.ARTI_VK_PREIS, 0),
+                                to_number(:RPOS_RABATT_PROZENT), coalesce(to_number(:RPOS_MWST_PROZENT), l_mwst, 20), nvl(:RPOS_IST_OPTIONAL, 'N'),
                                 a.ARTI_ERLOESKONTO)
                         returning RPOS_ID into :RPOS_ID;
                     else
                         update FAKT_RECHNUNGSPOSITIONEN
-                           set RPOS_ARTI_ID        = :RPOS_ARTI_ID,
+                           set RPOS_ARTI_ID        = to_number(:RPOS_ARTI_ID),
                                RPOS_POSITION       = l_pos,
                                RPOS_KAPITEL        = :RPOS_KAPITEL,
                                RPOS_UNTERKAPITEL   = :RPOS_UNTERKAPITEL,
                                RPOS_ARTIKELNUMMER  = coalesce(a.ARTI_NUMMER, RPOS_ARTIKELNUMMER),
                                RPOS_NAME           = coalesce(:RPOS_NAME, a.ARTI_NAME, RPOS_NAME),
-                               RPOS_BESCHREIBUNG   = coalesce(:RPOS_BESCHREIBUNG, a.ARTI_BESCHREIBUNG),
-                               RPOS_MENGE          = nvl(:RPOS_MENGE, 1),
+                               RPOS_BESCHREIBUNG   = coalesce(to_clob(:RPOS_BESCHREIBUNG), a.ARTI_BESCHREIBUNG),
+                               RPOS_MENGE          = nvl(to_number(:RPOS_MENGE), 1),
                                RPOS_EINHEIT        = coalesce(:RPOS_EINHEIT, l_einh),
-                               RPOS_EINZELPREIS    = coalesce(:RPOS_EINZELPREIS, a.ARTI_VK_PREIS, 0),
-                               RPOS_RABATT_PROZENT = :RPOS_RABATT_PROZENT,
-                               RPOS_MWST_PROZENT   = coalesce(:RPOS_MWST_PROZENT, l_mwst, 20),
+                               RPOS_EINZELPREIS    = coalesce(to_number(:RPOS_EINZELPREIS), a.ARTI_VK_PREIS, 0),
+                               RPOS_RABATT_PROZENT = to_number(:RPOS_RABATT_PROZENT),
+                               RPOS_MWST_PROZENT   = coalesce(to_number(:RPOS_MWST_PROZENT), l_mwst, 20),
                                RPOS_IST_OPTIONAL   = nvl(:RPOS_IST_OPTIONAL, 'N')
                          where RPOS_ID = :RPOS_ID;
                     end if;
