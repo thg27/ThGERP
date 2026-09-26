@@ -5,6 +5,7 @@ Der Mandant wird im Portal (20000) gewaehlt (Navigationsleiste, App-Prozess "Man
 Alle ThG-Apps teilen die Sitzung (Session Sharing: Workspace) und damit die globalen Items MANDANT_*.
 Die Sub-Apps belegen den Mandanten nur vor, wenn noch keiner gesetzt ist (Einstieg direkt in einer App),
 aendern ihn aber nie – gewechselt wird nur im Portal.
+Navigationsleiste: Eintrag mit dem aktuellen Mandanten (nur Anzeige; Klick fuehrt ins Portal zum Wechseln).
 Aufruf (wiederholbar):  python3 Apex/generator/mandant_in_apps.py
 """
 import re
@@ -61,6 +62,25 @@ LOGO = """    logo {{
     }}
 """
 
+NAV_EINTRAG = """    entry mandant (
+        label: &MANDANT_NAME.
+        icon {
+            imageIconCssClasses: fa-building-o
+        }
+        layout {
+            sequence: 5
+        }
+        link {
+            target: {
+                type: url
+                url: f?p=THG-PORTAL:HOME:&SESSION.::&DEBUG.
+            }
+            linkAttributes: title="Mandant wechseln im Portal"
+        }
+    )
+
+"""
+
 items = (APEX / "thg-portal" / "shared-components" / "app-items.apx").read_text(encoding="utf-8")
 for app, text in SUB_APPS.items():
     sc = APEX / app / "shared-components"
@@ -69,6 +89,13 @@ for app, text in SUB_APPS.items():
     s = p.read_text(encoding="utf-8") if p.exists() else ""
     s = re.sub(r"appProcess mandant-vorbelegen \(.*?\n\)\n\n?", "", s, flags=re.S)
     p.write_text(PROZESS + ("\n" + s if s.strip() else ""), encoding="utf-8")
+    p = sc / "lists.apx"
+    s = p.read_text(encoding="utf-8")
+    if "    entry mandant (" not in s:
+        s = s.replace("list navigation-bar (\n    name: Navigation Bar\n\n",
+                      "list navigation-bar (\n    name: Navigation Bar\n\n" + NAV_EINTRAG, 1)
+        assert "    entry mandant (" in s, app
+        p.write_text(s, encoding="utf-8")
     p = APEX / app / "application.apx"
     s = p.read_text(encoding="utf-8")
     s = re.sub(r"    logo \{\n.*?\n    \}\n", lambda _: LOGO.format(text=text), s, count=1, flags=re.S)

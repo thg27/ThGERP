@@ -1,6 +1,23 @@
 list navigation-bar (
     name: Navigation Bar
 
+    entry mandant (
+        label: &MANDANT_NAME.
+        icon {
+            imageIconCssClasses: fa-building-o
+        }
+        layout {
+            sequence: 5
+        }
+        link {
+            target: {
+                type: url
+                url: f?p=THG-PORTAL:HOME:&SESSION.::&DEBUG.
+            }
+            linkAttributes: title="Mandant wechseln im Portal"
+        }
+    )
+
     entry --- (
         label: ---
         layout {

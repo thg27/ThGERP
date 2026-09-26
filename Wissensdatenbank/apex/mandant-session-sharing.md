@@ -11,6 +11,7 @@ bis er im Portal gewechselt wird.
   `scope: global` in **jeder** App (gleiche Namen) → der Wert gilt app-übergreifend in der Sitzung.
 - Portal: App-Prozess „Mandant setzen“ (Wechsel per Request `MANDANT_<CODE>` aus der Navigationsleiste).
 - Sub-Apps: App-Prozess „Mandant vorbelegen“ – setzt nur, wenn noch leer (direkter Einstieg), wechselt nie.
+- Anzeige in allen Sub-Apps: Eintrag `&MANDANT_NAME.` in der Navigationsleiste (ohne Auswahl), Klick führt ins Portal.
 - Logo: `logo { type: custom }` mit `data-mandant="&MANDANT_CODE."` → Bannerfarbe per `thg.css`, Bild `#WORKSPACE_FILES#&MANDANT_LOGO.`.
 - Alles für die Sub-Apps erzeugt `Apex/generator/mandant_in_apps.py` (wiederholbar).
 
