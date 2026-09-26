@@ -34,3 +34,7 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
 - APEX-Systemmeldungen („Row created.“) sind englisch, solange die deutschen APEX-Texte nicht installiert sind →
   bei Formularprozessen eigene `successMessage` setzen.
 - `<…>` in Beschriftungen wird als HTML verschluckt – keine spitzen Klammern in Labels.
+- **Region-Bezeichnung ≠ HTML-ID:** `region applikationen (` setzt keine DOM-ID. Für `$("#…")` bzw.
+  `apex.region("…")` braucht die Region `advanced { htmlDomId: applikationen }`; sonst greifen Handler nicht
+  (Klicks ohne Wirkung, keine Fehlermeldung). Handler besser an `document` binden (`$(document).on("click", "#id .klasse", …)`),
+  damit sie auch nach dem Aktualisieren der Region wirken.

@@ -14,7 +14,7 @@ page 10 (
         executeWhenPageLoads:
             ```javascript-browser
             // Schalter "Aktiv" in der Liste: per AJAX umschalten und Bericht aktualisieren
-            $("#applikationen").on("click", ".thg-schalter", function () {
+            $(document).on("click", "#applikationen .thg-schalter", function () {
                 var knopf = this;
                 knopf.disabled = true;
                 apex.server.process("AKTIV_UMSCHALTEN", { x01: knopf.dataset.id }, { dataType: "text" })
@@ -65,6 +65,9 @@ page 10 (
     region applikationen (
         name: Applikationen
         type: interactiveReport
+        advanced {
+            htmlDomId: applikationen
+        }
         source {
             location: localDatabase
             type: sqlQuery
