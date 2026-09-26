@@ -190,7 +190,7 @@ page 11 (
             sequence: 10
             region: @stammdaten
             slot: regionBody
-            columnSpan: 6
+            columnSpan: 5
             alignment: left
         }
         appearance {
@@ -276,6 +276,42 @@ page 11 (
         }
     )
 
+    pageItem P11_ARTI_IST_AKTIV (
+        type: switch
+        label {
+            label: Aktiv
+            alignment: left
+        }
+        layout {
+            sequence: 35
+            region: @stammdaten
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @artikel
+            column: ARTI_IST_AKTIV
+            dataType: varchar2
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
     pageItem P11_ARTI_BILD (
         type: imageUpload
         label {
@@ -287,7 +323,7 @@ page 11 (
             region: @stammdaten
             slot: regionBody
             startNewRow: false
-            columnSpan: 3
+            columnSpan: 2
             alignment: left
         }
         appearance {
@@ -599,42 +635,6 @@ page 11 (
         }
         validation {
             maxLength: 20
-        }
-    )
-
-    pageItem P11_ARTI_IST_AKTIV (
-        type: switch
-        label {
-            label: Aktiv
-            alignment: left
-        }
-        layout {
-            sequence: 50
-            region: @tab-zusatzfelder
-            slot: regionBody
-            startNewRow: false
-            columnSpan: 2
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @artikel
-            column: ARTI_IST_AKTIV
-            dataType: varchar2
-        }
-        settings {
-            useDefaults: false
-            onValue: Y
-            onLabel: Ja
-            offValue: N
-            offLabel: Nein
-        }
-        default {
-            type: static
-            staticValue: Y
         }
     )
 

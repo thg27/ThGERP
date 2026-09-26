@@ -1,0 +1,2070 @@
+page 11 (
+    name: Rechnung
+    alias: RECHNUNG
+    title: &P11_TITEL.
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: &P11_TITEL.
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 5
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                t-BreadcrumbRegion--useRegionTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region rechnung (
+        name: Rechnung
+        type: form
+        source {
+            location: localDatabase
+            tableName: FAKT_RECHNUNGEN
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+    region allgemein (
+        name: 1. Allgemein
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @rechnung
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region kunde (
+        name: 2. Kunde
+        type: staticContent
+        layout {
+            sequence: 20
+            parentRegion: @rechnung
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region details (
+        name: Texte
+        type: staticContent
+        layout {
+            sequence: 30
+            parentRegion: @rechnung
+            slot: subRegions
+        }
+        appearance {
+            template: @/tabs-container
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region tab-zahlungsbed (
+        name: Zahlungsbedingungen
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @details
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region tab-vortext (
+        name: Vortext
+        type: staticContent
+        layout {
+            sequence: 20
+            parentRegion: @details
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region tab-schlusstext (
+        name: Schlusstext
+        type: staticContent
+        layout {
+            sequence: 30
+            parentRegion: @details
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region tab-lieferadresse (
+        name: Lieferadresse
+        type: staticContent
+        layout {
+            sequence: 40
+            parentRegion: @details
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P11_RECH_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @allgemein
+            slot: regionBody
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P11_TITEL (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @allgemein
+            slot: regionBody
+        }
+    )
+
+    pageItem P11_KUND_ID_ALT (
+        type: hidden
+        layout {
+            sequence: 3
+            region: @kunde
+            slot: regionBody
+        }
+    )
+
+    pageItem P11_RECH_BETREFF (
+        type: textField
+        label {
+            label: Betreff (leer: „Rechnung <Nummer>“)
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_BETREFF
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P11_RECH_DATUM (
+        type: datePicker
+        label {
+            label: Datum
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_DATUM
+            dataType: date
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: expression
+            language: plsql
+            plsqlExpression: trunc(sysdate)
+        }
+    )
+
+    pageItem P11_RECH_FAELLIG_AM (
+        type: datePicker
+        label {
+            label: Fällig am (leer: aus Zahlungsbedingung)
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_FAELLIG_AM
+            dataType: date
+        }
+    )
+
+    pageItem P11_RECH_LEISTUNGSZEITRAUM (
+        type: textField
+        label {
+            label: Leistungszeitraum
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_LEISTUNGSZEITRAUM
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 100
+        }
+    )
+
+    pageItem P11_RECH_REFERENZ (
+        type: textField
+        label {
+            label: Referenz
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_REFERENZ
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P11_RECH_MAND_ID (
+        type: selectList
+        label {
+            label: Mandant (ausstellende Firma)
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_MAND_ID
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-mandanten
+            displayNullValue: false
+            displayExtraValues: false
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select coalesce((select MITA_MAND_ID from ALLG_MITARBEITER where MITA_BENUTZERNAME = :APP_USER), (select min(MAND_ID) keep (dense_rank first order by MAND_SORTIERUNG) from ADMIN_MANDANTEN where MAND_IST_AKTIV = 'Y')) from dual
+                ```
+        }
+    )
+
+    pageItem P11_RECH_MITA_ID (
+        type: selectList
+        label {
+            label: Bearbeiter
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_MITA_ID
+            dataType: number
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-mitarbeiter
+            displayNullValue: true
+            nullDisplayValue: -
+            displayExtraValues: false
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select MITA_ID from ALLG_MITARBEITER where MITA_BENUTZERNAME = :APP_USER
+                ```
+        }
+    )
+
+    pageItem P11_RECH_PROJEKT (
+        type: textField
+        label {
+            label: Projekt
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_PROJEKT
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P11_RECH_IST_BRUTTO (
+        type: switch
+        label {
+            label: Preise sind brutto
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_IST_BRUTTO
+            dataType: varchar2
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P11_RECH_IST_FAELLIGKEIT_ANZEIGEN (
+        type: switch
+        label {
+            label: Fälligkeit anzeigen
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_IST_FAELLIGKEIT_ANZEIGEN
+            dataType: varchar2
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P11_RECH_NUMMER (
+        type: displayOnly
+        label {
+            label: Rechnungsnummer
+            alignment: left
+        }
+        layout {
+            sequence: 110
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_NUMMER
+            dataType: varchar2
+        }
+    )
+
+    pageItem P11_RECH_STATUS (
+        type: displayOnly
+        label {
+            label: Status
+            alignment: left
+        }
+        layout {
+            sequence: 120
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_STATUS
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: ENTWURF
+        }
+    )
+
+    pageItem P11_RECH_KUND_ID (
+        type: selectList
+        label {
+            label: Kunde
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @kunde
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_KUND_ID
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-kunden
+            displayNullValue: true
+            nullDisplayValue: - Kunde wählen -
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P11_RECH_ZBED_ID (
+        type: selectList
+        label {
+            label: Zahlungsbedingung (leer: vom Kunden)
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_ZBED_ID
+            dataType: number
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-zahlungsbedingungen
+            displayNullValue: true
+            nullDisplayValue: -
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P11_RECH_IST_OHNE_MWST (
+        type: switch
+        label {
+            label: Keine MwSt. (Reverse Charge)
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_IST_OHNE_MWST
+            dataType: varchar2
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P11_HINWEIS_EMPFAENGER (
+        type: displayOnly
+        layout {
+            sequence: 35
+            region: @kunde
+            slot: regionBody
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: Anschrift, UID und Kontaktperson werden beim Speichern aus dem Kundenstamm übernommen, wenn der Kunde gewählt oder geändert wurde; danach hier änderbar.
+        }
+    )
+
+    pageItem P11_RECH_EMPF_ANREDE (
+        type: textField
+        label {
+            label: Anrede
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @kunde
+            slot: regionBody
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_ANREDE
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 30
+        }
+    )
+
+    pageItem P11_RECH_EMPF_NAME (
+        type: textarea
+        label {
+            label: Kunde (Anschrift)
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_NAME
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 400
+        }
+    )
+
+    pageItem P11_RECH_EMPF_KONTAKTPERSON (
+        type: textField
+        label {
+            label: Kontaktperson
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_KONTAKTPERSON
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P11_RECH_EMPF_UID_NUMMER (
+        type: textField
+        label {
+            label: UID-Nr.
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_UID_NUMMER
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 20
+        }
+    )
+
+    pageItem P11_RECH_EMPF_STRASSE (
+        type: textField
+        label {
+            label: Adresse
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @kunde
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_STRASSE
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 250
+        }
+    )
+
+    pageItem P11_RECH_EMPF_PLZ (
+        type: textField
+        label {
+            label: PLZ
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 1
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_PLZ
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 10
+        }
+    )
+
+    pageItem P11_RECH_EMPF_ORT (
+        type: textField
+        label {
+            label: Ort
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_ORT
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 100
+        }
+    )
+
+    pageItem P11_RECH_EMPF_LAND_CODE (
+        type: selectList
+        label {
+            label: Land
+            alignment: left
+        }
+        layout {
+            sequence: 110
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_LAND_CODE
+            dataType: varchar2
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-laender
+            displayNullValue: true
+            nullDisplayValue: -
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P11_RECH_ZAHLUNGSBED_TEXT (
+        type: textarea
+        label {
+            label: Zahlungsbedingungen
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @tab-zahlungsbed
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_ZAHLUNGSBED_TEXT
+            dataType: clob
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = 'ZAHLUNGSBED' and TXVL_IST_STANDARD = 'Y'
+                ```
+        }
+    )
+
+    pageItem P11_RECH_VORTEXT (
+        type: textarea
+        label {
+            label: Vortext
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @tab-vortext
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_VORTEXT
+            dataType: clob
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = 'VORTEXT' and TXVL_IST_STANDARD = 'Y'
+                ```
+        }
+    )
+
+    pageItem P11_RECH_SCHLUSSTEXT (
+        type: textarea
+        label {
+            label: Schlusstext
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @tab-schlusstext
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_SCHLUSSTEXT
+            dataType: clob
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = 'SCHLUSSTEXT' and TXVL_IST_STANDARD = 'Y'
+                ```
+        }
+    )
+
+    pageItem P11_RECH_LIEFERADRESSE (
+        type: textarea
+        label {
+            label: Lieferadresse
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @tab-lieferadresse
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_LIEFERADRESSE
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 1000
+        }
+    )
+
+    region positionen (
+        name: 3. Artikel (Positionen)
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select RPOS_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTI_ID, RPOS_NAME,
+                       RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
+                       RPOS_IST_OPTIONAL, RPOS_SUMME, RPOS_BESCHREIBUNG
+                  from FAKT_RECHNUNGSPOSITIONEN
+                 where RPOS_RECH_ID = :P11_RECH_ID
+                 order by RPOS_POSITION
+                ```
+            pageItemsToSubmit: [
+                P11_RECH_ID
+            ]
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        toolbar {
+            controls: [
+                actionsMenu
+                saveButton
+            ]
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+
+        savedReport PRIMARY (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 0
+                }
+            )
+            displayColumn (
+                column: @RPOS_POSITION
+                layout {
+                    sequence: 1
+                }
+            )
+            displayColumn (
+                column: @RPOS_KAPITEL
+                layout {
+                    sequence: 2
+                }
+            )
+            displayColumn (
+                column: @RPOS_ARTI_ID
+                layout {
+                    sequence: 3
+                }
+            )
+            displayColumn (
+                column: @RPOS_NAME
+                layout {
+                    sequence: 4
+                }
+            )
+            displayColumn (
+                column: @RPOS_MENGE
+                layout {
+                    sequence: 5
+                }
+            )
+            displayColumn (
+                column: @RPOS_EINHEIT
+                layout {
+                    sequence: 6
+                }
+            )
+            displayColumn (
+                column: @RPOS_EINZELPREIS
+                layout {
+                    sequence: 7
+                }
+            )
+            displayColumn (
+                column: @RPOS_RABATT_PROZENT
+                layout {
+                    sequence: 8
+                }
+            )
+            displayColumn (
+                column: @RPOS_MWST_PROZENT
+                layout {
+                    sequence: 9
+                }
+            )
+            displayColumn (
+                column: @RPOS_IST_OPTIONAL
+                layout {
+                    sequence: 10
+                }
+            )
+            displayColumn (
+                column: @RPOS_SUMME
+                layout {
+                    sequence: 11
+                }
+            )
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 5
+            }
+        )
+
+        column RPOS_ID (
+            type: hidden
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: RPOS_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column RPOS_POSITION (
+            type: numberField
+            heading {
+                heading: Pos
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: RPOS_POSITION
+                dataType: number
+            }
+        )
+
+        column RPOS_KAPITEL (
+            type: textField
+            heading {
+                heading: Kapitel
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: RPOS_KAPITEL
+                dataType: varchar2
+            }
+        )
+
+        column RPOS_UNTERKAPITEL (
+            type: textField
+            heading {
+                heading: Unterkapitel
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: RPOS_UNTERKAPITEL
+                dataType: varchar2
+            }
+        )
+
+        column RPOS_ARTI_ID (
+            type: selectList
+            heading {
+                heading: Artikel
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: RPOS_ARTI_ID
+                dataType: number
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-artikel
+                displayNullValue: true
+                displayExtraValues: false
+            }
+        )
+
+        column RPOS_NAME (
+            type: textField
+            heading {
+                heading: Name (leer: vom Artikel)
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: RPOS_NAME
+                dataType: varchar2
+            }
+        )
+
+        column RPOS_MENGE (
+            type: numberField
+            heading {
+                heading: Menge
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: RPOS_MENGE
+                dataType: number
+            }
+            default {
+                type: static
+                staticValue: 1
+            }
+        )
+
+        column RPOS_EINHEIT (
+            type: selectList
+            heading {
+                heading: Einheit
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: RPOS_EINHEIT
+                dataType: varchar2
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-einheiten-code
+                displayNullValue: true
+                displayExtraValues: false
+            }
+        )
+
+        column RPOS_EINZELPREIS (
+            type: numberField
+            heading {
+                heading: Einzelpreis (leer: vom Artikel)
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: RPOS_EINZELPREIS
+                dataType: number
+            }
+        )
+
+        column RPOS_RABATT_PROZENT (
+            type: numberField
+            heading {
+                heading: Rabatt %
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: RPOS_RABATT_PROZENT
+                dataType: number
+            }
+        )
+
+        column RPOS_MWST_PROZENT (
+            type: selectList
+            heading {
+                heading: MwSt. %
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: RPOS_MWST_PROZENT
+                dataType: number
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-mwst-prozent
+                displayNullValue: true
+                displayExtraValues: false
+            }
+        )
+
+        column RPOS_IST_OPTIONAL (
+            type: selectList
+            heading {
+                heading: Optional
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: RPOS_IST_OPTIONAL
+                dataType: varchar2
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ja-nein
+                displayNullValue: false
+                displayExtraValues: false
+            }
+            default {
+                type: static
+                staticValue: N
+            }
+        )
+
+        column RPOS_SUMME (
+            type: numberField
+            heading {
+                heading: Summe
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: RPOS_SUMME
+                dataType: number
+            }
+            readOnly {
+                type: always
+            }
+        )
+
+        column RPOS_BESCHREIBUNG (
+            type: textarea
+            heading {
+                heading: Beschreibung (leer: vom Artikel)
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                databaseColumn: RPOS_BESCHREIBUNG
+                dataType: clob
+            }
+        )
+
+    )
+
+    region summen (
+        name: Summen
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select 1 as SORT, 'Netto' as ZEILE, sum(NETTO) as BETRAG from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID
+                union all
+                select 2, to_char(MWST_PROZENT, 'FM990') || ' % MwSt.', MWST from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID
+                union all
+                select 3, 'Gesamtbetrag', sum(NETTO + MWST) from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID
+                union all
+                select 4, 'Bezahlt', BEZAHLT from FAKT_RECHNUNGEN_V where RECH_ID = :P11_RECH_ID and RECH_STATUS <> 'ENTWURF'
+                union all
+                select 5, 'Offen', OFFEN from FAKT_RECHNUNGEN_V where RECH_ID = :P11_RECH_ID and RECH_STATUS <> 'ENTWURF'
+                order by 1, 2
+                ```
+            pageItemsToSubmit: [
+                P11_RECH_ID
+            ]
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            showNullValuesAs: -
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        messages {
+            whenNoDataFound: Noch keine Positionen.
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+
+        column SORT (
+            type: hidden
+            heading {
+                heading: Sort
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column ZEILE (
+            type: plainText
+            heading {
+                heading: Position
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 30
+                columnAlignment: end
+            }
+            source {
+                dataType: NUMBER
+            }
+            appearance {
+                formatMask: FML999G999G990D00
+            }
+        )
+
+    )
+
+    region zahlungen (
+        name: Zahlungen
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select ZAHL_ID, ZAHL_RECH_ID, ZAHL_DATUM, ZAHL_BETRAG, ZAHL_SKONTO, ZAHL_MAHNSPESEN, ZAHL_BEMERKUNG
+                  from FAKT_ZAHLUNGEN
+                 where ZAHL_RECH_ID = :P11_RECH_ID
+                 order by ZAHL_DATUM
+                ```
+            pageItemsToSubmit: [
+                P11_RECH_ID
+            ]
+        }
+        layout {
+            sequence: 60
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        toolbar {
+            controls: [
+                actionsMenu
+                saveButton
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_STATUS in ('OFFEN', 'BEZAHLT')
+        }
+
+        savedReport PRIMARY (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 0
+                }
+            )
+            displayColumn (
+                column: @ZAHL_DATUM
+                layout {
+                    sequence: 1
+                }
+            )
+            displayColumn (
+                column: @ZAHL_BETRAG
+                layout {
+                    sequence: 2
+                }
+            )
+            displayColumn (
+                column: @ZAHL_SKONTO
+                layout {
+                    sequence: 3
+                }
+            )
+            displayColumn (
+                column: @ZAHL_MAHNSPESEN
+                layout {
+                    sequence: 4
+                }
+            )
+            displayColumn (
+                column: @ZAHL_BEMERKUNG
+                layout {
+                    sequence: 5
+                }
+            )
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 5
+            }
+        )
+
+        column ZAHL_ID (
+            type: hidden
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: ZAHL_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ZAHL_RECH_ID (
+            type: hidden
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: ZAHL_RECH_ID
+                dataType: number
+            }
+            default {
+                type: item
+                item: P11_RECH_ID
+            }
+        )
+
+        column ZAHL_DATUM (
+            type: datePicker
+            heading {
+                heading: Datum
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: ZAHL_DATUM
+                dataType: date
+            }
+        )
+
+        column ZAHL_BETRAG (
+            type: numberField
+            heading {
+                heading: Betrag
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ZAHL_BETRAG
+                dataType: number
+            }
+        )
+
+        column ZAHL_SKONTO (
+            type: numberField
+            heading {
+                heading: Skonto
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ZAHL_SKONTO
+                dataType: number
+            }
+        )
+
+        column ZAHL_MAHNSPESEN (
+            type: numberField
+            heading {
+                heading: Mahnspesen/Zinsen
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: ZAHL_MAHNSPESEN
+                dataType: number
+            }
+        )
+
+        column ZAHL_BEMERKUNG (
+            type: textField
+            heading {
+                heading: Bemerkung
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: ZAHL_BEMERKUNG
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Zur Liste
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 10
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Entwurf löschen
+        layout {
+            sequence: 15
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+                t-Button--simple
+            ]
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'ENTWURF'
+        }
+        confirmation {
+            message: Rechnungsentwurf wirklich löschen?
+            style: danger
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 20
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+    )
+
+    button abschliessen (
+        buttonName: ABSCHLIESSEN
+        label: Rechnung abschließen
+        layout {
+            sequence: 25
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'ENTWURF'
+        }
+        confirmation {
+            message: Rechnung abschließen? Die Rechnungsnummer wird vergeben und kann nicht mehr geändert werden.
+            style: warning
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Anlegen
+        layout {
+            sequence: 30
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P11_RECH_ID
+        }
+    )
+
+    button up (
+        buttonName: UP
+        label: Zurück zur Rechnungsliste
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: up
+        }
+        appearance {
+            buttonTemplate: @/icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+            icon: fa-arrow-up
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 10
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process initialize-form-rechnung (
+        name: Formular Rechnung initialisieren
+        type: formInitialization
+        formRegion: @rechnung
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process titel-setzen (
+        name: Seitentitel und Kunde merken
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                :P11_TITEL := case when :P11_RECH_ID is null then 'Neue Rechnung'
+                                   when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
+                                   else 'Rechnung ' || :P11_RECH_NUMMER end;
+                :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: beforeHeader
+        }
+    )
+
+    process entwurf-loeschen (
+        name: Positionen des Entwurfs löschen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                delete from FAKT_RECHNUNGSPOSITIONEN
+                 where RPOS_RECH_ID = :P11_RECH_ID
+                   and exists (select 1 from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID and RECH_STATUS = 'ENTWURF');
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            whenButtonPressed: @delete
+        }
+    )
+
+    process process-form-rechnung (
+        name: Formular Rechnung verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @rechnung
+        execution {
+            sequence: 10
+        }
+    )
+
+    process empfaenger-uebernehmen (
+        name: Empfänger vom Kunden übernehmen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                FAKT_RECHNUNG.empfaenger_uebernehmen(:P11_RECH_ID);
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :REQUEST in ('CREATE', 'SAVE', 'ABSCHLIESSEN') and :P11_RECH_KUND_ID <> nvl(:P11_KUND_ID_ALT, -1)
+        }
+    )
+
+    process positionen-speichern (
+        name: Positionen speichern (Werte vom Artikel übernehmen)
+        type: executeCode
+        editableRegion: @positionen
+        source {
+            plsqlCode:
+                ```plsql
+                -- Positionen nur im Entwurf aenderbar; leere Felder werden vom Artikel uebernommen
+                declare
+                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                    a        ARTI_ARTIKEL%rowtype;
+                    l_mwst   ALLG_MWST_SAETZE.MWST_PROZENT%type;
+                    l_einh   ALLG_EINHEITEN.EINH_CODE%type;
+                    l_pos    number := :RPOS_POSITION;
+                begin
+                    select RECH_STATUS into l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
+                    if l_status <> 'ENTWURF' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf geändert werden.');
+                    end if;
+                    if :APEX$ROW_STATUS = 'D' then
+                        delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = :RPOS_ID;
+                        return;
+                    end if;
+                    if :RPOS_ARTI_ID is not null then
+                        select * into a from ARTI_ARTIKEL where ARTI_ID = :RPOS_ARTI_ID;
+                        select MWST_PROZENT into l_mwst from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
+                        select max(EINH_CODE) into l_einh from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
+                    end if;
+                    if l_pos is null then
+                        select nvl(max(RPOS_POSITION), 0) + 1 into l_pos
+                          from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = :P11_RECH_ID;
+                    end if;
+                    if :APEX$ROW_STATUS = 'C' then
+                        insert into FAKT_RECHNUNGSPOSITIONEN
+                              (RPOS_RECH_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTIKELNUMMER,
+                               RPOS_NAME, RPOS_BESCHREIBUNG, RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT,
+                               RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO)
+                        values (:P11_RECH_ID, :RPOS_ARTI_ID, l_pos, :RPOS_KAPITEL, :RPOS_UNTERKAPITEL, a.ARTI_NUMMER,
+                                coalesce(:RPOS_NAME, a.ARTI_NAME), coalesce(:RPOS_BESCHREIBUNG, a.ARTI_BESCHREIBUNG),
+                                nvl(:RPOS_MENGE, 1), coalesce(:RPOS_EINHEIT, l_einh), coalesce(:RPOS_EINZELPREIS, a.ARTI_VK_PREIS, 0),
+                                :RPOS_RABATT_PROZENT, coalesce(:RPOS_MWST_PROZENT, l_mwst, 20), nvl(:RPOS_IST_OPTIONAL, 'N'),
+                                a.ARTI_ERLOESKONTO)
+                        returning RPOS_ID into :RPOS_ID;
+                    else
+                        update FAKT_RECHNUNGSPOSITIONEN
+                           set RPOS_ARTI_ID        = :RPOS_ARTI_ID,
+                               RPOS_POSITION       = l_pos,
+                               RPOS_KAPITEL        = :RPOS_KAPITEL,
+                               RPOS_UNTERKAPITEL   = :RPOS_UNTERKAPITEL,
+                               RPOS_ARTIKELNUMMER  = coalesce(a.ARTI_NUMMER, RPOS_ARTIKELNUMMER),
+                               RPOS_NAME           = coalesce(:RPOS_NAME, a.ARTI_NAME, RPOS_NAME),
+                               RPOS_BESCHREIBUNG   = coalesce(:RPOS_BESCHREIBUNG, a.ARTI_BESCHREIBUNG),
+                               RPOS_MENGE          = nvl(:RPOS_MENGE, 1),
+                               RPOS_EINHEIT        = coalesce(:RPOS_EINHEIT, l_einh),
+                               RPOS_EINZELPREIS    = coalesce(:RPOS_EINZELPREIS, a.ARTI_VK_PREIS, 0),
+                               RPOS_RABATT_PROZENT = :RPOS_RABATT_PROZENT,
+                               RPOS_MWST_PROZENT   = coalesce(:RPOS_MWST_PROZENT, l_mwst, 20),
+                               RPOS_IST_OPTIONAL   = nvl(:RPOS_IST_OPTIONAL, 'N')
+                         where RPOS_ID = :RPOS_ID;
+                    end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 30
+        }
+    )
+
+    process zahlungen-speichern (
+        name: Zahlungen speichern
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @zahlungen
+        execution {
+            sequence: 40
+        }
+    )
+
+    process summen-berechnen (
+        name: Summen und Zahlungsstatus
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);
+                FAKT_RECHNUNG.zahlungsstatus(:P11_RECH_ID);
+                ```
+        }
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :REQUEST <> 'DELETE'
+        }
+    )
+
+    process abschliessen (
+        name: Rechnung abschließen (Nummer vergeben)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                FAKT_RECHNUNG.abschliessen(:P11_RECH_ID);
+                ```
+        }
+        execution {
+            sequence: 60
+        }
+        serverSideCondition {
+            whenButtonPressed: @abschliessen
+        }
+        successMessage {
+            successMessage: Rechnung abgeschlossen.
+        }
+    )
+
+    branch zur-liste-nach-loeschen (
+        name: Nach dem Löschen zur Liste
+        execution {
+            sequence: 10
+        }
+        behavior {
+            target: {
+                page: 10
+            }
+        }
+        serverSideCondition {
+            whenButtonPressed: @delete
+        }
+    )
+
+    branch in-rechnung-bleiben (
+        name: In der Rechnung bleiben
+        execution {
+            sequence: 20
+        }
+        behavior {
+            target: {
+                page: 11
+                items: {
+                    P11_RECH_ID: &P11_RECH_ID.
+                }
+            }
+        }
+    )
+
+)

@@ -5,9 +5,9 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
 
 ## Status / offene Entscheidungen
 - Workspace `THGERP`, Schema `WKSP_THGERP`, SQLcl-Verbindung `wksp_thgerp@pdbthg` (Host dbthgprod, für ERP-Entwicklung freigegeben).
-- App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20040 THG-ARTIKEL (geplant).
+- App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20040 THG-ARTIKEL, 20050 THG-FINANZ (Fakturierung, Tabellen FAKT_*).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-09-26): alle DDL-Skripte 01–20 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20030; Kunden aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-09-26): alle DDL-Skripte 01–21 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung

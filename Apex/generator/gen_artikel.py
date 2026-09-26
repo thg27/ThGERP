@@ -426,14 +426,16 @@ def seite_11():
 
 """
     st = "stammdaten"
-    s += item("P11_ARTI_NAME", "textField", "Name", 10, st, col="ARTI_NAME", req=True, maxlen=200, spalten=6)
+    s += item("P11_ARTI_NAME", "textField", "Name", 10, st, col="ARTI_NAME", req=True, maxlen=200, spalten=5)
     s += item("P11_ARTI_VK_PREIS", "numberField", "Verkaufspreis", 20, st, col="ARTI_VK_PREIS", dtype="number",
               req=True, neue_zeile=False, spalten=2,
               extra="        default {\n            type: static\n            staticValue: 0\n        }\n")
     s += item("P11_ARTI_IST_BRUTTO", "switch", "brutto", 30, st, col="ARTI_IST_BRUTTO", neue_zeile=False, spalten=1,
               extra=SWITCH("N"))
+    s += item("P11_ARTI_IST_AKTIV", "switch", "Aktiv", 35, st,
+              col="ARTI_IST_AKTIV", neue_zeile=False, spalten=2, extra=SWITCH("Y"))
     s += item("P11_ARTI_BILD", "imageUpload", "Artikelbild", 40, st, col="ARTI_BILD", dtype="blob",
-              neue_zeile=False, spalten=3)
+              neue_zeile=False, spalten=2)
     s += item("P11_ARTI_NUMMER", "textField", "Nummer", 50, st, col="ARTI_NUMMER", req=True, maxlen=30, spalten=6,
               extra="""        default {
             type: sqlQuerySingleValue
@@ -473,8 +475,6 @@ def seite_11():
               dtype="number", neue_zeile=False, spalten=2)
     s += item("P11_ARTI_ERLOESKONTO", "textField", "Erlöskonto", 40, zf, col="ARTI_ERLOESKONTO", maxlen=20,
               neue_zeile=False, spalten=2)
-    s += item("P11_ARTI_IST_AKTIV", "switch", "Aktiv", 50, zf, col="ARTI_IST_AKTIV", neue_zeile=False, spalten=2,
-              extra=SWITCH("Y"))
 
     # Zusatzfelder 1-10 (Grid: je aktivem Feld eine Zeile, Wert direkt editierbar)
     s += f"""    region zusatzwerte (

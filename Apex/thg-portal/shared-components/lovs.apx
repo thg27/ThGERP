@@ -292,3 +292,97 @@ lov lov-textvorlage-arten (
         return: SCHLUSSTEXT
     )
 )
+
+lov lov-mandanten (
+    name: LOV_MANDANTEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select MAND_NAME as d,
+                   MAND_ID as r
+              from ADMIN_MANDANTEN
+             where MAND_IST_AKTIV = 'Y'
+             order by MAND_SORTIERUNG, MAND_NAME
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-mitarbeiter (
+    name: LOV_MITARBEITER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select MITA_NAME as d,
+                   MITA_ID as r
+              from ALLG_MITARBEITER
+             order by MITA_NAME
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-artikel (
+    name: LOV_ARTIKEL
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select ARTI_NUMMER || ' – ' || ARTI_NAME as d,
+                   ARTI_ID as r
+              from ARTI_ARTIKEL
+             where ARTI_IST_AKTIV = 'Y'
+             order by ARTI_NUMMER
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-mwst-prozent (
+    name: LOV_MWST_PROZENT
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select to_char(MWST_PROZENT, 'FM990D00') || ' %' as d,
+                   MWST_PROZENT as r
+              from ALLG_MWST_SAETZE
+             where MWST_IST_AKTIV = 'Y'
+             order by MWST_SORTIERUNG nulls last, MWST_PROZENT desc
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-einheiten-code (
+    name: LOV_EINHEITEN_CODE
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select EINH_CODE as d,
+                   EINH_CODE as r
+              from ALLG_EINHEITEN
+             where EINH_IST_AKTIV = 'Y'
+             order by EINH_SORTIERUNG nulls last, EINH_CODE
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)

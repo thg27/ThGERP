@@ -1,0 +1,248 @@
+lov lov-boolean (
+    name: LOV_BOOLEAN
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/20000/lov-boolean
+    }
+
+    entry false (
+        sequence: 2
+        display: Nein
+        return: FALSE
+    )
+
+    entry true (
+        sequence: 1
+        display: Ja
+        return: TRUE
+    )
+
+)
+
+lov lov-ja-nein (
+    name: LOV_JA_NEIN
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/20000/lov-ja-nein
+    }
+
+    entry ja (
+        sequence: 1
+        display: Ja
+        return: Y
+    )
+
+    entry nein (
+        sequence: 2
+        display: Nein
+        return: N
+    )
+
+)
+
+lov lov-textvorlage-arten (
+    name: LOV_TEXTVORLAGE_ARTEN
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/20000/lov-textvorlage-arten
+    }
+
+    entry zahlungsbed (
+        sequence: 1
+        display: Zahlungsbedingungen
+        return: ZAHLUNGSBED
+    )
+
+    entry vortext (
+        sequence: 2
+        display: Vortext
+        return: VORTEXT
+    )
+
+    entry schlusstext (
+        sequence: 3
+        display: Schlusstext
+        return: SCHLUSSTEXT
+    )
+)
+
+lov lov-mandanten (
+    name: LOV_MANDANTEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select MAND_NAME as d,
+                   MAND_ID as r
+              from ADMIN_MANDANTEN
+             where MAND_IST_AKTIV = 'Y'
+             order by MAND_SORTIERUNG, MAND_NAME
+            ```
+    }
+    subscription {
+        master: @/20000/lov-mandanten
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-mitarbeiter (
+    name: LOV_MITARBEITER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select MITA_NAME as d,
+                   MITA_ID as r
+              from ALLG_MITARBEITER
+             order by MITA_NAME
+            ```
+    }
+    subscription {
+        master: @/20000/lov-mitarbeiter
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-artikel (
+    name: LOV_ARTIKEL
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select ARTI_NUMMER || ' – ' || ARTI_NAME as d,
+                   ARTI_ID as r
+              from ARTI_ARTIKEL
+             where ARTI_IST_AKTIV = 'Y'
+             order by ARTI_NUMMER
+            ```
+    }
+    subscription {
+        master: @/20000/lov-artikel
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-mwst-prozent (
+    name: LOV_MWST_PROZENT
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select to_char(MWST_PROZENT, 'FM990D00') || ' %' as d,
+                   MWST_PROZENT as r
+              from ALLG_MWST_SAETZE
+             where MWST_IST_AKTIV = 'Y'
+             order by MWST_SORTIERUNG nulls last, MWST_PROZENT desc
+            ```
+    }
+    subscription {
+        master: @/20000/lov-mwst-prozent
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-einheiten-code (
+    name: LOV_EINHEITEN_CODE
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select EINH_CODE as d,
+                   EINH_CODE as r
+              from ALLG_EINHEITEN
+             where EINH_IST_AKTIV = 'Y'
+             order by EINH_SORTIERUNG nulls last, EINH_CODE
+            ```
+    }
+    subscription {
+        master: @/20000/lov-einheiten-code
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-kunden (
+    name: LOV_KUNDEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select KUND_NUMMER || ' – ' ||
+                   case KUND_TYP when 'FIRMA' then KUND_FIRMENNAME
+                                 else KUND_NACHNAME || nvl2(KUND_VORNAME, ' ' || KUND_VORNAME, null) end as d,
+                   KUND_ID as r
+              from KUND_KUNDEN
+             order by KUND_NUMMER
+            ```
+    }
+    subscription {
+        master: @/20000/lov-kunden
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-zahlungsbedingungen (
+    name: LOV_ZAHLUNGSBEDINGUNGEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select ZBED_BEZEICHNUNG as d,
+                   ZBED_ID as r
+              from ALLG_ZAHLUNGSBEDINGUNGEN
+             order by ZBED_ZIEL_TAGE, ZBED_BEZEICHNUNG
+            ```
+    }
+    subscription {
+        master: @/20000/lov-zahlungsbedingungen
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-laender (
+    name: LOV_LAENDER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select LAND_BEZEICHNUNG || ' (' || LAND_CODE || ')' as d,
+                   LAND_CODE as r
+              from ALLG_LAENDER
+             where LAND_CODE <> 'XX'
+             order by case LAND_CODE when 'AT' then 0 when 'DE' then 1 when 'CH' then 2 else 3 end, LAND_BEZEICHNUNG
+            ```
+    }
+    subscription {
+        master: @/20000/lov-laender
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)

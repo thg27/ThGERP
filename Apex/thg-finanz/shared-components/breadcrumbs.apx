@@ -1,0 +1,80 @@
+breadcrumb breadcrumb (
+    name: Breadcrumb
+
+    entry home (
+        name: Startseite
+        pageNumber: 1
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry rechnungen (
+        name: Rechnungen
+        pageNumber: 10
+        execution {
+            sequence: 20
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+    entry rechnung (
+        name: Rechnung
+        pageNumber: 11
+        execution {
+            sequence: 30
+        }
+        appearance {
+            parentEntry: @rechnungen
+        }
+        link {
+            target: {
+                page: 11
+            }
+        }
+    )
+
+    entry wertelisten (
+        name: Wertelisten
+        pageNumber: 100
+        execution {
+            sequence: 100
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 100
+            }
+        }
+    )
+
+    entry werteliste-110 (
+        name: Nummernkreise
+        pageNumber: 110
+        execution {
+            sequence: 110
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 110
+            }
+        }
+    )
+)

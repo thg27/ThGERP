@@ -28,5 +28,6 @@ whenever sqlerror exit failure rollback
 @@18_mandanten_firmendaten.sql
 @@19_artikelstamm.sql
 @@20_fakturierung.sql
+@@21_finanz.sql
 
 prompt Installation abgeschlossen.
