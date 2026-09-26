@@ -24,3 +24,13 @@ Diese Punkte haben Validierung oder Import scheitern lassen (APEX 26.1, SQLcl 26
 
 ## Quelle / Stand
 App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
+
+## Laufzeit-Stolpersteine (ergänzt 2026-09-26, Browsertest THG-FINANZ)
+- **Werte aus dem Interactive Grid kommen als Text** in Prozessen mit `editableRegion` (`:RPOS_EINZELPREIS` usw.).
+  `coalesce(:TEXT, zahl_spalte)` → `ORA-00932`. Zahlen mit `to_number(:X)`, CLOB-Spalten mit `to_clob(:X)` umwandeln.
+- Solche Prozesse vor dem Einspielen **in der Datenbank ausführen**: Code aus der `.apx` nehmen, Binds durch
+  Text-Literale ersetzen, am Ende `rollback` – das findet Typfehler, die `apex validate` nicht sieht.
+- **`apex import` beendet die laufenden Sitzungen** der Apps (Session Sharing) → nach jedem Einspielen neu anmelden.
+- APEX-Systemmeldungen („Row created.“) sind englisch, solange die deutschen APEX-Texte nicht installiert sind →
+  bei Formularprozessen eigene `successMessage` setzen.
+- `<…>` in Beschriftungen wird als HTML verschluckt – keine spitzen Klammern in Labels.
