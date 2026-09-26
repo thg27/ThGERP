@@ -130,3 +130,271 @@ lov lov-mandanten (
         display: D
     }
 )
+
+lov lov-icons (
+    name: LOV_ICONS
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/20000/lov-icons
+    }
+
+    entry icon-th-large (
+        sequence: 1
+        display: Kacheln (fa-th-large)
+        return: fa-th-large
+    )
+
+    entry icon-home (
+        sequence: 2
+        display: Startseite (fa-home)
+        return: fa-home
+    )
+
+    entry icon-gear (
+        sequence: 3
+        display: Zahnrad (fa-gear)
+        return: fa-gear
+    )
+
+    entry icon-gears (
+        sequence: 4
+        display: Zahnräder (fa-gears)
+        return: fa-gears
+    )
+
+    entry icon-wrench (
+        sequence: 5
+        display: Werkzeug (fa-wrench)
+        return: fa-wrench
+    )
+
+    entry icon-address-book (
+        sequence: 6
+        display: Adressbuch (fa-address-book)
+        return: fa-address-book
+    )
+
+    entry icon-users (
+        sequence: 7
+        display: Personen (fa-users)
+        return: fa-users
+    )
+
+    entry icon-user (
+        sequence: 8
+        display: Person (fa-user)
+        return: fa-user
+    )
+
+    entry icon-building-o (
+        sequence: 9
+        display: Gebäude (fa-building-o)
+        return: fa-building-o
+    )
+
+    entry icon-industry (
+        sequence: 10
+        display: Industrie (fa-industry)
+        return: fa-industry
+    )
+
+    entry icon-cube (
+        sequence: 11
+        display: Würfel (Artikel) (fa-cube)
+        return: fa-cube
+    )
+
+    entry icon-cubes (
+        sequence: 12
+        display: Würfel (Lager) (fa-cubes)
+        return: fa-cubes
+    )
+
+    entry icon-archive (
+        sequence: 13
+        display: Archiv (fa-archive)
+        return: fa-archive
+    )
+
+    entry icon-truck (
+        sequence: 14
+        display: Lieferung (fa-truck)
+        return: fa-truck
+    )
+
+    entry icon-shopping-cart (
+        sequence: 15
+        display: Einkaufswagen (fa-shopping-cart)
+        return: fa-shopping-cart
+    )
+
+    entry icon-eur (
+        sequence: 16
+        display: Euro (fa-eur)
+        return: fa-eur
+    )
+
+    entry icon-money (
+        sequence: 17
+        display: Geld (fa-money)
+        return: fa-money
+    )
+
+    entry icon-credit-card (
+        sequence: 18
+        display: Kreditkarte (fa-credit-card)
+        return: fa-credit-card
+    )
+
+    entry icon-calculator (
+        sequence: 19
+        display: Rechner (fa-calculator)
+        return: fa-calculator
+    )
+
+    entry icon-file-text-o (
+        sequence: 20
+        display: Dokument (fa-file-text-o)
+        return: fa-file-text-o
+    )
+
+    entry icon-folder-open-o (
+        sequence: 21
+        display: Ordner (fa-folder-open-o)
+        return: fa-folder-open-o
+    )
+
+    entry icon-book (
+        sequence: 22
+        display: Buch (fa-book)
+        return: fa-book
+    )
+
+    entry icon-print (
+        sequence: 23
+        display: Drucker (fa-print)
+        return: fa-print
+    )
+
+    entry icon-envelope-o (
+        sequence: 24
+        display: Brief (fa-envelope-o)
+        return: fa-envelope-o
+    )
+
+    entry icon-phone (
+        sequence: 25
+        display: Telefon (fa-phone)
+        return: fa-phone
+    )
+
+    entry icon-calendar (
+        sequence: 26
+        display: Kalender (fa-calendar)
+        return: fa-calendar
+    )
+
+    entry icon-clock-o (
+        sequence: 27
+        display: Uhr (fa-clock-o)
+        return: fa-clock-o
+    )
+
+    entry icon-tasks (
+        sequence: 28
+        display: Aufgaben (fa-tasks)
+        return: fa-tasks
+    )
+
+    entry icon-check-square-o (
+        sequence: 29
+        display: Erledigt (fa-check-square-o)
+        return: fa-check-square-o
+    )
+
+    entry icon-briefcase (
+        sequence: 30
+        display: Aktentasche (fa-briefcase)
+        return: fa-briefcase
+    )
+
+    entry icon-bar-chart (
+        sequence: 31
+        display: Balkendiagramm (fa-bar-chart)
+        return: fa-bar-chart
+    )
+
+    entry icon-pie-chart (
+        sequence: 32
+        display: Kreisdiagramm (fa-pie-chart)
+        return: fa-pie-chart
+    )
+
+    entry icon-line-chart (
+        sequence: 33
+        display: Liniendiagramm (fa-line-chart)
+        return: fa-line-chart
+    )
+
+    entry icon-table (
+        sequence: 34
+        display: Tabelle (fa-table)
+        return: fa-table
+    )
+
+    entry icon-list-ul (
+        sequence: 35
+        display: Liste (fa-list-ul)
+        return: fa-list-ul
+    )
+
+    entry icon-tags (
+        sequence: 36
+        display: Etiketten (fa-tags)
+        return: fa-tags
+    )
+
+    entry icon-database (
+        sequence: 37
+        display: Datenbank (fa-database)
+        return: fa-database
+    )
+
+    entry icon-server (
+        sequence: 38
+        display: Server (fa-server)
+        return: fa-server
+    )
+
+    entry icon-cloud (
+        sequence: 39
+        display: Cloud (fa-cloud)
+        return: fa-cloud
+    )
+
+    entry icon-globe (
+        sequence: 40
+        display: Globus (fa-globe)
+        return: fa-globe
+    )
+
+    entry icon-map-marker (
+        sequence: 41
+        display: Ort (fa-map-marker)
+        return: fa-map-marker
+    )
+
+    entry icon-lock (
+        sequence: 42
+        display: Schloss (fa-lock)
+        return: fa-lock
+    )
+
+    entry icon-key (
+        sequence: 43
+        display: Schlüssel (fa-key)
+        return: fa-key
+    )
+)

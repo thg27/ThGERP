@@ -10,6 +10,29 @@ page 10 (
     navigation {
         cursorFocus: doNotFocusCursor
     }
+    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            // Schalter "Aktiv" in der Liste: per AJAX umschalten und Bericht aktualisieren
+            $("#applikationen").on("click", ".thg-schalter", function () {
+                var knopf = this;
+                knopf.disabled = true;
+                apex.server.process("AKTIV_UMSCHALTEN", { x01: knopf.dataset.id }, { dataType: "text" })
+                    .then(function () { apex.region("applikationen").refresh(); })
+                    .catch(function () { knopf.disabled = false; apex.message.alert("Umschalten nicht möglich."); });
+            });
+            ```
+    }
+    css {
+        inline:
+            ```css
+            .thg-schalter { display: inline-flex; align-items: center; gap: .5rem; border: 0; background: none; cursor: pointer; padding: 0; }
+            .thg-schalter-knopf { position: relative; width: 2.25rem; height: 1.25rem; border-radius: 1rem; background: #b5b5b5; transition: background .15s; }
+            .thg-schalter-knopf::after { content: ""; position: absolute; top: .125rem; left: .125rem; width: 1rem; height: 1rem; border-radius: 50%; background: #fff; transition: left .15s; }
+            .thg-schalter[aria-pressed="true"] .thg-schalter-knopf { background: var(--thg-primaer, #108024); }
+            .thg-schalter[aria-pressed="true"] .thg-schalter-knopf::after { left: 1.125rem; }
+            ```
+    }
     security {
         authorizationScheme: @administration-rights
         pageAccessProtection: argumentsMustHaveChecksum
@@ -55,7 +78,9 @@ page 10 (
                        APPL_APEX_ALIAS,
                        APPL_ZIELSEITE,
                        APPL_ICON,
-                       case APPL_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as APPL_IST_AKTIV,
+                       APPL_IST_AKTIV,
+                       case APPL_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as AKTIV_TEXT,
+                       case APPL_IST_AKTIV when 'Y' then 'true' else 'false' end as AKTIV_ARIA,
                        APPL_UPDATED_ON,
                        APPL_UPDATED_BY
                   from ADMIN_APPLIKATIONEN
@@ -190,12 +215,17 @@ page 10 (
             type: plainText
             heading {
                 heading: Icon
+                alignment: center
             }
             layout {
                 sequence: 80
+                columnAlignment: center
             }
             source {
                 dataType: STRING
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #APPL_ICON# fa-2x" title="#APPL_ICON#" aria-hidden="true"></span>
             }
         )
 
@@ -206,6 +236,35 @@ page 10 (
             }
             layout {
                 sequence: 90
+            }
+            source {
+                dataType: STRING
+            }
+            columnFormatting {
+                htmlExpression: <button type="button" class="thg-schalter" data-id="#APPL_ID#" aria-pressed="#AKTIV_ARIA#" title="Im Portal anzeigen umschalten"><span class="thg-schalter-knopf"></span><span class="thg-schalter-text">#AKTIV_TEXT#</span></button>
+            }
+        )
+
+        column AKTIV_TEXT (
+            type: hidden
+            heading {
+                heading: Aktiv (Text)
+            }
+            layout {
+                sequence: 91
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column AKTIV_ARIA (
+            type: hidden
+            heading {
+                heading: Aktiv (ARIA)
+            }
+            layout {
+                sequence: 92
             }
             source {
                 dataType: STRING
@@ -368,6 +427,24 @@ page 10 (
             }
         )
 
+    )
+
+    process aktiv-umschalten (
+        name: AKTIV_UMSCHALTEN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                update ADMIN_APPLIKATIONEN
+                   set APPL_IST_AKTIV = case APPL_IST_AKTIV when 'Y' then 'N' else 'Y' end
+                 where APPL_ID = to_number(apex_application.g_x01);
+                htp.p('ok');
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
     )
 
 )
