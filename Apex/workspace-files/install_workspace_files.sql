@@ -172,9 +172,9 @@ body.apex-theme-redwood-light .t-Header {
   line-height: 1.4;
   text-align: center;
 }
-.thg-login-firma--links  { left: 10rem; }
-.thg-login-firma'));
-    dbms_lob.append(l_inhalt, to_clob('--rechts { right: 10rem; }
+.thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); '));
+    dbms_lob.append(l_inhalt, to_clob('}
+.thg-login-firma--rechts { right: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma img {
   display: block;
   height: 10rem;
@@ -183,7 +183,7 @@ body.apex-theme-redwood-light .t-Header {
 .thg-login-firma-name { font-weight: 700; font-size: 1.75rem; line-height: 1.2; }
 
 /* Schmale Bildschirme: Firmen nebeneinander ueber dem Anmeldeformular statt in den Ecken */
-@media (max-width: 800px) {
+@media (max-width: 1280px) {
   .thg-login-firmen {
     display: flex;
     justify-content: space-between;
