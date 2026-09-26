@@ -19,7 +19,8 @@ document.addEventListener("click", function (ereignis) {
                 if (ok) {
                     wechseln();
                 }
-            });
+            },
+            { title: "Ungespeicherte Änderungen", confirmLabel: "Zum Portal", cancelLabel: "Abbrechen" });
     } else {
         wechseln();
     }

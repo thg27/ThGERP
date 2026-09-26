@@ -232,7 +232,8 @@ document.addEventListener("click", function (ereignis) {
                     wechsel'));
     dbms_lob.append(l_inhalt, to_clob('n();
                 }
-            });
+            },
+            { title: "Ungespeicherte Änderungen", confirmLabel: "Zum Portal", cancelLabel: "Abbrechen" });
     } else {
         wechseln();
     }
