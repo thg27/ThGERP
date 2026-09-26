@@ -22,7 +22,6 @@ whenever sqlerror exit failure rollback
 @@11_ddl_util.sql
 @@12_laender.sql
 @@13_kundenstamm_erweiterung.sql
-@@14_migration_vorbereitung.sql
 @@15_kundenstammblatt.sql
 @@16_rechtsformen_ausland.sql
 @@17_mandanten.sql

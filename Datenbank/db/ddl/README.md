@@ -22,7 +22,6 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 11_ddl_util.sql | Hilfspaket DDL_UTIL für wiederholbare Skripte (Tabelle/Spalte/Constraint/Index/Trigger sicherstellen) |
 | 12_laender.sql | ALLG_LAENDER um die Länder der Altdaten ergänzt (34 Länder); wiederholbar |
 | 13_kundenstamm_erweiterung.sql | Kundengruppen, Branchen, Unterkategorien, Kunde-Branche/-Unterkategorie, Abteilungen, Funktionen; Zusatzspalten Kunde/Ansprechpartner; wiederholbar (generiert) |
-| 14_migration_vorbereitung.sql | Alt-ID-Spalten (Standorte, Kommunikation, Branchen-Zuordnungen), Land XX = unbekannt, Standorttypen Rechnungs-/Lieferadresse; wiederholbar |
 | 15_kundenstammblatt.sql | Package AS_PDF (lib/as_pdf, MIT) und KUND_STAMMBLATT: Kundenstammblatt als PDF (`KUND_STAMMBLATT.pdf(kund_id)`), genutzt von App 20020 Seite 12; wiederholbar |
 | 16_rechtsformen_ausland.sql | Ausländische Rechtsformen der Altdaten (d.o.o., d.d., s.p., s.r.o., a.s., Kft., Zrt., Sp. z o.o., S.R.L., S.p.A., S.A., Ltd., eGen); wiederholbar |
 | 17_mandanten.sql | ADMIN_MANDANTEN (THG-EDV GmbH, Thomas Geßlbauer GmbH) und in ALLG_MITARBEITER Benutzername (Login) und Standard-Mandant; wiederholbar |
