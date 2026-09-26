@@ -56,7 +56,7 @@ page 110 (
                        t.NKRS_UPDATED_ON,
                        t.NKRS_UPDATED_BY
                   from FAKT_NUMMERNKREISE t
-                  join ADMIN_MANDANTEN m on m.MAND_ID = t.NKRS_MAND_ID
+                  join ADMIN_MANDANTEN m on m.MAND_ID = t.NKRS_MAND_ID and m.MAND_ID = :MANDANT_ID
                  order by m.MAND_SORTIERUNG, t.NKRS_BELEGART, t.NKRS_JAHR desc
                 ```
         }

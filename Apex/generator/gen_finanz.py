@@ -28,7 +28,7 @@ WL_FINANZ = [
                  ("JAHR", "Jahr", "number", True), ("FORMAT", "Format", "text", True),
                  ("LETZTE_NUMMER", "Zuletzt vergebene Nummer", "number", True)],
          lov="lov-mandanten",
-         join=("ADMIN_MANDANTEN m on m.MAND_ID = t.NKRS_MAND_ID", "m.MAND_KURZNAME"),
+         join=("ADMIN_MANDANTEN m on m.MAND_ID = t.NKRS_MAND_ID and m.MAND_ID = :MANDANT_ID", "m.MAND_KURZNAME"),
          order="m.MAND_SORTIERUNG, t.NKRS_BELEGART, t.NKRS_JAHR desc"),
 ]
 
@@ -48,7 +48,7 @@ def default_sql(sql):
 def seite_10():
     s = KOPF(10, "Rechnungen", "RECHNUNGEN") + BREADCRUMB("Rechnungen")
     s += f"""    region rechnungen (
-        name: Rechnungen
+        name: Rechnungen &MANDANT_NAME.
         type: interactiveReport
         source {{
             location: localDatabase
@@ -70,6 +70,7 @@ def seite_10():
                        OFFEN,
                        case IST_UEBERFAELLIG when 'Y' then 'überfällig' end as UEBERFAELLIG
                   from FAKT_RECHNUNGEN_V
+                 where RECH_MAND_ID = :MANDANT_ID
                  order by RECH_DATUM desc, RECH_NUMMER desc nulls first
                 ```
         }}
@@ -326,11 +327,47 @@ def seite_11():
               maxlen=100, spalten=6, **f)
     s += item("P11_RECH_REFERENZ", "textField", "Referenz", 50, a, col="RECH_REFERENZ", maxlen=200,
               neue_zeile=False, spalten=6, **f)
-    s += item("P11_RECH_MAND_ID", "selectList", "Mandant (ausstellende Firma)", 60, a, col="RECH_MAND_ID",
-              dtype="number", req=True, spalten=4, extra=lov("lov-mandanten") + default_sql(
-                  "select coalesce((select MITA_MAND_ID from ALLG_MITARBEITER where MITA_BENUTZERNAME = :APP_USER), "
-                  "(select min(MAND_ID) keep (dense_rank first order by MAND_SORTIERUNG) from ADMIN_MANDANTEN "
-                  "where MAND_IST_AKTIV = 'Y')) from dual"), **f)
+    s += """    pageItem P11_RECH_MAND_ID (
+        type: hidden
+        layout {
+            sequence: 60
+            region: @allgemein
+            slot: regionBody
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_MAND_ID
+            dataType: number
+        }
+        default {
+            type: item
+            item: MANDANT_ID
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P11_MANDANT (
+        type: displayOnly
+        label {
+            label: Mandant (Wechsel im Portal)
+            alignment: left
+        }
+        layout {
+            sequence: 61
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+"""
     s += item("P11_RECH_MITA_ID", "selectList", "Bearbeiter", 70, a, col="RECH_MITA_ID", dtype="number",
               neue_zeile=False, spalten=4, extra=lov("lov-mitarbeiter", "-") + default_sql(
                   "select MITA_ID from ALLG_MITARBEITER where MITA_BENUTZERNAME = :APP_USER"), **f)
@@ -508,14 +545,18 @@ def seite_11():
             plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'ENTWURF'
         }
 """
-    s += button("delete", "DELETE", "Entwurf löschen", 15, "breadcrumb", "next",
+    s += button("delete", "DELETE", "Rechnung löschen", 15, "breadcrumb", "next",
                 options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n            ]",
                 verhalten="""            executeValidations: false
             warnOnUnsavedChanges: doNotCheck
-            databaseAction: delete
             requiresConfirmation: true
-""", bedingung=entwurf + """        confirmation {
-            message: Rechnungsentwurf wirklich löschen?
+""", bedingung="""        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and (:P11_RECH_STATUS = 'ENTWURF' or FAKT_RECHNUNG.ist_letzte(:P11_RECH_ID) = 'Y')
+        }
+        confirmation {
+            message: Rechnung &P11_RECH_NUMMER. wirklich löschen? Positionen und Zahlungen werden mitgelöscht; bei einer abgeschlossenen Rechnung wird die Nummer wieder frei.
             style: danger
         }
 """)
@@ -553,6 +594,27 @@ def seite_11():
         }
     )
 
+    process mandant-pruefen (
+        name: Rechnung gehört zum Mandanten der Sitzung
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                if :P11_RECH_MAND_ID <> :MANDANT_ID then
+                    raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                end if;
+                ```
+        }
+        execution {
+            sequence: 15
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+    )
+
     process titel-setzen (
         name: Seitentitel und Kunde merken
         type: executeCode
@@ -563,6 +625,7 @@ def seite_11():
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
+                select max(MAND_KURZNAME) into :P11_MANDANT from ADMIN_MANDANTEN where MAND_ID = coalesce(:P11_RECH_MAND_ID, :MANDANT_ID);
                 ```
         }
         execution {
@@ -571,15 +634,13 @@ def seite_11():
         }
     )
 
-    process entwurf-loeschen (
-        name: Positionen des Entwurfs löschen
+    process rechnung-loeschen (
+        name: Rechnung löschen (Entwurf oder letzte Rechnung)
         type: executeCode
         source {
             plsqlCode:
                 ```plsql
-                delete from FAKT_RECHNUNGSPOSITIONEN
-                 where RPOS_RECH_ID = :P11_RECH_ID
-                   and exists (select 1 from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID and RECH_STATUS = 'ENTWURF');
+                FAKT_RECHNUNG.loeschen(:P11_RECH_ID);
                 ```
         }
         execution {
@@ -587,6 +648,9 @@ def seite_11():
         }
         serverSideCondition {
             whenButtonPressed: @delete
+        }
+        successMessage {
+            successMessage: Rechnung gelöscht.
         }
     )
 
@@ -596,6 +660,10 @@ def seite_11():
         formRegion: @rechnung
         execution {
             sequence: 10
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE,ABSCHLIESSEN
         }
     )
 
@@ -871,7 +939,7 @@ list startseite (
               from (
                     select 'Rechnungen' as label, 10 as seite, 'fa-file-text-o' as image,
                            'Ausgangsrechnungen erfassen, abschließen und Zahlungen verbuchen' as beschreibung,
-                           (select count(*) || ' offen' from FAKT_RECHNUNGEN where RECH_STATUS = 'OFFEN') as anzahl
+                           (select count(*) || ' offen' from FAKT_RECHNUNGEN where RECH_STATUS = 'OFFEN' and RECH_MAND_ID = :MANDANT_ID) as anzahl
                       from dual
                     union all
                     select 'Wertelisten', 100, 'fa-list-ul', 'Nummernkreise', null from dual

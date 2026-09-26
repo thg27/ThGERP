@@ -2,9 +2,11 @@ app THG-KUNDEN (
     name: ThG – Kundenstammdaten
     version: 1.0.0
     logo {
-        type: imageAndText
-        imageUrl: #WORKSPACE_FILES#thg-logo.svg
-        text: Kundenstammdaten
+        type: custom
+        customHtml:
+            ```
+            <span class="thg-mandant-logo" data-mandant="&MANDANT_CODE."><img src="#WORKSPACE_FILES#&MANDANT_LOGO." alt="&MANDANT_NAME."></span><span class="apex-logo-text">Kundenstammdaten</span>
+            ```
     }
     navigation {
         homeUrl: {

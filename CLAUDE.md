@@ -7,11 +7,10 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
 - Workspace `THGERP`, Schema `WKSP_THGERP`, SQLcl-Verbindung `wksp_thgerp@pdbthg` (Host dbthgprod, für ERP-Entwicklung freigegeben).
 - App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20040 THG-ARTIKEL, 20050 THG-FINANZ (Fakturierung, Tabellen FAKT_*).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-09-26): alle DDL-Skripte 01–21 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-09-26): alle DDL-Skripte 01–22 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
-- Mandantenfähigkeit: Mandanten, Firmendaten und Bannerfarben sind umgesetzt (ADMIN_MANDANTEN, globale Items MANDANT_*); Sub-Apps zeigen noch das feste Logo
 
 ## Datenbank-Standards
 Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
@@ -31,6 +30,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Einspielen (einzeln nacheinander): 1. Portal, 2. Sub-Apps, 3. Subscriptions mit `apex_shared_component.refresh` aktualisieren, 4. `apex_subscribed_components` prüfen – alle `UP_TO_DATE`.
 - Wertelisten-Pflege: Kunden-Wertelisten (KUND_*) in THG-KUNDEN unter Administration > Wertelisten (generiert mit `Apex/generator/gen_wertelisten_kunden.py`); allgemeine Wertelisten (ALLG_*) in THG-ALLGEMEIN unter Look Up Values.
 - Gemeinsame Workspace-Dateien `thg.css` und `thg-logo.svg` in `Apex/workspace-files/`; nach Änderung `python3 build_install.py` und das erzeugte `install_workspace_files.sql` einspielen – kein App-Import nötig.
+- Mandant: wird im Portal gewählt (Navigationsleiste) und gilt über Session Sharing (globale Items `MANDANT_*`) in allen Apps, bis er im Portal gewechselt wird. Sub-Apps belegen nur vor (App-Prozess „Mandant vorbelegen“), wechseln nie; Logo/Bannerfarbe je Mandant. Einrichtung neuer Sub-Apps: `python3 Apex/generator/mandant_in_apps.py`.
+  Kunden und Artikel sind mandantenübergreifend; Finanz (FAKT_*) ist mandantenabhängig (`RECH_MAND_ID = :MANDANT_ID`).
 - Theme-Stil: Redwood Light; Stilauswahl im Portal setzt `apex_theme.set_current_style` für alle Apps aus `ADMIN_APPLIKATIONEN`.
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`.
 - `Apex/strategic-planner` ist Vorlage und wird nicht in Git eingecheckt.

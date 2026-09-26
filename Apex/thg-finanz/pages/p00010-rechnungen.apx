@@ -38,7 +38,7 @@ page 10 (
     )
 
     region rechnungen (
-        name: Rechnungen
+        name: Rechnungen &MANDANT_NAME.
         type: interactiveReport
         source {
             location: localDatabase
@@ -60,6 +60,7 @@ page 10 (
                        OFFEN,
                        case IST_UEBERFAELLIG when 'Y' then 'überfällig' end as UEBERFAELLIG
                   from FAKT_RECHNUNGEN_V
+                 where RECH_MAND_ID = :MANDANT_ID
                  order by RECH_DATUM desc, RECH_NUMMER desc nulls first
                 ```
         }

@@ -183,7 +183,7 @@ list startseite (
               from (
                     select 'Rechnungen' as label, 10 as seite, 'fa-file-text-o' as image,
                            'Ausgangsrechnungen erfassen, abschließen und Zahlungen verbuchen' as beschreibung,
-                           (select count(*) || ' offen' from FAKT_RECHNUNGEN where RECH_STATUS = 'OFFEN') as anzahl
+                           (select count(*) || ' offen' from FAKT_RECHNUNGEN where RECH_STATUS = 'OFFEN' and RECH_MAND_ID = :MANDANT_ID) as anzahl
                       from dual
                     union all
                     select 'Wertelisten', 100, 'fa-list-ul', 'Nummernkreise', null from dual

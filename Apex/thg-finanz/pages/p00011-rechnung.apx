@@ -337,42 +337,42 @@ page 11 (
     )
 
     pageItem P11_RECH_MAND_ID (
-        type: selectList
-        label {
-            label: Mandant (ausstellende Firma)
-            alignment: left
-        }
+        type: hidden
         layout {
             sequence: 60
             region: @allgemein
             slot: regionBody
-            columnSpan: 4
-            alignment: left
-        }
-        appearance {
-            template: @/required-floating
-            templateOptions: #DEFAULT#
         }
         source {
             formRegion: @rechnung
             column: RECH_MAND_ID
             dataType: number
         }
-        validation {
-            valueRequired: true
-        }
-        lov {
-            type: sharedComponent
-            lov: @lov-mandanten
-            displayNullValue: false
-            displayExtraValues: false
-        }
         default {
-            type: sqlQuerySingleValue
-            sqlQuerySingleValue:
-                ```sql
-                select coalesce((select MITA_MAND_ID from ALLG_MITARBEITER where MITA_BENUTZERNAME = :APP_USER), (select min(MAND_ID) keep (dense_rank first order by MAND_SORTIERUNG) from ADMIN_MANDANTEN where MAND_IST_AKTIV = 'Y')) from dual
-                ```
+            type: item
+            item: MANDANT_ID
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P11_MANDANT (
+        type: displayOnly
+        label {
+            label: Mandant (Wechsel im Portal)
+            alignment: left
+        }
+        layout {
+            sequence: 61
+            region: @allgemein
+            slot: regionBody
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
         }
     )
 
@@ -1715,7 +1715,7 @@ page 11 (
 
     button delete (
         buttonName: DELETE
-        label: Entwurf löschen
+        label: Rechnung löschen
         layout {
             sequence: 15
             region: @breadcrumb
@@ -1732,16 +1732,15 @@ page 11 (
         behavior {
             executeValidations: false
             warnOnUnsavedChanges: doNotCheck
-            databaseAction: delete
             requiresConfirmation: true
         }
         serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'ENTWURF'
+            plsqlExpression: :P11_RECH_ID is not null and (:P11_RECH_STATUS = 'ENTWURF' or FAKT_RECHNUNG.ist_letzte(:P11_RECH_ID) = 'Y')
         }
         confirmation {
-            message: Rechnungsentwurf wirklich löschen?
+            message: Rechnung &P11_RECH_NUMMER. wirklich löschen? Positionen und Zahlungen werden mitgelöscht; bei einer abgeschlossenen Rechnung wird die Nummer wieder frei.
             style: danger
         }
     )
@@ -1855,6 +1854,27 @@ page 11 (
         }
     )
 
+    process mandant-pruefen (
+        name: Rechnung gehört zum Mandanten der Sitzung
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                if :P11_RECH_MAND_ID <> :MANDANT_ID then
+                    raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                end if;
+                ```
+        }
+        execution {
+            sequence: 15
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+    )
+
     process titel-setzen (
         name: Seitentitel und Kunde merken
         type: executeCode
@@ -1865,6 +1885,7 @@ page 11 (
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
+                select max(MAND_KURZNAME) into :P11_MANDANT from ADMIN_MANDANTEN where MAND_ID = coalesce(:P11_RECH_MAND_ID, :MANDANT_ID);
                 ```
         }
         execution {
@@ -1873,15 +1894,13 @@ page 11 (
         }
     )
 
-    process entwurf-loeschen (
-        name: Positionen des Entwurfs löschen
+    process rechnung-loeschen (
+        name: Rechnung löschen (Entwurf oder letzte Rechnung)
         type: executeCode
         source {
             plsqlCode:
                 ```plsql
-                delete from FAKT_RECHNUNGSPOSITIONEN
-                 where RPOS_RECH_ID = :P11_RECH_ID
-                   and exists (select 1 from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID and RECH_STATUS = 'ENTWURF');
+                FAKT_RECHNUNG.loeschen(:P11_RECH_ID);
                 ```
         }
         execution {
@@ -1889,6 +1908,9 @@ page 11 (
         }
         serverSideCondition {
             whenButtonPressed: @delete
+        }
+        successMessage {
+            successMessage: Rechnung gelöscht.
         }
     )
 
@@ -1898,6 +1920,10 @@ page 11 (
         formRegion: @rechnung
         execution {
             sequence: 10
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE,ABSCHLIESSEN
         }
     )
 

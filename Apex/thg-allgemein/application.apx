@@ -2,9 +2,11 @@ app THG-ALLGEMEIN (
     name: ThG – Allgemein
     version: 1.0.0
     logo {
-        type: imageAndText
-        imageUrl: #WORKSPACE_FILES#thg-logo.svg
-        text: Allgemein
+        type: custom
+        customHtml:
+            ```
+            <span class="thg-mandant-logo" data-mandant="&MANDANT_CODE."><img src="#WORKSPACE_FILES#&MANDANT_LOGO." alt="&MANDANT_NAME."></span><span class="apex-logo-text">Allgemein</span>
+            ```
     }
     navigation {
         homeUrl: {

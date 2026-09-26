@@ -1,7 +1,8 @@
 -- =====================================================================
 -- ThGERP (Gruppe FAKT) – App THG-FINANZ (20050)
 -- 21 – Logik und Sichten der Fakturierung:
---      Package FAKT_RECHNUNG (Empfaenger uebernehmen, Summen, Abschliessen mit Nummernkreis, Zahlungsstatus)
+--      Package FAKT_RECHNUNG (Empfaenger uebernehmen, Summen, Abschliessen mit Nummernkreis, Zahlungsstatus,
+--      Loeschen nur Entwurf bzw. letzte Rechnung)
 --      Views FAKT_RECHNUNGEN_V (Liste mit offenem Betrag), FAKT_RECHNUNG_MWST_V (Summen je Steuersatz)
 --      Grunddaten: Mitarbeiter Thomas Gesslbauer (Login ADMIN_THG), Textvorlagen aus Kingbill, Portal-Kachel
 -- Voraussetzung: 17–20
@@ -71,6 +72,12 @@ create or replace package FAKT_RECHNUNG as
     procedure abschliessen(p_rech_id in number);
     -- Status OFFEN/BEZAHLT aus den Zahlungen ableiten
     procedure zahlungsstatus(p_rech_id in number);
+    -- Y = Rechnung hat die zuletzt vergebene Nummer ihres Nummernkreises (darf geloescht werden)
+    function ist_letzte(p_rech_id in number) return varchar2;
+    -- Entwurf oder letzte Rechnung loeschen (inkl. Positionen, Zahlungen); letzte Nummer wird wieder frei
+    procedure loeschen(p_rech_id in number);
+    -- TRUE nur waehrend das Package Nummern vergibt/zuruecksetzt (Trigger sperren manuelle Aenderungen)
+    g_intern boolean := false;
 end FAKT_RECHNUNG;
 /
 
@@ -140,9 +147,11 @@ create or replace package body FAKT_RECHNUNG as
           from FAKT_NUMMERNKREISE
          where NKRS_MAND_ID = p_mand_id and NKRS_BELEGART = p_belegart and NKRS_JAHR = p_jahr
            for update;
+        g_intern := true;
         update FAKT_NUMMERNKREISE
            set NKRS_LETZTE_NUMMER = NKRS_LETZTE_NUMMER + 1
          where NKRS_ID = l_nkrs.NKRS_ID;
+        g_intern := false;
         return replace(replace(l_nkrs.NKRS_FORMAT, '{JAHR}', to_char(p_jahr)), '{NR}', to_char(l_nkrs.NKRS_LETZTE_NUMMER + 1));
     end naechste_nummer;
 
@@ -162,6 +171,7 @@ create or replace package body FAKT_RECHNUNG as
         end if;
         summen_berechnen(p_rech_id);
         l_nr := naechste_nummer(l_rech.RECH_MAND_ID, 'RECHNUNG', extract(year from l_rech.RECH_DATUM));
+        g_intern := true;
         update FAKT_RECHNUNGEN r
            set RECH_NUMMER     = l_nr,
                RECH_STATUS     = 'OFFEN',
@@ -170,6 +180,11 @@ create or replace package body FAKT_RECHNUNG as
                                           RECH_DATUM + nvl((select ZBED_ZIEL_TAGE from ALLG_ZAHLUNGSBEDINGUNGEN
                                                              where ZBED_ID = r.RECH_ZBED_ID), 14))
          where RECH_ID = p_rech_id;
+        g_intern := false;
+    exception
+        when others then
+            g_intern := false;
+            raise;
     end abschliessen;
 
     procedure zahlungsstatus(p_rech_id in number) is
@@ -181,6 +196,46 @@ create or replace package body FAKT_RECHNUNG as
          where RECH_ID = p_rech_id
            and RECH_STATUS in ('OFFEN', 'BEZAHLT');
     end zahlungsstatus;
+
+    function ist_letzte(p_rech_id in number) return varchar2 is
+        l_anz pls_integer;
+    begin
+        select count(*) into l_anz
+          from FAKT_RECHNUNGEN r
+          join FAKT_NUMMERNKREISE n on n.NKRS_MAND_ID = r.RECH_MAND_ID
+                                   and n.NKRS_BELEGART = 'RECHNUNG'
+                                   and n.NKRS_JAHR = extract(year from r.RECH_DATUM)
+         where r.RECH_ID = p_rech_id
+           and r.RECH_NUMMER = replace(replace(n.NKRS_FORMAT, '{JAHR}', to_char(n.NKRS_JAHR)),
+                                       '{NR}', to_char(n.NKRS_LETZTE_NUMMER));
+        return case when l_anz > 0 then 'Y' else 'N' end;
+    end ist_letzte;
+
+    procedure loeschen(p_rech_id in number) is
+        l_rech FAKT_RECHNUNGEN%rowtype;
+    begin
+        select * into l_rech from FAKT_RECHNUNGEN where RECH_ID = p_rech_id for update;
+        if l_rech.RECH_STATUS <> 'ENTWURF' and ist_letzte(p_rech_id) = 'N' then
+            raise_application_error(-20220, 'Es kann nur die zuletzt vergebene Rechnung ('
+                || 'Nummernkreis ' || extract(year from l_rech.RECH_DATUM) || ') gelöscht werden.');
+        end if;
+        g_intern := true;
+        delete from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = p_rech_id;
+        delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = p_rech_id;
+        delete from FAKT_RECHNUNGEN where RECH_ID = p_rech_id;
+        if l_rech.RECH_STATUS <> 'ENTWURF' then
+            update FAKT_NUMMERNKREISE
+               set NKRS_LETZTE_NUMMER = NKRS_LETZTE_NUMMER - 1
+             where NKRS_MAND_ID = l_rech.RECH_MAND_ID
+               and NKRS_BELEGART = 'RECHNUNG'
+               and NKRS_JAHR = extract(year from l_rech.RECH_DATUM);
+        end if;
+        g_intern := false;
+    exception
+        when others then
+            g_intern := false;
+            raise;
+    end loeschen;
 
 end FAKT_RECHNUNG;
 /

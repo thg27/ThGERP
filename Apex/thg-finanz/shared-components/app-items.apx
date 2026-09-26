@@ -1,0 +1,64 @@
+appItem MANDANT_ID (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Aktueller Mandant (ADMIN_MANDANTEN.MAND_ID). Global = in allen ThG-Apps derselben Sitzung gültig.
+            Gesetzt vom App-Prozess "Mandant setzen" (Login: ALLG_MITARBEITER.MITA_MAND_ID, Wechsel über die Navigationsleiste).
+            ```
+    }
+)
+
+appItem MANDANT_CODE (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Code des aktuellen Mandanten (EDV, TG) – steuert die Bannerfarben (thg.css: data-mandant).
+            ```
+    }
+)
+
+appItem MANDANT_NAME (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+)
+
+appItem MANDANT_LOGO (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Logo-Datei des aktuellen Mandanten (Workspace-Datei, ADMIN_MANDANTEN.MAND_LOGO_DATEI).
+            ```
+    }
+)
+
+appItem MANDANT_BENUTZER (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Benutzer, für den der Standard-Mandant ermittelt wurde; weicht er von APP_USER ab (Login), wird neu ermittelt.
+            ```
+    }
+)

@@ -2,9 +2,11 @@ app THG-ARTIKEL (
     name: ThG – Artikelstamm
     version: 1.0.0
     logo {
-        type: imageAndText
-        imageUrl: #WORKSPACE_FILES#thg-logo.svg
-        text: Artikelstamm
+        type: custom
+        customHtml:
+            ```
+            <span class="thg-mandant-logo" data-mandant="&MANDANT_CODE."><img src="#WORKSPACE_FILES#&MANDANT_LOGO." alt="&MANDANT_NAME."></span><span class="apex-logo-text">Artikelstamm</span>
+            ```
     }
     navigation {
         homeUrl: {
