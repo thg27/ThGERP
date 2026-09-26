@@ -34,3 +34,59 @@ appProcess mandant-vorbelegen (
         point: beforeHeader
     }
 )
+
+appProcess theme-stil (
+    name: Theme-Stil
+    type: executeCode
+    source {
+        plsqlCode:
+            ```plsql
+            -- Theme-Stil je Mitarbeiter (ALLG_MITARBEITER.MITA_THEME_STIL), gilt in der Sitzung fuer alle ThG-Apps:
+            --   * Portal: Auswahl in der Navigationsleiste (Request THEME_STYLE_<id>) -> beim Mitarbeiter speichern
+            --   * sonst einmal je Anmeldung: gespeicherten Stil setzen (ohne Eintrag gilt der Standard der App)
+            declare
+                l_stil ALLG_MITARBEITER.MITA_THEME_STIL%type;
+
+                procedure anwenden(p_name in varchar2) is
+                begin
+                    for a in (select distinct s.application_id, s.theme_number
+                                from apex_application_theme_styles s
+                               where s.name = p_name
+                                 and s.is_public = 'Yes'
+                                 and s.application_id in (select APPL_APEX_APP_ID from ADMIN_APPLIKATIONEN))
+                    loop
+                        apex_theme.set_session_style(p_application_id => a.application_id,
+                                                     p_theme_number   => a.theme_number,
+                                                     p_name           => p_name);
+                    end loop;
+                end;
+            begin
+                if :REQUEST like 'THEME\_STYLE\_%' escape '\' then
+                    select max(name) into l_stil
+                      from apex_application_theme_styles
+                     where application_id = :APP_ID
+                       and theme_style_id = to_number(substr(:REQUEST, length('THEME_STYLE_') + 1));
+                    update ALLG_MITARBEITER
+                       set MITA_THEME_STIL = l_stil
+                     where MITA_BENUTZERNAME = upper(:APP_USER);
+                    anwenden(l_stil);
+                    :THEME_STIL := l_stil;
+                    :THEME_STIL_BENUTZER := :APP_USER;
+                elsif :THEME_STIL_BENUTZER is null or :THEME_STIL_BENUTZER <> :APP_USER then
+                    select max(MITA_THEME_STIL) into l_stil
+                      from ALLG_MITARBEITER
+                     where MITA_BENUTZERNAME = upper(:APP_USER);
+                    if l_stil is not null then
+                        anwenden(l_stil);
+                    end if;
+                    :THEME_STIL := l_stil;
+                    :THEME_STIL_BENUTZER := :APP_USER;
+                end if;
+            end;
+            ```
+    }
+    execution {
+        sequence: 10
+        point: beforeHeader
+    }
+)

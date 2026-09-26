@@ -5,6 +5,8 @@ Der Mandant wird im Portal (20000) gewaehlt (Navigationsleiste, App-Prozess "Man
 Alle ThG-Apps teilen die Sitzung (Session Sharing: Workspace) und damit die globalen Items MANDANT_*.
 Die Sub-Apps belegen den Mandanten nur vor, wenn noch keiner gesetzt ist (Einstieg direkt in einer App),
 aendern ihn aber nie – gewechselt wird nur im Portal.
+Theme-Stil: Prozess "Theme-Stil" (Portal und Sub-Apps) setzt den beim Mitarbeiter gespeicherten Stil einmal je
+Sitzung fuer alle Apps; im Portal speichert die Stilauswahl (Request THEME_STYLE_<id>) den Stil beim Mitarbeiter.
 Navigationsleiste: Eintrag mit dem aktuellen Mandanten (nur Anzeige; Klick fuehrt ins Portal zum Wechseln).
 Aufruf (wiederholbar):  python3 Apex/generator/mandant_in_apps.py
 """
@@ -53,6 +55,63 @@ PROZESS = """appProcess mandant-vorbelegen (
 )
 """
 
+THEME_PROZESS = """appProcess theme-stil (
+    name: Theme-Stil
+    type: executeCode
+    source {
+        plsqlCode:
+            ```plsql
+            -- Theme-Stil je Mitarbeiter (ALLG_MITARBEITER.MITA_THEME_STIL), gilt in der Sitzung fuer alle ThG-Apps:
+            --   * Portal: Auswahl in der Navigationsleiste (Request THEME_STYLE_<id>) -> beim Mitarbeiter speichern
+            --   * sonst einmal je Anmeldung: gespeicherten Stil setzen (ohne Eintrag gilt der Standard der App)
+            declare
+                l_stil ALLG_MITARBEITER.MITA_THEME_STIL%type;
+
+                procedure anwenden(p_name in varchar2) is
+                begin
+                    for a in (select distinct s.application_id, s.theme_number
+                                from apex_application_theme_styles s
+                               where s.name = p_name
+                                 and s.is_public = 'Yes'
+                                 and s.application_id in (select APPL_APEX_APP_ID from ADMIN_APPLIKATIONEN))
+                    loop
+                        apex_theme.set_session_style(p_application_id => a.application_id,
+                                                     p_theme_number   => a.theme_number,
+                                                     p_name           => p_name);
+                    end loop;
+                end;
+            begin
+                if :REQUEST like 'THEME\\_STYLE\\_%' escape '\\' then
+                    select max(name) into l_stil
+                      from apex_application_theme_styles
+                     where application_id = :APP_ID
+                       and theme_style_id = to_number(substr(:REQUEST, length('THEME_STYLE_') + 1));
+                    update ALLG_MITARBEITER
+                       set MITA_THEME_STIL = l_stil
+                     where MITA_BENUTZERNAME = upper(:APP_USER);
+                    anwenden(l_stil);
+                    :THEME_STIL := l_stil;
+                    :THEME_STIL_BENUTZER := :APP_USER;
+                elsif :THEME_STIL_BENUTZER is null or :THEME_STIL_BENUTZER <> :APP_USER then
+                    select max(MITA_THEME_STIL) into l_stil
+                      from ALLG_MITARBEITER
+                     where MITA_BENUTZERNAME = upper(:APP_USER);
+                    if l_stil is not null then
+                        anwenden(l_stil);
+                    end if;
+                    :THEME_STIL := l_stil;
+                    :THEME_STIL_BENUTZER := :APP_USER;
+                end if;
+            end;
+            ```
+    }
+    execution {
+        sequence: 10
+        point: beforeHeader
+    }
+)
+"""
+
 LOGO = """    logo {{
         type: custom
         customHtml:
@@ -87,8 +146,8 @@ for app, text in SUB_APPS.items():
     (sc / "app-items.apx").write_text(items, encoding="utf-8")
     p = sc / "app-processes.apx"
     s = p.read_text(encoding="utf-8") if p.exists() else ""
-    s = re.sub(r"appProcess mandant-vorbelegen \(.*?\n\)\n\n?", "", s, flags=re.S)
-    p.write_text(PROZESS + ("\n" + s if s.strip() else ""), encoding="utf-8")
+    s = re.sub(r"appProcess (mandant-vorbelegen|theme-stil) \(.*?\n\)\n\n?", "", s, flags=re.S)
+    p.write_text(PROZESS + "\n" + THEME_PROZESS + ("\n" + s if s.strip() else ""), encoding="utf-8")
     p = sc / "lists.apx"
     s = p.read_text(encoding="utf-8")
     if "    entry mandant (" not in s:
@@ -100,4 +159,9 @@ for app, text in SUB_APPS.items():
     s = p.read_text(encoding="utf-8")
     s = re.sub(r"    logo \{\n.*?\n    \}\n", lambda _: LOGO.format(text=text), s, count=1, flags=re.S)
     p.write_text(s, encoding="utf-8")
+# Portal: bisherigen Prozess "Theme-Stil setzen" (setzte den Stil global fuer alle Benutzer) ersetzen
+p = APEX / "thg-portal" / "shared-components" / "app-processes.apx"
+s = p.read_text(encoding="utf-8")
+s = re.sub(r"appProcess (theme-stil-setzen|theme-stil) \(.*?\n\)\n?", "", s, flags=re.S).rstrip("\n")
+p.write_text(s + "\n\n" + THEME_PROZESS, encoding="utf-8")
 print(f"Mandant (Items, Vorbelegung, Logo) in {len(SUB_APPS)} Sub-Apps")

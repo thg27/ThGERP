@@ -30,7 +30,7 @@ list navigation-bar (
                       from ADMIN_MANDANTEN
                      where MAND_IST_AKTIV = 'Y'
                     union all
-                    -- Stilauswahl (Theme-Stil der gesamten Anwendung)
+                    -- Stilauswahl (Theme-Stil des Mitarbeiters, gilt in allen ThG-Apps)
                     select 1 as the_level, 'Stil' as label, '#' as target,
                            null as is_current_list_entry, 'fa-paint-brush' as image,
                            null as attribute2, 10 as sortierung
@@ -39,8 +39,12 @@ list navigation-bar (
                     select 2,
                            s.name,
                            apex_page.get_url(p_page => :APP_PAGE_ID, p_request => 'THEME_STYLE_' || s.theme_style_id),
-                           case when s.is_current = 'Yes' then 'YES' end,
-                           case when s.is_current = 'Yes' then 'fa-check' end,
+                           case when s.name = coalesce(:THEME_STIL, (select c.name from apex_application_theme_styles c
+                                                                      where c.application_id = :APP_ID and c.is_current = 'Yes'))
+                                then 'YES' end,
+                           case when s.name = coalesce(:THEME_STIL, (select c.name from apex_application_theme_styles c
+                                                                      where c.application_id = :APP_ID and c.is_current = 'Yes'))
+                                then 'fa-check' end,
                            null,
                            11
                       from apex_application_theme_styles s

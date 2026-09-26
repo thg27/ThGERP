@@ -19,13 +19,22 @@ body:has([data-mandant="TG"]) {
   --thg-fokus: #e6ecf7;     /* helles Blau */
 }
 
-/* Redwood: Header (Banner ganz oben) in der Mandantenfarbe mit weisser Schrift */
-body.apex-theme-redwood-light .t-Header {
-  --ut-header-background-color: var(--thg-primaer);
-  --ut-header-border-color: var(--thg-primaer);
-  --ut-header-text-color: #fff;
-  --ut-logo-text-color: #fff;
+/* Header (Banner ganz oben) in allen Theme-Stilen in der Mandantenfarbe mit weisser Schrift.
+   !important, weil die Stil-CSS (Vita, Iris, Redwood …) nach dieser Datei geladen wird und den Header einfaerbt;
+   die Farbe kommt ausschliesslich vom Mandanten. */
+body .t-Header {
+  --ut-header-background-color: var(--thg-primaer) !important;
+  --ut-header-border-color: var(--thg-primaer) !important;
+  --ut-header-text-color: #fff !important;
+  --ut-logo-text-color: #fff !important;
+  background-color: var(--thg-primaer) !important;
+  border-color: var(--thg-primaer) !important;
   color: #fff;
+}
+body .t-Header .t-Header-logo-link,
+body .t-Header .t-Button--header,
+body .t-Header .t-NavigationBar-item .t-Button {
+  color: #fff !important;
 }
 
 /* Logo (ThG-Logo, Workspace-Datei thg-logo.svg) vor dem App-Namen */

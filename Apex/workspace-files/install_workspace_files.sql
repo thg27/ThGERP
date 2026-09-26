@@ -81,14 +81,23 @@ body:has([data-mandant="TG"]) {
   --thg-fokus: #e6ecf7;     /* helles Blau */
 }
 
-/* Redwood: Header (Banner ganz oben) in der Mandantenfarbe mit weisser Schrift */
-body.apex-theme-redwood-light .t-Header {
-  --ut-header-backgroun'));
-    dbms_lob.append(l_inhalt, to_clob('d-color: var(--thg-primaer);
-  --ut-header-border-color: var(--thg-primaer);
-  --ut-header-text-color: #fff;
-  --ut-logo-text-color: #fff;
+/* Header (Banner ganz oben) in allen Theme-Stilen in der Mandantenfarbe mit weisser Schrift.
+   !important, weil die Stil-CSS (Vita, Iris, Redwood '));
+    dbms_lob.append(l_inhalt, to_clob('…) nach dieser Datei geladen wird und den Header einfaerbt;
+   die Farbe kommt ausschliesslich vom Mandanten. */
+body .t-Header {
+  --ut-header-background-color: var(--thg-primaer) !important;
+  --ut-header-border-color: var(--thg-primaer) !important;
+  --ut-header-text-color: #fff !important;
+  --ut-logo-text-color: #fff !important;
+  background-color: var(--thg-primaer) !important;
+  border-color: var(--thg-primaer) !important;
   color: #fff;
+}
+body .t-Header .t-Header-logo-link,
+body .t-Header .t-Button--header,
+body .t-Header .t-NavigationBar-item .t-Button {
+  color: #fff !important;
 }
 
 /* Logo (ThG-Logo, Workspace-Datei thg-logo.svg) vor dem App-Namen */
@@ -105,7 +114,8 @@ body.apex-theme-redwood-light .t-Header {
   background: #fff;
   border-radius: 6px;
   padding: 2px 6px;
-  margin-inline-end: .75rem;
+  m'));
+    dbms_lob.append(l_inhalt, to_clob('argin-inline-end: .75rem;
   vertical-align: middle;
 }
 .t-Header-logo .thg-mandant-logo img {
@@ -119,8 +129,7 @@ body.apex-theme-redwood-light .t-Header {
   display: none;
 }
 
-/* Radio-/Checkbox-Gruppen n'));
-    dbms_lob.append(l_inhalt, to_clob('ebeneinander statt untereinander:
+/* Radio-/Checkbox-Gruppen nebeneinander statt untereinander:
    am Feld Appearance > CSS Classes "thg-horizontal" setzen */
 .thg-horizontal.apex-item-group--rc,
 .thg-horizontal .apex-item-group--rc {
@@ -132,15 +141,15 @@ body.apex-theme-redwood-light .t-Header {
 /* Aktives Eingabefeld hervorheben (Hintergrund), damit sofort sichtbar ist, wo der Cursor steht;
    Radio-/Checkbox-Gruppen ausgenommen (dort wäre die ganze Gruppe eingefärbt) */
 .t-Form-fieldContainer:focus-within .t-Form-inputContainer :is(input:not([type=radio]):not([type=checkbox]), textarea, select),
-.t-Form-fieldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-fieldContainer-inner,
+.t-Form-fieldCon'));
+    dbms_lob.append(l_inhalt, to_clob('tainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-fieldContainer-inner,
 .t-Form-fieldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-itemWrapper {
   background-color: var(--thg-fokus) !important;
 }
 
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
    (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
-.t-Regi'));
-    dbms_lob.append(l_inhalt, to_clob('on.thg-kompakt {
+.t-Region.thg-kompakt {
   margin-block-end: .75rem;
 }
 .thg-kompakt > .t-Region-header {
@@ -159,7 +168,8 @@ body.apex-theme-redwood-light .t-Header {
 }
 
 /* Dialog ohne Redwood-Musterstreifen über der Titelleiste: Klasse "thg-dialog-schlicht" am .ui-dialog
-   (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, per JavaScript) */
+   (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, per Jav'));
+    dbms_lob.append(l_inhalt, to_clob('aScript) */
 .ui-dialog.thg-dialog-schlicht .ui-dialog-titlebar::before {
   display: none !important;
 }
@@ -172,8 +182,7 @@ body.apex-theme-redwood-light .t-Header {
   line-height: 1.4;
   text-align: center;
 }
-.thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); '));
-    dbms_lob.append(l_inhalt, to_clob('}
+.thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma--rechts { right: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma img {
   display: block;
@@ -191,7 +200,8 @@ body.apex-theme-redwood-light .t-Header {
     padding: 1rem;
   }
   .thg-login-firma { position: static; font-size: .75rem; }
-  .thg-login-firma-name { font-size: 1rem; }
+  .thg-login-firma-name { font'));
+    dbms_lob.append(l_inhalt, to_clob('-size: 1rem; }
   .thg-login-firma img { height: 5rem; }
 }
 '));

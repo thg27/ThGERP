@@ -62,3 +62,31 @@ appItem MANDANT_BENUTZER (
             ```
     }
 )
+
+appItem THEME_STIL (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Theme-Stil des Mitarbeiters (ALLG_MITARBEITER.MITA_THEME_STIL), in der Sitzung fuer alle ThG-Apps gesetzt.
+            ```
+    }
+)
+
+appItem THEME_STIL_BENUTZER (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Benutzer, fuer den der Theme-Stil angewendet wurde; weicht er von APP_USER ab (Login), wird neu angewendet.
+            ```
+    }
+)
