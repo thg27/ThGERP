@@ -124,13 +124,19 @@ for nr in range(1, 11):
     grund_artikel.append(insert_wenn_fehlt('ARTI_ZUSATZFELDER', ['ZUSF_NUMMER', 'ZUSF_BEZEICHNUNG'],
                                            [str(nr), f"'Zusatzfeld {nr}'"], 'ZUSF_NUMMER'))
 
+# Portal-Kachel fuer die App THG-ARTIKEL (20040)
+grund_artikel.append("""insert into ADMIN_APPLIKATIONEN (APPL_APEX_APP_ID, APPL_APEX_ALIAS, APPL_BEZEICHNUNG, APPL_BESCHREIBUNG, APPL_ZIELSEITE, APPL_ICON, APPL_SORTIERUNG)
+  select 20040, 'THG-ARTIKEL', 'Artikelstamm', 'Artikel (Waren und Dienstleistungen), Artikelgruppen, Zusatzfelder', 'HOME', 'fa-cube', 30
+    from dual
+   where not exists (select 1 from ADMIN_APPLIKATIONEN where APPL_APEX_APP_ID = 20040);""")
+
 (DDL / '19_artikelstamm.sql').write_text(render('''
 -- =====================================================================
 -- ThGERP (Gruppen ARTI, ALLG)
 -- 19 – Artikelstamm (Modul THG-ARTIKEL), abgeleitet aus der Kingbill-Artikelmaske:
 --      neu: ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN,
 --           ARTI_ARTIKELGRUPPEN, ARTI_ARTIKEL, ARTI_ZUSATZFELDER, ARTI_ARTIKEL_ZUSATZWERTE, ARTI_ARTIKEL_DATEIEN
---      Grunddaten: MwSt.-Saetze 0/10/20 % (Standard 20), Einheiten, Zusatzfelder 1–10
+--      Grunddaten: MwSt.-Saetze 0/10/20 % (Standard 20), Einheiten, Zusatzfelder 1–10, Portal-Kachel THG-ARTIKEL
 -- GENERIERT mit generator/gen_19_20_artikel_fakturierung.py – nicht von Hand bearbeiten
 -- Erzeugt: 2026-09-26
 -- Wiederholbar (DDL_UTIL; Grunddaten nur fehlende Zeilen).

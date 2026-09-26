@@ -30,3 +30,6 @@ Apex/vendix-pos-app/
 
 # Vorlagen, nicht versioniert
 Vorlagen/
+
+# Python-Cache
+__pycache__/

@@ -77,8 +77,11 @@ def bericht(w):
         if kind == "select":
             sel.append(f"{join[1]} as {c}")
             cols.append((c, label, "plainText", "STRING"))
-        elif kind == "switch":
+        elif kind in ("switch", "switchN"):
             sel.append(f"case {a}{c} when 'Y' then 'Ja' else 'Nein' end as {c}")
+            cols.append((c, label, "plainText", "STRING"))
+        elif kind == "textarea":
+            sel.append(f"dbms_lob.substr({a}{c}, 200, 1) as {c}")
             cols.append((c, label, "plainText", "STRING"))
         else:
             sel.append(f"{a}{c}")
@@ -326,7 +329,8 @@ def bericht(w):
 def feld(w, e, i, col, label, kind, pflicht):
     p = w["pfx"]
     item = f"P{e}_{p}_{col}"
-    typ = {"text": "textField", "number": "numberField", "switch": "switch", "select": "selectList"}[kind]
+    typ = {"text": "textField", "number": "numberField", "switch": "switch", "switchN": "switch",
+           "select": "selectList", "textarea": "textarea"}[kind]
     tmpl = "required-floating" if pflicht else "optional-floating"
     dt = "number" if kind in ("number", "select") else "varchar2"
     extra = ""
@@ -341,19 +345,19 @@ def feld(w, e, i, col, label, kind, pflicht):
             column: {p}_{col}
             dataType: {dt}
         }}"""
-    if kind == "switch":
-        extra += """
-        settings {
+    if kind in ("switch", "switchN"):
+        extra += f"""
+        settings {{
             useDefaults: false
             onValue: Y
             onLabel: Ja
             offValue: N
             offLabel: Nein
-        }
-        default {
+        }}
+        default {{
             type: static
-            staticValue: Y
-        }"""
+            staticValue: {"N" if kind == "switchN" else "Y"}
+        }}"""
     if kind == "select":
         extra += f"""
         lov {{
@@ -623,98 +627,98 @@ def bearbeiten(w):
 """
 
 
-def uebersicht():
-    return """page 100 (
+def uebersicht(liste="wertelisten-kunden", region="Wertelisten zum Kunden"):
+    return f"""page 100 (
     name: Wertelisten
     alias: WERTELISTEN
     title: Wertelisten
     pageGroup: @administration
-    appearance {
+    appearance {{
         pageTemplate: @/standard
         templateOptions: #DEFAULT#
-    }
-    navigation {
+    }}
+    navigation {{
         cursorFocus: doNotFocusCursor
-    }
-    security {
+    }}
+    security {{
         authorizationScheme: @administration-rights
         pageAccessProtection: argumentsMustHaveChecksum
         formAutoComplete: false
-    }
+    }}
 
     region breadcrumb (
         name: Breadcrumb
         title: Wertelisten
         type: breadcrumb
-        source {
+        source {{
             breadcrumb: @breadcrumb
-        }
-        layout {
+        }}
+        layout {{
             sequence: 5
             slot: breadcrumbBar
-        }
-        appearance {
+        }}
+        appearance {{
             template: @/title-bar
             templateOptions: [
                 t-BreadcrumbRegion--useRegionTitle
             ]
-        }
-        componentAppearance {
+        }}
+        componentAppearance {{
             breadcrumbTemplate: @/breadcrumb
             templateOptions: #DEFAULT#
-        }
+        }}
     )
 
     region wertelisten (
-        name: Wertelisten zum Kunden
+        name: {region}
         type: list
-        source {
-            list: @wertelisten-kunden
-        }
-        layout {
+        source {{
+            list: @{liste}
+        }}
+        layout {{
             sequence: 10
             slot: body
-        }
-        appearance {
+        }}
+        appearance {{
             template: @/standard
             templateOptions: [
                 #DEFAULT#
                 t-Region--noPadding
                 t-Region--scrollBody
             ]
-        }
-        componentAppearance {
+        }}
+        componentAppearance {{
             listTemplate: @/media-list
             templateOptions: [
                 #DEFAULT#
                 t-MediaList--showBadges
             ]
-        }
+        }}
     )
 
     button up (
         buttonName: UP
         label: Zurück zur Startseite
-        layout {
+        layout {{
             sequence: 10
             region: @breadcrumb
             slot: up
-        }
-        appearance {
+        }}
+        appearance {{
             buttonTemplate: @/icon
             templateOptions: [
                 #DEFAULT#
                 t-Button--noUI
             ]
             icon: fa-arrow-up
-        }
-        behavior {
+        }}
+        behavior {{
             action: redirectThisApp
-            target: {
+            target: {{
                 page: 1
-            }
+            }}
             warnOnUnsavedChanges: doNotCheck
-        }
+        }}
     )
 
 )

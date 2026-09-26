@@ -210,3 +210,85 @@ lov lov-laender (
         display: D
     }
 )
+
+lov lov-artikelgruppen (
+    name: LOV_ARTIKELGRUPPEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select AGRP_BEZEICHNUNG as d,
+                   AGRP_ID as r
+              from ARTI_ARTIKELGRUPPEN
+             where AGRP_IST_AKTIV = 'Y'
+             order by AGRP_SORTIERUNG nulls last, AGRP_BEZEICHNUNG
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-einheiten (
+    name: LOV_EINHEITEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select EINH_CODE || ' – ' || EINH_BEZEICHNUNG as d,
+                   EINH_ID as r
+              from ALLG_EINHEITEN
+             where EINH_IST_AKTIV = 'Y'
+             order by EINH_SORTIERUNG nulls last, EINH_CODE
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-mwst-saetze (
+    name: LOV_MWST_SAETZE
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select to_char(MWST_PROZENT, 'FM990D00') || ' %' as d,
+                   MWST_ID as r
+              from ALLG_MWST_SAETZE
+             where MWST_IST_AKTIV = 'Y'
+             order by MWST_SORTIERUNG nulls last, MWST_PROZENT desc
+            ```
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-textvorlage-arten (
+    name: LOV_TEXTVORLAGE_ARTEN
+    source {
+        location: staticValues
+    }
+
+    entry zahlungsbed (
+        sequence: 1
+        display: Zahlungsbedingungen
+        return: ZAHLUNGSBED
+    )
+
+    entry vortext (
+        sequence: 2
+        display: Vortext
+        return: VORTEXT
+    )
+
+    entry schlusstext (
+        sequence: 3
+        display: Schlusstext
+        return: SCHLUSSTEXT
+    )
+)

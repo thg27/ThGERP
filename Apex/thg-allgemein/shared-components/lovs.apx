@@ -43,3 +43,31 @@ lov lov-ja-nein (
     )
 
 )
+
+lov lov-textvorlage-arten (
+    name: LOV_TEXTVORLAGE_ARTEN
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/20000/lov-textvorlage-arten
+    }
+
+    entry zahlungsbed (
+        sequence: 1
+        display: Zahlungsbedingungen
+        return: ZAHLUNGSBED
+    )
+
+    entry vortext (
+        sequence: 2
+        display: Vortext
+        return: VORTEXT
+    )
+
+    entry schlusstext (
+        sequence: 3
+        display: Schlusstext
+        return: SCHLUSSTEXT
+    )
+)

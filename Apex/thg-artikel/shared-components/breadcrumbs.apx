@@ -1,0 +1,96 @@
+breadcrumb breadcrumb (
+    name: Breadcrumb
+
+    entry home (
+        name: Startseite
+        pageNumber: 1
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry artikel (
+        name: Artikel
+        pageNumber: 10
+        execution {
+            sequence: 20
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+    entry artikel-bearbeiten (
+        name: &P11_TITEL.
+        pageNumber: 11
+        execution {
+            sequence: 30
+        }
+        appearance {
+            parentEntry: @artikel
+        }
+        link {
+            target: {
+                page: 11
+            }
+        }
+    )
+
+    entry wertelisten (
+        name: Wertelisten
+        pageNumber: 100
+        execution {
+            sequence: 100
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 100
+            }
+        }
+    )
+
+    entry werteliste-110 (
+        name: Artikelgruppen
+        pageNumber: 110
+        execution {
+            sequence: 110
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 110
+            }
+        }
+    )
+
+    entry werteliste-120 (
+        name: Zusatzfelder
+        pageNumber: 120
+        execution {
+            sequence: 120
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 120
+            }
+        }
+    )
+)

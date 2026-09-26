@@ -94,8 +94,31 @@ list navigation-menu (
     )
 
 
-    entry look-up-values (
-        label: Look Up Values
+    entry artikel (
+        label: Artikel
+        icon {
+            imageIconCssClasses: fa-cube
+        }
+        layout {
+            sequence: 20
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                10
+                11
+                12
+            ]
+        }
+    )
+
+    entry wertelisten (
+        label: Wertelisten
         icon {
             imageIconCssClasses: fa-list-ul
         }
@@ -112,18 +135,16 @@ list navigation-menu (
             pages: [
                 100
                 110
+                111
                 120
-                130
-                140
-                150
-                160
+                121
             ]
         }
     )
 )
 
-list admin-lookup-values (
-    name: Admin - Look Up Values
+list wertelisten-artikel (
+    name: Wertelisten - Artikel
     source {
         type: sqlQuery
         sqlQuery:
@@ -138,31 +159,43 @@ list admin-lookup-values (
                    beschreibung as attribute1,
                    to_char(anzahl) as attribute2
               from (
-                    select 'Länder' as label, 110 as seite, 'fa-globe' as image, 'Länder (ISO-Code), EU-Kennzeichen, Adressregister' as beschreibung,
-                           (select count(*) from ALLG_LAENDER) as anzahl
+                    select 'Artikelgruppen' as label, 110 as seite, 'fa-tags' as image, 'Gruppen der Artikel (Dienstleistung, Office 365 …)' as beschreibung,
+                           (select count(*) from ARTI_ARTIKELGRUPPEN) as anzahl
                       from dual
                     union all
-                    select 'Zahlungsbedingungen' as label, 120 as seite, 'fa-money' as image, 'Zahlungsziel und Skonto' as beschreibung,
-                           (select count(*) from ALLG_ZAHLUNGSBEDINGUNGEN) as anzahl
-                      from dual
-                    union all
-                    select 'Kommunikationsarten' as label, 130 as seite, 'fa-phone' as image, 'E-Mail, Telefon, Mobil, Fax, Web' as beschreibung,
-                           (select count(*) from ALLG_KOMMUNIKATIONSARTEN) as anzahl
-                      from dual
-                    union all
-                    select 'Einheiten' as label, 140 as seite, 'fa-balance-scale' as image, 'Mengeneinheiten (Stk., Std., Pauschale …)' as beschreibung,
-                           (select count(*) from ALLG_EINHEITEN) as anzahl
-                      from dual
-                    union all
-                    select 'MwSt.-Sätze' as label, 150 as seite, 'fa-percent' as image, 'Umsatzsteuersätze; der Standardsatz wird für neue Artikel vorgeschlagen' as beschreibung,
-                           (select count(*) from ALLG_MWST_SAETZE) as anzahl
-                      from dual
-                    union all
-                    select 'Textvorlagen' as label, 160 as seite, 'fa-file-text-o' as image, 'Vorlagen für Zahlungsbedingungen, Vortext und Schlusstext auf Belegen' as beschreibung,
-                           (select count(*) from ALLG_TEXTVORLAGEN) as anzahl
+                    select 'Zusatzfelder' as label, 120 as seite, 'fa-list-alt' as image, 'Feldnamen der Zusatzfelder in der Artikelmaske (1–10)' as beschreibung,
+                           (select count(*) from ARTI_ZUSATZFELDER) as anzahl
                       from dual
                    )
-             order by label
+             order by seite
+            ```
+    }
+)
+
+list startseite (
+    name: Startseite
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select 1 as the_level,
+                   label,
+                   apex_page.get_url(p_page => seite, p_clear_cache => seite) as target,
+                   null as is_current_list_entry,
+                   image,
+                   null as image_attribute,
+                   null as image_alt_attribute,
+                   beschreibung as attribute1,
+                   anzahl as attribute2
+              from (
+                    select 'Artikel' as label, 10 as seite, 'fa-cube' as image,
+                           'Artikelstamm: Waren und Dienstleistungen mit Preis, Einheit, MwSt., Beschreibung, Zusatzfeldern und Dateien' as beschreibung,
+                           to_char((select count(*) from ARTI_ARTIKEL where ARTI_IST_AKTIV = 'Y')) as anzahl
+                      from dual
+                    union all
+                    select 'Wertelisten', 100, 'fa-list-ul', 'Artikelgruppen und Zusatzfelder', null from dual
+                   )
+             order by seite
             ```
     }
 )

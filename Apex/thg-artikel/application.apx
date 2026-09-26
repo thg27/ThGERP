@@ -1,0 +1,63 @@
+app THG-ARTIKEL (
+    name: ThG – Artikelstamm
+    version: 1.0.0
+    logo {
+        type: imageAndText
+        imageUrl: #WORKSPACE_FILES#thg-logo.svg
+        text: Artikelstamm
+    }
+    navigation {
+        homeUrl: {
+            page: 1
+        }
+        loginUrl: {
+            page: LOGIN
+        }
+    }
+    navigationMenu {
+        listTemplate: @/side-navigation-menu
+        templateOptions: [
+            #DEFAULT#
+            js-defaultCollapsed
+            js-navCollapsed--hidden
+            t-TreeNav--classic
+        ]
+        list: @navigation-menu
+    }
+    navigationBar {
+        list: @navigation-bar
+        listTemplate: @/navigation-bar
+        templateOptions: #DEFAULT#
+    }
+    userInterface {
+        currentTheme: @universal-theme
+        globalPage: 0
+        addBuiltWithApexToFooter: false
+    }
+    appFormatMasks {
+        date: DS
+        timestamp: DS
+        timestampTimeZone: DS
+    }
+    authentication {
+        scheme: @oracle-apex-accounts
+    }
+    authorization {
+        sourceForRoleOrGroupSchemes: authenticationScheme
+    }
+    sessionManagement {
+        maxSessionIdleTime: 3600
+        maxSessionLength: 28800
+    }
+    sessionStateProtection {
+        checksumSalt: 1079CEF89DB2FCD056A938B2F416922D9F95841F2EEF6CB0BF077DC3F4525F7E
+    }
+    globalization {
+        primaryLanguage: de
+        documentDirection: leftToRight
+    }
+    runtime {
+        allowFeedback: true
+        compatibilityMode: 24.2
+    }
+)

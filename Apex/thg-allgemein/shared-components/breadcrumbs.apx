@@ -78,4 +78,55 @@ breadcrumb breadcrumb (
         }
     )
 
+
+    entry lookup-140 (
+        name: Einheiten
+        pageNumber: 140
+        execution {
+            sequence: 140
+        }
+        appearance {
+            parentEntry: @look-up-values
+        }
+        link {
+            target: {
+                page: 140
+            }
+        }
+    )
+
+
+    entry lookup-150 (
+        name: MwSt.-Sätze
+        pageNumber: 150
+        execution {
+            sequence: 150
+        }
+        appearance {
+            parentEntry: @look-up-values
+        }
+        link {
+            target: {
+                page: 150
+            }
+        }
+    )
+
+
+    entry lookup-160 (
+        name: Textvorlagen
+        pageNumber: 160
+        execution {
+            sequence: 160
+        }
+        appearance {
+            parentEntry: @look-up-values
+        }
+        link {
+            target: {
+                page: 160
+            }
+        }
+    )
+
 )
