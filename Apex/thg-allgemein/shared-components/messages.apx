@@ -1,0 +1,295 @@
+textMessage APEX.IG.SAVE (
+    message {
+        text: Speichern
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.EDIT (
+    message {
+        text: Bearbeiten
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.ADD_ROW (
+    message {
+        text: Zeile hinzufügen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.ACTIONS (
+    message {
+        text: Aktionen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.CHANGES_SAVED (
+    message {
+        text: Änderungen gespeichert
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.SEARCH (
+    message {
+        text: Suchen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.GO (
+    message {
+        text: Los
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.REFRESH (
+    message {
+        text: Aktualisieren
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.RESET (
+    message {
+        text: Zurücksetzen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.REVERT_CHANGES (
+    message {
+        text: Änderungen verwerfen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.DELETE (
+    message {
+        text: Löschen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.DELETE_ROWS (
+    message {
+        text: Zeilen löschen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.DUPLICATE_ROWS (
+    message {
+        text: Zeilen duplizieren
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.REFRESH_ROWS (
+    message {
+        text: Zeilen aktualisieren
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.COLUMNS (
+    message {
+        text: Spalten
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.FILTER (
+    message {
+        text: Filter
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.SORT (
+    message {
+        text: Sortieren
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.DOWNLOAD (
+    message {
+        text: Herunterladen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.HELP (
+    message {
+        text: Hilfe
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.REPORT (
+    message {
+        text: Bericht
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.IG.ROWS_PER_PAGE (
+    message {
+        text: Zeilen pro Seite
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.GV.SELECTION_COUNT (
+    message {
+        text: %0 Zeilen ausgewählt
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.GV.ROW_DELETED (
+    message {
+        text: Gelöscht
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.GV.ROW_ADDED (
+    message {
+        text: Hinzugefügt
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.RV.INSERT (
+    message {
+        text: Hinzufügen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.RV.NEXT_RECORD (
+    message {
+        text: Weiter
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.RV.PREV_RECORD (
+    message {
+        text: Zurück
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.RECORD_VIEW.TOOLBAR (
+    message {
+        text: Einzelzeilenansicht
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.DIALOG.CANCEL (
+    message {
+        text: Abbrechen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.DIALOG.OK (
+    message {
+        text: OK
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.DIALOG.SAVE (
+    message {
+        text: Speichern
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.DIALOG.CLOSE (
+    message {
+        text: Schließen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.CLOSE_NOTIFICATION (
+    message {
+        text: Meldung schließen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEX.POPUP.SEARCH (
+    message {
+        text: Suchen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEXIR_GO (
+    message {
+        text: Los
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEXIR_ACTIONS (
+    message {
+        text: Aktionen
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage APEXIR_SEARCH (
+    message {
+        text: Suchen
+        language: de
+        usedInJavaScript: true
+    }
+)
