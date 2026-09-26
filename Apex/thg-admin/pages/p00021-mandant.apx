@@ -76,17 +76,45 @@ page 21 (
         }
     )
 
+    region registerkarten (
+        name: Registerkarten
+        type: regionDisplaySelector
+        layout {
+            sequence: 15
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            mode: viewSingleRegion
+            displayRegionIcons: false
+            includeShowAll: true
+            rememberSelection: bySession
+        }
+        advanced {
+            htmlDomId: mandant-registerkarten
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P21_MAND_ID
+        }
+    )
+
     region firmenbuch (
         name: Adresse und Firmenbuch
         type: staticContent
         layout {
             sequence: 20
-            parentRegion: @mandant
-            slot: subRegions
+            slot: contentBody
         }
         appearance {
             template: @/standard
             templateOptions: #DEFAULT#
+        }
+        advanced {
+            regionDisplaySelector: true
         }
     )
 
@@ -548,6 +576,9 @@ page 21 (
             template: @/standard
             templateOptions: #DEFAULT#
         }
+        advanced {
+            regionDisplaySelector: true
+        }
         edit {
             enabled: true
             allowedOperations: [
@@ -815,6 +846,9 @@ page 21 (
         appearance {
             template: @/standard
             templateOptions: #DEFAULT#
+        }
+        advanced {
+            regionDisplaySelector: true
         }
         edit {
             enabled: true
