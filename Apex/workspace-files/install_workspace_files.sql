@@ -148,25 +148,24 @@ body .t-Header .t-NavigationBar-item .t-Button {
 }
 
 /* Wichtige Anzeigefelder leicht hervorheben (z.B. Rechnungsnummer, Rechnungsdatum):
-   Seitenelement > Appearance > CSS Classes "thg-hervorheben"; Farbe des Mandanten */
-.t-Form-fieldContainer:has(.thg-hervorheben) .t-Form-fieldContainer-inner,
-.t-Form-fieldContainer:has(.thg-hervorheben) .t-Form-itemWrapper,
-.t-Form-fieldContainer.thg-hervorheben .t-Form-fieldContainer-inner {
+   Seitenelement > Appearance > CSS Classes "thg-hervorheben" (APEX setzt die Klasse auf den Feld-Container);
+   Farbe des Mandanten */
+.t-Form-fieldContainer.thg-hervorheben {
   background-color: var(--thg-fokus) !important;
   border-radius: var(--ut-field-border-radius, .25rem);
 }
-.t-Form-fieldContainer:has(.thg-hervorheben) .display_only {
+.t-Form-fieldContainer.thg-hervorheben .display_only {
   font-weight: 600;
 }
 
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
-   (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Ab'));
-    dbms_lob.append(l_inhalt, to_clob('schnitten */
+   (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {
   margin-block-end: .75rem;
 }
 .thg-kompakt > .t-Region-header {
-  padding-block: .375rem;
+  padding-block: .375rem;'));
+    dbms_lob.append(l_inhalt, to_clob('
   min-block-size: 0;
 }
 .thg-kompakt > .t-Region-header .t-Region-headerItems {
@@ -194,12 +193,12 @@ body .t-Header .t-NavigationBar-item .t-Button {
   line-height: 1.4;
   text-align: center;
 }
-.thg-login-firma--links  { left: clamp'));
-    dbms_lob.append(l_inhalt, to_clob('(2rem, 6vw, 10rem); }
+.thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma--rechts { right: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma img {
   display: block;
-  height: 10rem;
+  '));
+    dbms_lob.append(l_inhalt, to_clob('height: 10rem;
   margin: 0 auto .75rem;
 }
 .thg-login-firma-name { font-weight: 700; font-size: 1.75rem; line-height: 1.2; }
