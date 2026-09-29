@@ -16,6 +16,7 @@ bis er im Portal gewechselt wird.
 - Logo-Klick (alle Apps): `thg.js` fängt den Klick ab, prüft `apex.page.isChanged()` (inkl. Grids), fragt bei
   Änderungen nach und wechselt mit `apex.navigation.redirect('f?p=THG-PORTAL:HOME:<Sitzung>', true)` ins Portal.
 - Logo: `logo { type: custom }` mit `data-mandant="&MANDANT_CODE."` → Bannerfarbe per `thg.css`, Bild `#WORKSPACE_FILES#&MANDANT_LOGO.`.
+  Stolperstein: Die Farbe hängt am Mandantencode (`body:has([data-mandant="HOLDING"])`). Wird der Code in der Admin-App geändert (z.B. `TG` → `HOLDING`), greift nur noch die Standardfarbe (grün) – `thg.css` und die Grunddatenskripte (17/18/20) auf den neuen Code umstellen, Workspace-Dateien neu einspielen, Seite mit Cmd+Shift+R neu laden.
 - Alles für die Sub-Apps erzeugt `Apex/generator/mandant_in_apps.py` (wiederholbar).
 
 ## Stolpersteine
