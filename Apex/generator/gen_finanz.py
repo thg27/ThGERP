@@ -573,7 +573,7 @@ def seite_11():
                 jsCode:
                     ```javascript
                     // Firmenname / Adresse / PLZ Ort / Land / UID – leere Zeilen entfallen
-                    var land = $v("P11_RECH_EMPF_LAND_CODE") ? $("#P11_RECH_EMPF_LAND_CODE option:selected").text() : "",
+                    var land = $v("P11_RECH_EMPF_LAND_CODE") ? $("#P11_RECH_EMPF_LAND_CODE option:selected").text().split(" (")[0] : "",   // ohne Ländercode
                         uid  = $v("P11_RECH_EMPF_UID_NUMMER"),
                         zeilen = [$v("P11_RECH_EMPF_NAME"),
                                   $v("P11_RECH_EMPF_STRASSE"),
