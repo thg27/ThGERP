@@ -236,6 +236,12 @@ def ig_region(sid, name, seq, sql, spalten, anzeige, bedingung, ops="add\n      
 """
 
 
+def hervorheben(s):
+    """Seitenelement mit CSS-Klasse thg-hervorheben (leicht hinterlegt, Farbe des Mandanten)"""
+    return s.replace("            templateOptions: #DEFAULT#\n        }\n",
+                     "            templateOptions: #DEFAULT#\n            cssClasses: thg-hervorheben\n        }\n", 1)
+
+
 def seite_11():
     s = KOPF(11, "Rechnung", "RECHNUNG").replace("title: Rechnung", "title: &P11_TITEL.")
     s += BREADCRUMB("&P11_TITEL.")
@@ -312,17 +318,18 @@ def seite_11():
 
 """
     a = "allgemein"
-    s += item("P11_RECH_BETREFF", "textField", "Betreff (leer: „Rechnung“ + Nummer)", 10, a, col="RECH_BETREFF",
-              maxlen=200, spalten=6, **f)
-    s += item("P11_RECH_DATUM", "datePicker", "Datum", 20, a, col="RECH_DATUM", dtype="date", req=True,
+    # Rechnungsnummer (vergibt "Rechnung abschliessen") und Rechnungsdatum (beim Anlegen: heute) nur Anzeige,
+    # leicht hervorgehoben (thg.css .thg-hervorheben)
+    s += hervorheben(item("P11_RECH_NUMMER", "displayOnly", "Rechnungsnummer", 10, a, col="RECH_NUMMER", spalten=3, **f))
+    s += hervorheben(item("P11_RECH_DATUM", "displayOnly", "Rechnungsdatum", 20, a, col="RECH_DATUM", dtype="date",
               neue_zeile=False, spalten=3, extra="""        default {
             type: expression
             language: plsql
             plsqlExpression: trunc(sysdate)
         }
-""", **f)
+""", **f))
     s += item("P11_RECH_FAELLIG_AM", "datePicker", "Fällig am (leer: aus Zahlungsbedingung)", 30, a,
-              col="RECH_FAELLIG_AM", dtype="date", neue_zeile=False, spalten=3, **f)
+              col="RECH_FAELLIG_AM", dtype="date", neue_zeile=False, spalten=6, **f)
     s += item("P11_RECH_LEISTUNGSZEITRAUM", "textField", "Leistungszeitraum", 40, a, col="RECH_LEISTUNGSZEITRAUM",
               maxlen=100, spalten=6, **f)
     s += item("P11_RECH_REFERENZ", "textField", "Referenz", 50, a, col="RECH_REFERENZ", maxlen=200,
@@ -377,8 +384,6 @@ def seite_11():
               extra=SWITCH("N"), **f)
     s += item("P11_RECH_IST_FAELLIGKEIT_ANZEIGEN", "switch", "Fälligkeit anzeigen", 100, a,
               col="RECH_IST_FAELLIGKEIT_ANZEIGEN", neue_zeile=False, spalten=3, extra=SWITCH("N"), **f)
-    s += item("P11_RECH_NUMMER", "displayOnly", "Rechnungsnummer", 110, a, col="RECH_NUMMER",
-              neue_zeile=False, spalten=3, **f)
     s += item("P11_RECH_STATUS", "displayOnly", "Status", 120, a, col="RECH_STATUS", neue_zeile=False, spalten=3,
               extra="""        default {
             type: static
@@ -704,6 +709,24 @@ def seite_11():
         }
         successMessage {
             successMessage: Rechnung gelöscht.
+        }
+    )
+
+    process datum-vorbelegen (
+        name: Rechnungsdatum beim Anlegen setzen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Rechnungsdatum ist nur Anzeige (nicht aenderbar): beim Anlegen das heutige Datum
+                :P11_RECH_DATUM := to_char(trunc(sysdate))  -- NLS-Datumsformat der Sitzung = Format der App;
+                ```
+        }
+        execution {
+            sequence: 8
+        }
+        serverSideCondition {
+            whenButtonPressed: @create
         }
     )
 

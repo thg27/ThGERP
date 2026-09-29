@@ -196,37 +196,35 @@ page 11 (
         }
     )
 
-    pageItem P11_RECH_BETREFF (
-        type: textField
+    pageItem P11_RECH_NUMMER (
+        type: displayOnly
         label {
-            label: Betreff (leer: „Rechnung“ + Nummer)
+            label: Rechnungsnummer
             alignment: left
         }
         layout {
             sequence: 10
             region: @allgemein
             slot: regionBody
-            columnSpan: 6
+            columnSpan: 3
             alignment: left
         }
         appearance {
             template: @/optional-floating
             templateOptions: #DEFAULT#
+            cssClasses: thg-hervorheben
         }
         source {
             formRegion: @rechnung
-            column: RECH_BETREFF
+            column: RECH_NUMMER
             dataType: varchar2
-        }
-        validation {
-            maxLength: 200
         }
     )
 
     pageItem P11_RECH_DATUM (
-        type: datePicker
+        type: displayOnly
         label {
-            label: Datum
+            label: Rechnungsdatum
             alignment: left
         }
         layout {
@@ -238,16 +236,14 @@ page 11 (
             alignment: left
         }
         appearance {
-            template: @/required-floating
+            template: @/optional-floating
             templateOptions: #DEFAULT#
+            cssClasses: thg-hervorheben
         }
         source {
             formRegion: @rechnung
             column: RECH_DATUM
             dataType: date
-        }
-        validation {
-            valueRequired: true
         }
         default {
             type: expression
@@ -267,7 +263,7 @@ page 11 (
             region: @allgemein
             slot: regionBody
             startNewRow: false
-            columnSpan: 3
+            columnSpan: 6
             alignment: left
         }
         appearance {
@@ -511,31 +507,6 @@ page 11 (
         default {
             type: static
             staticValue: N
-        }
-    )
-
-    pageItem P11_RECH_NUMMER (
-        type: displayOnly
-        label {
-            label: Rechnungsnummer
-            alignment: left
-        }
-        layout {
-            sequence: 110
-            region: @allgemein
-            slot: regionBody
-            startNewRow: false
-            columnSpan: 3
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @rechnung
-            column: RECH_NUMMER
-            dataType: varchar2
         }
     )
 
@@ -1964,6 +1935,24 @@ page 11 (
         }
         successMessage {
             successMessage: Rechnung gelöscht.
+        }
+    )
+
+    process datum-vorbelegen (
+        name: Rechnungsdatum beim Anlegen setzen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Rechnungsdatum ist nur Anzeige (nicht aenderbar): beim Anlegen das heutige Datum
+                :P11_RECH_DATUM := to_char(trunc(sysdate))  -- NLS-Datumsformat der Sitzung = Format der App;
+                ```
+        }
+        execution {
+            sequence: 8
+        }
+        serverSideCondition {
+            whenButtonPressed: @create
         }
     )
 

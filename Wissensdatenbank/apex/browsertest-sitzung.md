@@ -10,9 +10,10 @@ Tests im Browser (Claude in Chrome) laufen in der Sitzung des Anwenders. `apex i
 - Solange die **Portal-App (20000) nicht neu eingespielt** wurde, bleibt die Sitzung gültig: Sub-Apps können
   danach jederzeit wieder mit derselben Sitzung aufgerufen werden (Session Sharing), auch nachdem eine Sub-App
   eingespielt wurde.
-- **Vor jedem `apex import` einer Sub-App** muss der Tab auf der Portal-Startseite stehen – auch wenn sich der
-  Anwender direkt in der Sub-App angemeldet hat. Steht der Tab beim Einspielen noch in der Sub-App, ist die Sitzung
-  danach weg (2026-09-30 zweimal so passiert).
+- **Vor jedem `apex import` einer Sub-App** muss der Tab auf der Portal-Startseite stehen.
+- **Anmeldung über die Portal-App** (`thg-portal/login`): Wurde die Sitzung durch eine Anmeldung direkt in einer
+  Sub-App erzeugt (z.B. `thg-finanz/login`), ist sie nach dem Einspielen dieser Sub-App weg – auch wenn der Tab dabei
+  im Portal stand (2026-09-30 beobachtet). Den Anwender dann um eine Anmeldung im Portal bitten.
 - Sub-Apps immer mit `?session=<Sitzung>` bzw. über das Portal aufrufen; eine URL ohne Sitzung startet eine neue
   Sitzung → Anmeldeseite.
 - Muss das Portal eingespielt werden, am besten gesammelt am Ende und den Anwender dann um eine neue Anmeldung bitten.

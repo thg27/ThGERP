@@ -82,6 +82,18 @@ body .t-Header .t-NavigationBar-item .t-Button {
   background-color: var(--thg-fokus) !important;
 }
 
+/* Wichtige Anzeigefelder leicht hervorheben (z.B. Rechnungsnummer, Rechnungsdatum):
+   Seitenelement > Appearance > CSS Classes "thg-hervorheben"; Farbe des Mandanten */
+.t-Form-fieldContainer:has(.thg-hervorheben) .t-Form-fieldContainer-inner,
+.t-Form-fieldContainer:has(.thg-hervorheben) .t-Form-itemWrapper,
+.t-Form-fieldContainer.thg-hervorheben .t-Form-fieldContainer-inner {
+  background-color: var(--thg-fokus) !important;
+  border-radius: var(--ut-field-border-radius, .25rem);
+}
+.t-Form-fieldContainer:has(.thg-hervorheben) .display_only {
+  font-weight: 600;
+}
+
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
    (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {

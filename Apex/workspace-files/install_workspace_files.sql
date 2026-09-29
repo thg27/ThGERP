@@ -147,8 +147,21 @@ body .t-Header .t-NavigationBar-item .t-Button {
   background-color: var(--thg-fokus) !important;
 }
 
+/* Wichtige Anzeigefelder leicht hervorheben (z.B. Rechnungsnummer, Rechnungsdatum):
+   Seitenelement > Appearance > CSS Classes "thg-hervorheben"; Farbe des Mandanten */
+.t-Form-fieldContainer:has(.thg-hervorheben) .t-Form-fieldContainer-inner,
+.t-Form-fieldContainer:has(.thg-hervorheben) .t-Form-itemWrapper,
+.t-Form-fieldContainer.thg-hervorheben .t-Form-fieldContainer-inner {
+  background-color: var(--thg-fokus) !important;
+  border-radius: var(--ut-field-border-radius, .25rem);
+}
+.t-Form-fieldContainer:has(.thg-hervorheben) .display_only {
+  font-weight: 600;
+}
+
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
-   (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
+   (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Ab'));
+    dbms_lob.append(l_inhalt, to_clob('schnitten */
 .t-Region.thg-kompakt {
   margin-block-end: .75rem;
 }
@@ -168,8 +181,7 @@ body .t-Header .t-NavigationBar-item .t-Button {
 }
 
 /* Dialog ohne Redwood-Musterstreifen über der Titelleiste: Klasse "thg-dialog-schlicht" am .ui-dialog
-   (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, pe'));
-    dbms_lob.append(l_inhalt, to_clob('r JavaScript) */
+   (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, per JavaScript) */
 .ui-dialog.thg-dialog-schlicht .ui-dialog-titlebar::before {
   display: none !important;
 }
@@ -182,7 +194,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
   line-height: 1.4;
   text-align: center;
 }
-.thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); }
+.thg-login-firma--links  { left: clamp'));
+    dbms_lob.append(l_inhalt, to_clob('(2rem, 6vw, 10rem); }
 .thg-login-firma--rechts { right: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma img {
   display: block;
@@ -200,8 +213,7 @@ body .t-Header .t-NavigationBar-item .t-Button {
     padding: 1rem;
   }
   .thg-login-firma { position: static; font-size: .75rem; }
-  .thg-login-firma-name {'));
-    dbms_lob.append(l_inhalt, to_clob(' font-size: 1rem; }
+  .thg-login-firma-name { font-size: 1rem; }
   .thg-login-firma img { height: 5rem; }
 }
 '));
