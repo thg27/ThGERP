@@ -10,6 +10,9 @@ Tests im Browser (Claude in Chrome) laufen in der Sitzung des Anwenders. `apex i
 - Solange die **Portal-App (20000) nicht neu eingespielt** wurde, bleibt die Sitzung gültig: Sub-Apps können
   danach jederzeit wieder mit derselben Sitzung aufgerufen werden (Session Sharing), auch nachdem eine Sub-App
   eingespielt wurde.
+- **Vor jedem `apex import` einer Sub-App** muss der Tab auf der Portal-Startseite stehen – auch wenn sich der
+  Anwender direkt in der Sub-App angemeldet hat. Steht der Tab beim Einspielen noch in der Sub-App, ist die Sitzung
+  danach weg (2026-09-30 zweimal so passiert).
 - Sub-Apps immer mit `?session=<Sitzung>` bzw. über das Portal aufrufen; eine URL ohne Sitzung startet eine neue
   Sitzung → Anmeldeseite.
 - Muss das Portal eingespielt werden, am besten gesammelt am Ende und den Anwender dann um eine neue Anmeldung bitten.
@@ -20,4 +23,4 @@ Tests im Browser (Claude in Chrome) laufen in der Sitzung des Anwenders. `apex i
 - Testdaten (Rechnungen, Schalter) nach dem Test auf den Ausgangszustand zurücksetzen.
 
 ## Quelle / Stand
-Hinweis des Anwenders, 2026-09-26.
+Hinweis des Anwenders, 2026-09-26; ergänzt 2026-09-30.
