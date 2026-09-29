@@ -642,7 +642,7 @@ page 11 (
     )
 
     pageItem P11_RECH_EMPF_NAME (
-        type: textarea
+        type: textField
         label {
             label: Firmenname
             alignment: left

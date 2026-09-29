@@ -384,7 +384,7 @@ def seite_11():
     s += item("P11_ANSCHRIFT", "displayOnly", "Kunde (Anschrift)", 40, k, spalten=6, **f).replace(
         "            templateOptions: #DEFAULT#\n        }\n",
         "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
-    s += item("P11_RECH_EMPF_NAME", "textarea", "Firmenname", 50, k, col="RECH_EMPF_NAME", maxlen=400,
+    s += item("P11_RECH_EMPF_NAME", "textField", "Firmenname", 50, k, col="RECH_EMPF_NAME", maxlen=400,
               neue_zeile=False, spalten=6, **f)
     s += item("P11_RECH_EMPF_STRASSE", "textField", "Adresse", 80, k, col="RECH_EMPF_STRASSE", maxlen=250,
               spalten=6, **f)

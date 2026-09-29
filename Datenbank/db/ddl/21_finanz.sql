@@ -119,7 +119,7 @@ create or replace package body FAKT_RECHNUNG as
             e.ksto_id    := r.KSTO_ID;
             e.anrede     := case r.KUND_TYP when 'PRIVAT' then r.KUND_ANREDE end;
             e.name       := case r.KUND_TYP
-                                when 'FIRMA' then r.KUND_FIRMENNAME || nvl2(r.KUND_NAMENSZUSATZ, chr(10) || r.KUND_NAMENSZUSATZ, null)
+                                when 'FIRMA' then r.KUND_FIRMENNAME || nvl2(r.KUND_NAMENSZUSATZ, ', ' || r.KUND_NAMENSZUSATZ, null)  -- einzeilig
                                 else trim(r.KUND_VORNAME || ' ' || r.KUND_NACHNAME) end;
             e.strasse    := trim(r.ADRE_STRASSE || ' ' || r.ADRE_HAUSNUMMER);
             e.plz        := r.ADRE_PLZ;
