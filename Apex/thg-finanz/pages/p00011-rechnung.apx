@@ -683,7 +683,7 @@ page 11 (
         }
         default {
             type: static
-            staticValue: Anschrift, UID und Kontaktperson werden beim Speichern aus dem Kundenstamm übernommen, wenn der Kunde gewählt oder geändert wurde; danach hier änderbar.
+            staticValue: Anschrift, UID, Kontaktperson und Zahlungsbedingung werden bei der Auswahl des Kunden aus dem Kundenstamm übernommen; danach hier änderbar.
         }
     )
 
@@ -1844,6 +1844,48 @@ page 11 (
         }
     )
 
+    dynamicAction kunde-gewaehlt (
+        name: Kunde gewählt: Empfängerdaten übernehmen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: change
+            selectionType: items
+            items: P11_RECH_KUND_ID
+        }
+
+        action empfaenger-laden (
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    -- Empfaengerdaten des gewaehlten Kunden sofort in die Maske (danach aenderbar)
+                    declare
+                        e FAKT_RECHNUNG.t_empfaenger := FAKT_RECHNUNG.empfaenger(:P11_RECH_KUND_ID);
+                    begin
+                        :P11_RECH_EMPF_ANREDE        := e.anrede;
+                        :P11_RECH_EMPF_NAME          := e.name;
+                        :P11_RECH_EMPF_KONTAKTPERSON := e.kontaktperson;
+                        :P11_RECH_EMPF_UID_NUMMER    := e.uid_nummer;
+                        :P11_RECH_EMPF_STRASSE       := e.strasse;
+                        :P11_RECH_EMPF_PLZ           := e.plz;
+                        :P11_RECH_EMPF_ORT           := e.ort;
+                        :P11_RECH_EMPF_LAND_CODE     := e.land_code;
+                        :P11_RECH_ZBED_ID            := e.zbed_id;
+                    end;
+                    ```
+                itemsToSubmit: P11_RECH_KUND_ID
+                itemsToReturn: P11_RECH_EMPF_ANREDE,P11_RECH_EMPF_NAME,P11_RECH_EMPF_KONTAKTPERSON,P11_RECH_EMPF_UID_NUMMER,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_ZBED_ID
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
     process initialize-form-rechnung (
         name: Formular Rechnung initialisieren
         type: formInitialization
@@ -1931,12 +1973,13 @@ page 11 (
     )
 
     process empfaenger-uebernehmen (
-        name: Empfänger vom Kunden übernehmen
+        name: Standort und Ansprechpartner vom Kunden übernehmen
         type: executeCode
         source {
             plsqlCode:
                 ```plsql
-                FAKT_RECHNUNG.empfaenger_uebernehmen(:P11_RECH_ID);
+                -- Texte wurden bei der Auswahl des Kunden in die Maske uebernommen (Dynamic Action) und evtl. geaendert
+                FAKT_RECHNUNG.empfaenger_uebernehmen(:P11_RECH_ID, p_nur_verweise => true);
                 ```
         }
         execution {

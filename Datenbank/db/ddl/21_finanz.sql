@@ -61,9 +61,25 @@ comment on table FAKT_RECHNUNG_MWST_V is 'Rechnungssummen je Steuersatz (netto, 
 comment on table FAKT_RECHNUNGEN_V is 'Rechnungen mit Kunde, Mandant, bezahltem und offenem Betrag, ueberfaellig';
 
 create or replace package FAKT_RECHNUNG as
-    -- Empfaengerdaten (Anschrift, UID, Kontaktperson, Zahlungsbedingung) vom Kunden in die Rechnung kopieren;
-    -- Rechnungsadresse = Standort mit Kennzeichen Rechnungsadresse, sonst Hauptsitz
-    procedure empfaenger_uebernehmen(p_rech_id in number);
+    -- Empfaengerdaten eines Kunden: Rechnungsadresse = Standort mit Kennzeichen Rechnungsadresse, sonst Hauptsitz;
+    -- Kontaktperson = Hauptkontakt des Standorts, sonst erster Ansprechpartner
+    type t_empfaenger is record (
+        ksto_id       KUND_STANDORTE.KSTO_ID%type,
+        ansp_id       KUND_ANSPRECHPARTNER.ANSP_ID%type,
+        anrede        FAKT_RECHNUNGEN.RECH_EMPF_ANREDE%type,
+        name          FAKT_RECHNUNGEN.RECH_EMPF_NAME%type,
+        kontaktperson FAKT_RECHNUNGEN.RECH_EMPF_KONTAKTPERSON%type,
+        uid_nummer    FAKT_RECHNUNGEN.RECH_EMPF_UID_NUMMER%type,
+        strasse       FAKT_RECHNUNGEN.RECH_EMPF_STRASSE%type,
+        plz           FAKT_RECHNUNGEN.RECH_EMPF_PLZ%type,
+        ort           FAKT_RECHNUNGEN.RECH_EMPF_ORT%type,
+        land_code     FAKT_RECHNUNGEN.RECH_EMPF_LAND_CODE%type,
+        zbed_id       FAKT_RECHNUNGEN.RECH_ZBED_ID%type);
+    -- Empfaengerdaten des Kunden ermitteln (Rechnungsmaske: sofort bei Auswahl des Kunden anzeigen)
+    function empfaenger(p_kund_id in number) return t_empfaenger;
+    -- Empfaengerdaten vom Kunden in die Rechnung kopieren (Zahlungsbedingung nur, wenn leer);
+    -- p_nur_verweise: nur Standort und Ansprechpartner setzen (Texte wurden in der Maske schon uebernommen/geaendert)
+    procedure empfaenger_uebernehmen(p_rech_id in number, p_nur_verweise in boolean default false);
     -- Summen netto / MwSt. / brutto aus den Positionen (ohne optionale) neu berechnen
     procedure summen_berechnen(p_rech_id in number);
     -- naechste Belegnummer aus FAKT_NUMMERNKREISE (legt den Nummernkreis des Jahres bei Bedarf an)
@@ -83,13 +99,13 @@ end FAKT_RECHNUNG;
 
 create or replace package body FAKT_RECHNUNG as
 
-    procedure empfaenger_uebernehmen(p_rech_id in number) is
+    function empfaenger(p_kund_id in number) return t_empfaenger is
+        e t_empfaenger;
     begin
-        for r in (select k.KUND_ID, k.KUND_TYP, k.KUND_FIRMENNAME, k.KUND_NAMENSZUSATZ, k.KUND_ANREDE,
+        for r in (select k.KUND_TYP, k.KUND_FIRMENNAME, k.KUND_NAMENSZUSATZ, k.KUND_ANREDE,
                          k.KUND_VORNAME, k.KUND_NACHNAME, k.KUND_UID_NUMMER, k.KUND_ZBED_ID,
                          s.KSTO_ID, a.ADRE_STRASSE, a.ADRE_HAUSNUMMER, a.ADRE_PLZ, a.ADRE_ORT, a.ADRE_LAND_CODE
-                    from FAKT_RECHNUNGEN rech
-                    join KUND_KUNDEN k on k.KUND_ID = rech.RECH_KUND_ID
+                    from KUND_KUNDEN k
                     left join lateral (select s.*
                                          from KUND_STANDORTE s
                                         where s.KSTO_KUND_ID = k.KUND_ID
@@ -97,30 +113,55 @@ create or replace package body FAKT_RECHNUNG as
                                                  case s.KSTO_IST_HAUPTSITZ when 'Y' then 0 else 1 end
                                         fetch first 1 row only) s on 1 = 1
                     left join ALLG_ADRESSEN a on a.ADRE_ID = s.KSTO_ADRE_ID
-                   where rech.RECH_ID = p_rech_id)
+                   where k.KUND_ID = p_kund_id)
         loop
-            update FAKT_RECHNUNGEN
-               set RECH_KSTO_ID            = r.KSTO_ID,
-                   RECH_ANSP_ID            = (select max(ANSP_ID) keep (dense_rank first order by
-                                                     case ANSP_IST_HAUPTKONTAKT when 'Y' then 0 else 1 end, ANSP_NACHNAME)
-                                                from KUND_ANSPRECHPARTNER where ANSP_KSTO_ID = r.KSTO_ID),
-                   RECH_EMPF_ANREDE        = case r.KUND_TYP when 'PRIVAT' then r.KUND_ANREDE end,
-                   RECH_EMPF_NAME          = case r.KUND_TYP
-                                                 when 'FIRMA' then r.KUND_FIRMENNAME || nvl2(r.KUND_NAMENSZUSATZ, chr(10) || r.KUND_NAMENSZUSATZ, null)
-                                                 else trim(r.KUND_VORNAME || ' ' || r.KUND_NACHNAME) end,
-                   RECH_EMPF_STRASSE       = trim(r.ADRE_STRASSE || ' ' || r.ADRE_HAUSNUMMER),
-                   RECH_EMPF_PLZ           = r.ADRE_PLZ,
-                   RECH_EMPF_ORT           = r.ADRE_ORT,
-                   RECH_EMPF_LAND_CODE     = r.ADRE_LAND_CODE,
-                   RECH_EMPF_UID_NUMMER    = r.KUND_UID_NUMMER,
-                   RECH_ZBED_ID            = coalesce(RECH_ZBED_ID, r.KUND_ZBED_ID)
-             where RECH_ID = p_rech_id;
-            -- Kontaktperson als Text (aus dem ermittelten Ansprechpartner)
-            update FAKT_RECHNUNGEN rech
-               set RECH_EMPF_KONTAKTPERSON = (select trim(ANSP_ANREDE || ' ' || ANSP_TITEL || ' ' || ANSP_VORNAME || ' ' || ANSP_NACHNAME)
-                                                from KUND_ANSPRECHPARTNER where ANSP_ID = rech.RECH_ANSP_ID)
-             where RECH_ID = p_rech_id;
+            e.ksto_id    := r.KSTO_ID;
+            e.anrede     := case r.KUND_TYP when 'PRIVAT' then r.KUND_ANREDE end;
+            e.name       := case r.KUND_TYP
+                                when 'FIRMA' then r.KUND_FIRMENNAME || nvl2(r.KUND_NAMENSZUSATZ, chr(10) || r.KUND_NAMENSZUSATZ, null)
+                                else trim(r.KUND_VORNAME || ' ' || r.KUND_NACHNAME) end;
+            e.strasse    := trim(r.ADRE_STRASSE || ' ' || r.ADRE_HAUSNUMMER);
+            e.plz        := r.ADRE_PLZ;
+            e.ort        := r.ADRE_ORT;
+            e.land_code  := r.ADRE_LAND_CODE;
+            e.uid_nummer := r.KUND_UID_NUMMER;
+            e.zbed_id    := r.KUND_ZBED_ID;
+            select max(ANSP_ID) keep (dense_rank first order by case ANSP_IST_HAUPTKONTAKT when 'Y' then 0 else 1 end, ANSP_NACHNAME),
+                   max(trim(regexp_replace(ANSP_ANREDE || ' ' || ANSP_TITEL || ' ' || ANSP_VORNAME || ' ' || ANSP_NACHNAME, ' +', ' ')))
+                       keep (dense_rank first order by case ANSP_IST_HAUPTKONTAKT when 'Y' then 0 else 1 end, ANSP_NACHNAME)
+              into e.ansp_id, e.kontaktperson
+              from KUND_ANSPRECHPARTNER
+             where ANSP_KSTO_ID = r.KSTO_ID;
         end loop;
+        return e;
+    end empfaenger;
+
+    procedure empfaenger_uebernehmen(p_rech_id in number, p_nur_verweise in boolean default false) is
+        l_kund_id FAKT_RECHNUNGEN.RECH_KUND_ID%type;
+        e         t_empfaenger;
+    begin
+        select RECH_KUND_ID into l_kund_id from FAKT_RECHNUNGEN where RECH_ID = p_rech_id;
+        e := empfaenger(l_kund_id);
+        if p_nur_verweise then
+            update FAKT_RECHNUNGEN
+               set RECH_KSTO_ID = e.ksto_id,
+                   RECH_ANSP_ID = e.ansp_id
+             where RECH_ID = p_rech_id;
+        else
+            update FAKT_RECHNUNGEN
+               set RECH_KSTO_ID            = e.ksto_id,
+                   RECH_ANSP_ID            = e.ansp_id,
+                   RECH_EMPF_ANREDE        = e.anrede,
+                   RECH_EMPF_NAME          = e.name,
+                   RECH_EMPF_KONTAKTPERSON = e.kontaktperson,
+                   RECH_EMPF_STRASSE       = e.strasse,
+                   RECH_EMPF_PLZ           = e.plz,
+                   RECH_EMPF_ORT           = e.ort,
+                   RECH_EMPF_LAND_CODE     = e.land_code,
+                   RECH_EMPF_UID_NUMMER    = e.uid_nummer,
+                   RECH_ZBED_ID            = coalesce(RECH_ZBED_ID, e.zbed_id)
+             where RECH_ID = p_rech_id;
+        end if;
     end empfaenger_uebernehmen;
 
     procedure summen_berechnen(p_rech_id in number) is
