@@ -48,7 +48,7 @@ select r.RECH_ID,
        r.RECH_SUMME_BRUTTO,
        nvl(z.BEZAHLT, 0) as BEZAHLT,
        case when r.RECH_STATUS in ('OFFEN', 'BEZAHLT') then r.RECH_SUMME_BRUTTO - nvl(z.BEZAHLT, 0) end as OFFEN,
-       case when r.RECH_STATUS = 'OFFEN' and r.RECH_FAELLIG_AM < trunc(sysdate) then 'Y' else 'N' end as IST_UEBERFAELLIG,
+       case when r.RECH_STATUS = 'OFFEN' and r.RECH_FAELLIG_AM < trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) then 'Y' else 'N' end as IST_UEBERFAELLIG,
        r.RECH_UPDATED_ON,
        r.RECH_UPDATED_BY
   from FAKT_RECHNUNGEN r
@@ -84,7 +84,8 @@ create or replace package FAKT_RECHNUNG as
     procedure summen_berechnen(p_rech_id in number);
     -- naechste Belegnummer aus FAKT_NUMMERNKREISE (legt den Nummernkreis des Jahres bei Bedarf an)
     function naechste_nummer(p_mand_id in number, p_belegart in varchar2, p_jahr in number) return varchar2;
-    -- Entwurf abschliessen: Nummer vergeben, Status OFFEN, Betreff/Faelligkeit vorbelegen
+    -- Entwurf abschliessen: Rechnungsdatum = heute, Nummer vergeben (Jahr des Rechnungsdatums), Status OFFEN,
+    -- Betreff/Faelligkeit vorbelegen
     procedure abschliessen(p_rech_id in number);
     -- Status OFFEN/BEZAHLT aus den Zahlungen ableiten
     procedure zahlungsstatus(p_rech_id in number);
@@ -200,6 +201,8 @@ create or replace package body FAKT_RECHNUNG as
         l_rech FAKT_RECHNUNGEN%rowtype;
         l_anz  pls_integer;
         l_nr   FAKT_RECHNUNGEN.RECH_NUMMER%type;
+        -- Rechnungsdatum = Tag des Abschliessens in Oesterreich (Datenbankserver laeuft in UTC)
+        l_datum constant date := trunc(cast(systimestamp at time zone 'Europe/Vienna' as date));
     begin
         select * into l_rech from FAKT_RECHNUNGEN where RECH_ID = p_rech_id for update;
         if l_rech.RECH_STATUS <> 'ENTWURF' then
@@ -211,14 +214,15 @@ create or replace package body FAKT_RECHNUNG as
             raise_application_error(-20201, 'Die Rechnung hat keine Positionen.');
         end if;
         summen_berechnen(p_rech_id);
-        l_nr := naechste_nummer(l_rech.RECH_MAND_ID, 'RECHNUNG', extract(year from l_rech.RECH_DATUM));
+        l_nr := naechste_nummer(l_rech.RECH_MAND_ID, 'RECHNUNG', extract(year from l_datum));
         g_intern := true;
         update FAKT_RECHNUNGEN r
            set RECH_NUMMER     = l_nr,
+               RECH_DATUM      = l_datum,
                RECH_STATUS     = 'OFFEN',
                RECH_BETREFF    = coalesce(RECH_BETREFF, 'Rechnung ' || l_nr),
                RECH_FAELLIG_AM = coalesce(RECH_FAELLIG_AM,
-                                          RECH_DATUM + nvl((select ZBED_ZIEL_TAGE from ALLG_ZAHLUNGSBEDINGUNGEN
+                                          l_datum + nvl((select ZBED_ZIEL_TAGE from ALLG_ZAHLUNGSBEDINGUNGEN
                                                              where ZBED_ID = r.RECH_ZBED_ID), 14))
          where RECH_ID = p_rech_id;
         g_intern := false;

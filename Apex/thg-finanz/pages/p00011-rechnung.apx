@@ -248,7 +248,7 @@ page 11 (
         default {
             type: expression
             language: plsql
-            plsqlExpression: trunc(sysdate)
+            plsqlExpression: trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))
         }
     )
 
@@ -1945,7 +1945,8 @@ page 11 (
             plsqlCode:
                 ```plsql
                 -- Rechnungsdatum ist nur Anzeige (nicht aenderbar): beim Anlegen das heutige Datum
-                :P11_RECH_DATUM := to_char(trunc(sysdate))  -- NLS-Datumsformat der Sitzung = Format der App;
+                -- Datum in Oesterreich (Datenbankserver laeuft in UTC); NLS-Datumsformat der Sitzung = Format der App
+                :P11_RECH_DATUM := to_char(trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)));
                 ```
         }
         execution {

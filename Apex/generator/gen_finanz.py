@@ -325,7 +325,7 @@ def seite_11():
               neue_zeile=False, spalten=3, extra="""        default {
             type: expression
             language: plsql
-            plsqlExpression: trunc(sysdate)
+            plsqlExpression: trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))
         }
 """, **f))
     s += item("P11_RECH_FAELLIG_AM", "datePicker", "Fällig am (leer: aus Zahlungsbedingung)", 30, a,
@@ -719,7 +719,8 @@ def seite_11():
             plsqlCode:
                 ```plsql
                 -- Rechnungsdatum ist nur Anzeige (nicht aenderbar): beim Anlegen das heutige Datum
-                :P11_RECH_DATUM := to_char(trunc(sysdate))  -- NLS-Datumsformat der Sitzung = Format der App;
+                -- Datum in Oesterreich (Datenbankserver laeuft in UTC); NLS-Datumsformat der Sitzung = Format der App
+                :P11_RECH_DATUM := to_char(trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)));
                 ```
         }
         execution {
