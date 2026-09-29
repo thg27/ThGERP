@@ -621,54 +621,30 @@ page 11 (
         }
     )
 
-    pageItem P11_HINWEIS_EMPFAENGER (
+    pageItem P11_ANSCHRIFT (
         type: displayOnly
-        layout {
-            sequence: 35
-            region: @kunde
-            slot: regionBody
-        }
-        appearance {
-            template: @/hidden
-            templateOptions: #DEFAULT#
-        }
-        default {
-            type: static
-            staticValue: Anschrift, UID, Kontaktperson und Zahlungsbedingung werden bei der Auswahl des Kunden aus dem Kundenstamm übernommen; danach hier änderbar.
-        }
-    )
-
-    pageItem P11_RECH_EMPF_ANREDE (
-        type: textField
         label {
-            label: Anrede
+            label: Kunde (Anschrift)
             alignment: left
         }
         layout {
             sequence: 40
             region: @kunde
             slot: regionBody
-            columnSpan: 2
+            columnSpan: 6
             alignment: left
         }
         appearance {
             template: @/optional-floating
             templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @rechnung
-            column: RECH_EMPF_ANREDE
-            dataType: varchar2
-        }
-        validation {
-            maxLength: 30
+            cssClasses: thg-anschrift
         }
     )
 
     pageItem P11_RECH_EMPF_NAME (
         type: textarea
         label {
-            label: Kunde (Anschrift)
+            label: Firmenname
             alignment: left
         }
         layout {
@@ -676,7 +652,7 @@ page 11 (
             region: @kunde
             slot: regionBody
             startNewRow: false
-            columnSpan: 4
+            columnSpan: 6
             alignment: left
         }
         appearance {
@@ -690,62 +666,6 @@ page 11 (
         }
         validation {
             maxLength: 400
-        }
-    )
-
-    pageItem P11_RECH_EMPF_KONTAKTPERSON (
-        type: textField
-        label {
-            label: Kontaktperson
-            alignment: left
-        }
-        layout {
-            sequence: 60
-            region: @kunde
-            slot: regionBody
-            startNewRow: false
-            columnSpan: 3
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @rechnung
-            column: RECH_EMPF_KONTAKTPERSON
-            dataType: varchar2
-        }
-        validation {
-            maxLength: 200
-        }
-    )
-
-    pageItem P11_RECH_EMPF_UID_NUMMER (
-        type: textField
-        label {
-            label: UID-Nr.
-            alignment: left
-        }
-        layout {
-            sequence: 70
-            region: @kunde
-            slot: regionBody
-            startNewRow: false
-            columnSpan: 3
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @rechnung
-            column: RECH_EMPF_UID_NUMMER
-            dataType: varchar2
-        }
-        validation {
-            maxLength: 20
         }
     )
 
@@ -861,6 +781,61 @@ page 11 (
             displayNullValue: true
             nullDisplayValue: -
             displayExtraValues: false
+        }
+    )
+
+    pageItem P11_RECH_EMPF_KONTAKTPERSON (
+        type: textField
+        label {
+            label: Kontaktperson
+            alignment: left
+        }
+        layout {
+            sequence: 120
+            region: @kunde
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_KONTAKTPERSON
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P11_RECH_EMPF_UID_NUMMER (
+        type: textField
+        label {
+            label: UID-Nr.
+            alignment: left
+        }
+        layout {
+            sequence: 130
+            region: @kunde
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_UID_NUMMER
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 20
         }
     )
 
@@ -1795,6 +1770,42 @@ page 11 (
         }
     )
 
+    dynamicAction anschrift-vorschau (
+        name: Anschrift-Vorschau wie am Ausdruck
+        execution {
+            sequence: 20
+        }
+        when {
+            event: change
+            selectionType: items
+            items: P11_RECH_EMPF_NAME,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_EMPF_UID_NUMMER
+        }
+
+        action anschrift-zusammensetzen (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript
+                    // Firmenname / Adresse / PLZ Ort / Land / UID – leere Zeilen entfallen
+                    var land = $v("P11_RECH_EMPF_LAND_CODE") ? $("#P11_RECH_EMPF_LAND_CODE option:selected").text() : "",
+                        uid  = $v("P11_RECH_EMPF_UID_NUMMER"),
+                        zeilen = [$v("P11_RECH_EMPF_NAME"),
+                                  $v("P11_RECH_EMPF_STRASSE"),
+                                  ($v("P11_RECH_EMPF_PLZ") + " " + $v("P11_RECH_EMPF_ORT")).trim(),
+                                  land,
+                                  uid ? "UID-Nr.: " + uid : ""].filter(Boolean);
+                    $("#P11_ANSCHRIFT_DISPLAY").text(zeilen.join("
+"));
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: true
+            }
+        )
+
+    )
+
     dynamicAction kunde-gewaehlt (
         name: Kunde gewählt: Empfängerdaten übernehmen
         execution {
@@ -1815,7 +1826,6 @@ page 11 (
                     declare
                         e FAKT_RECHNUNG.t_empfaenger := FAKT_RECHNUNG.empfaenger(:P11_RECH_KUND_ID);
                     begin
-                        :P11_RECH_EMPF_ANREDE        := e.anrede;
                         :P11_RECH_EMPF_NAME          := e.name;
                         :P11_RECH_EMPF_KONTAKTPERSON := e.kontaktperson;
                         :P11_RECH_EMPF_UID_NUMMER    := e.uid_nummer;
@@ -1827,10 +1837,21 @@ page 11 (
                     end;
                     ```
                 itemsToSubmit: P11_RECH_KUND_ID
-                itemsToReturn: P11_RECH_EMPF_ANREDE,P11_RECH_EMPF_NAME,P11_RECH_EMPF_KONTAKTPERSON,P11_RECH_EMPF_UID_NUMMER,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_ZBED_ID
+                itemsToReturn: P11_RECH_EMPF_NAME,P11_RECH_EMPF_KONTAKTPERSON,P11_RECH_EMPF_UID_NUMMER,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_ZBED_ID
             }
             execution {
                 sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action anschrift-aktualisieren (
+            action: executeJsCode
+            settings {
+                jsCode: $("#P11_RECH_EMPF_NAME").trigger("change");
+            }
+            execution {
+                sequence: 20
                 fireOnInit: false
             }
         )

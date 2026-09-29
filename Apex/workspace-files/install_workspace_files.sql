@@ -157,11 +157,17 @@ body .t-Header .t-NavigationBar-item .t-Button {
   font-weight: 600;
 }
 
+/* Mehrzeilige Anzeige (z.B. Anschrift wie am Ausdruck): Seitenelement > Appearance > CSS Classes "thg-anschrift" */
+.t-Form-fieldContainer.thg-anschrift .display_only {
+  white-space: pre-line;
+  min-height: 7.5r'));
+    dbms_lob.append(l_inhalt, to_clob('em;
+}
+
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
    (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {
-  margin'));
-    dbms_lob.append(l_inhalt, to_clob('-block-end: .75rem;
+  margin-block-end: .75rem;
 }
 .thg-kompakt > .t-Region-header {
   padding-block: .375rem;
@@ -184,7 +190,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
   display: none !important;
 }
 
-/* Login-Seite (Portal): Firmenlogos mit Anschrift - Logo mit zentriertem Namen/Anschrift darunter, Thomas Gesslbauer GmbH links oben, THG-EDV GmbH rechts oben */
+/* Login-Seite (Portal): Firmenlogos mit Anschrift - Logo mit zentriertem Namen/Anschrift darunter, Thomas Gesslbauer GmbH links oben, THG-EDV '));
+    dbms_lob.append(l_inhalt, to_clob('GmbH rechts oben */
 .thg-login-firma {
   position: fixed;
   top: 3rem;
@@ -193,8 +200,7 @@ body .t-Header .t-NavigationBar-item .t-Button {
   text-align: center;
 }
 .thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); }
-.thg-login-firma--recht'));
-    dbms_lob.append(l_inhalt, to_clob('s { right: clamp(2rem, 6vw, 10rem); }
+.thg-login-firma--rechts { right: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma img {
   display: block;
   height: 10rem;

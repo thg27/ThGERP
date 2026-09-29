@@ -92,6 +92,12 @@ body .t-Header .t-NavigationBar-item .t-Button {
   font-weight: 600;
 }
 
+/* Mehrzeilige Anzeige (z.B. Anschrift wie am Ausdruck): Seitenelement > Appearance > CSS Classes "thg-anschrift" */
+.t-Form-fieldContainer.thg-anschrift .display_only {
+  white-space: pre-line;
+  min-height: 7.5rem;
+}
+
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
    (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {

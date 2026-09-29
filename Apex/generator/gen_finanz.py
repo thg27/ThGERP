@@ -379,31 +379,13 @@ def seite_11():
               dtype="number", neue_zeile=False, spalten=3, extra=lov("lov-zahlungsbedingungen", "-"), **f)
     s += item("P11_RECH_IST_OHNE_MWST", "switch", "Keine MwSt. (Reverse Charge)", 30, k, col="RECH_IST_OHNE_MWST",
               neue_zeile=False, spalten=3, extra=SWITCH("N"), **f)
-    s += """    pageItem P11_HINWEIS_EMPFAENGER (
-        type: displayOnly
-        layout {
-            sequence: 35
-            region: @kunde
-            slot: regionBody
-        }
-        appearance {
-            template: @/hidden
-            templateOptions: #DEFAULT#
-        }
-        default {
-            type: static
-            staticValue: Anschrift, UID, Kontaktperson und Zahlungsbedingung werden bei der Auswahl des Kunden aus dem Kundenstamm übernommen; danach hier änderbar.
-        }
-    )
-
-"""
-    s += item("P11_RECH_EMPF_ANREDE", "textField", "Anrede", 40, k, col="RECH_EMPF_ANREDE", maxlen=30, spalten=2, **f)
-    s += item("P11_RECH_EMPF_NAME", "textarea", "Kunde (Anschrift)", 50, k, col="RECH_EMPF_NAME", maxlen=400,
-              neue_zeile=False, spalten=4, **f)
-    s += item("P11_RECH_EMPF_KONTAKTPERSON", "textField", "Kontaktperson", 60, k, col="RECH_EMPF_KONTAKTPERSON",
-              maxlen=200, neue_zeile=False, spalten=3, **f)
-    s += item("P11_RECH_EMPF_UID_NUMMER", "textField", "UID-Nr.", 70, k, col="RECH_EMPF_UID_NUMMER", maxlen=20,
-              neue_zeile=False, spalten=3, **f)
+    # Anschrift wie am Ausdruck (nur Anzeige): Firmenname, Adresse, PLZ Ort, Land, UID – aus den Feldern darunter,
+    # per Dynamic Action "Anschrift-Vorschau" sofort aktualisiert (thg.css .thg-anschrift: Zeilenumbrueche)
+    s += item("P11_ANSCHRIFT", "displayOnly", "Kunde (Anschrift)", 40, k, spalten=6, **f).replace(
+        "            templateOptions: #DEFAULT#\n        }\n",
+        "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
+    s += item("P11_RECH_EMPF_NAME", "textarea", "Firmenname", 50, k, col="RECH_EMPF_NAME", maxlen=400,
+              neue_zeile=False, spalten=6, **f)
     s += item("P11_RECH_EMPF_STRASSE", "textField", "Adresse", 80, k, col="RECH_EMPF_STRASSE", maxlen=250,
               spalten=6, **f)
     s += item("P11_RECH_EMPF_PLZ", "textField", "PLZ", 90, k, col="RECH_EMPF_PLZ", maxlen=10, neue_zeile=False,
@@ -412,6 +394,10 @@ def seite_11():
               spalten=3, **f)
     s += item("P11_RECH_EMPF_LAND_CODE", "selectList", "Land", 110, k, col="RECH_EMPF_LAND_CODE",
               neue_zeile=False, spalten=2, extra=lov("lov-laender", "-"), **f)
+    s += item("P11_RECH_EMPF_KONTAKTPERSON", "textField", "Kontaktperson", 120, k, col="RECH_EMPF_KONTAKTPERSON",
+              maxlen=200, spalten=6, **f)
+    s += item("P11_RECH_EMPF_UID_NUMMER", "textField", "UID-Nr.", 130, k, col="RECH_EMPF_UID_NUMMER", maxlen=20,
+              neue_zeile=False, spalten=6, **f)
 
     txt = lambda art: default_sql(f"select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = '{art}' and TXVL_IST_STANDARD = 'Y'")
     s += item("P11_RECH_ZAHLUNGSBED_TEXT", "textarea", "Zahlungsbedingungen", 10, "tab-zahlungsbed",
@@ -570,7 +556,42 @@ def seite_11():
 """)
 
     # ------------------------------------------------ Prozesse
-    s += """    dynamicAction kunde-gewaehlt (
+    s += """    dynamicAction anschrift-vorschau (
+        name: Anschrift-Vorschau wie am Ausdruck
+        execution {
+            sequence: 20
+        }
+        when {
+            event: change
+            selectionType: items
+            items: P11_RECH_EMPF_NAME,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_EMPF_UID_NUMMER
+        }
+
+        action anschrift-zusammensetzen (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript
+                    // Firmenname / Adresse / PLZ Ort / Land / UID – leere Zeilen entfallen
+                    var land = $v("P11_RECH_EMPF_LAND_CODE") ? $("#P11_RECH_EMPF_LAND_CODE option:selected").text() : "",
+                        uid  = $v("P11_RECH_EMPF_UID_NUMMER"),
+                        zeilen = [$v("P11_RECH_EMPF_NAME"),
+                                  $v("P11_RECH_EMPF_STRASSE"),
+                                  ($v("P11_RECH_EMPF_PLZ") + " " + $v("P11_RECH_EMPF_ORT")).trim(),
+                                  land,
+                                  uid ? "UID-Nr.: " + uid : ""].filter(Boolean);
+                    $("#P11_ANSCHRIFT_DISPLAY").text(zeilen.join("\n"));
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: true
+            }
+        )
+
+    )
+
+    dynamicAction kunde-gewaehlt (
         name: Kunde gewählt: Empfängerdaten übernehmen
         execution {
             sequence: 10
@@ -590,7 +611,6 @@ def seite_11():
                     declare
                         e FAKT_RECHNUNG.t_empfaenger := FAKT_RECHNUNG.empfaenger(:P11_RECH_KUND_ID);
                     begin
-                        :P11_RECH_EMPF_ANREDE        := e.anrede;
                         :P11_RECH_EMPF_NAME          := e.name;
                         :P11_RECH_EMPF_KONTAKTPERSON := e.kontaktperson;
                         :P11_RECH_EMPF_UID_NUMMER    := e.uid_nummer;
@@ -602,10 +622,21 @@ def seite_11():
                     end;
                     ```
                 itemsToSubmit: P11_RECH_KUND_ID
-                itemsToReturn: P11_RECH_EMPF_ANREDE,P11_RECH_EMPF_NAME,P11_RECH_EMPF_KONTAKTPERSON,P11_RECH_EMPF_UID_NUMMER,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_ZBED_ID
+                itemsToReturn: P11_RECH_EMPF_NAME,P11_RECH_EMPF_KONTAKTPERSON,P11_RECH_EMPF_UID_NUMMER,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_ZBED_ID
             }
             execution {
                 sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action anschrift-aktualisieren (
+            action: executeJsCode
+            settings {
+                jsCode: $("#P11_RECH_EMPF_NAME").trigger("change");
+            }
+            execution {
+                sequence: 20
                 fireOnInit: false
             }
         )
