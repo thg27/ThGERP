@@ -682,7 +682,18 @@ def seite_11():
         source {
             plsqlCode:
                 ```plsql
-                FAKT_RECHNUNG.loeschen(:P11_RECH_ID);
+                -- fachliche Fehler des Packages (-20200 bis -20299) als normale Meldung ohne ORA-Nummer anzeigen
+                begin
+                    FAKT_RECHNUNG.loeschen(:P11_RECH_ID);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
                 ```
         }
         execution {
@@ -835,7 +846,18 @@ def seite_11():
         source {
             plsqlCode:
                 ```plsql
-                FAKT_RECHNUNG.abschliessen(:P11_RECH_ID);
+                -- fachliche Fehler des Packages (-20200 bis -20299) als normale Meldung ohne ORA-Nummer anzeigen
+                begin
+                    FAKT_RECHNUNG.abschliessen(:P11_RECH_ID);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
                 ```
         }
         execution {

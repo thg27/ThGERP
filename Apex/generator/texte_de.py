@@ -48,6 +48,8 @@ TEXTE = {
     "APEX.DIALOG.SAVE": "Speichern",
     "APEX.DIALOG.CLOSE": "Schließen",
     "APEX.CLOSE_NOTIFICATION": "Meldung schließen",
+    "FLOW.SINGLE_VALIDATION_ERROR": "1 Fehler ist aufgetreten",
+    "FLOW.VALIDATION_ERROR": "%0 Fehler sind aufgetreten",
     "APEX.POPUP.SEARCH": "Suchen",
     # Interactive Report
     "APEXIR_GO": "Los",

@@ -262,6 +262,22 @@ textMessage APEX.CLOSE_NOTIFICATION (
     }
 )
 
+textMessage FLOW.SINGLE_VALIDATION_ERROR (
+    message {
+        text: 1 Fehler ist aufgetreten
+        language: de
+        usedInJavaScript: true
+    }
+)
+
+textMessage FLOW.VALIDATION_ERROR (
+    message {
+        text: %0 Fehler sind aufgetreten
+        language: de
+        usedInJavaScript: true
+    }
+)
+
 textMessage APEX.POPUP.SEARCH (
     message {
         text: Suchen
