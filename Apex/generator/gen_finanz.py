@@ -580,7 +580,7 @@ def seite_11():
                                   ($v("P11_RECH_EMPF_PLZ") + " " + $v("P11_RECH_EMPF_ORT")).trim(),
                                   land,
                                   uid ? "UID-Nr.: " + uid : ""].filter(Boolean);
-                    $("#P11_ANSCHRIFT_DISPLAY").text(zeilen.join("\n"));
+                    $("#P11_ANSCHRIFT_DISPLAY").text(zeilen.join(String.fromCharCode(10)));   // Zeilenumbruch
                     ```
             }
             execution {

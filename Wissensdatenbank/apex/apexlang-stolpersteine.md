@@ -41,3 +41,7 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
 - **Icons in einer Auswahlliste:** Seitenelement `type: selectOne` mit einer SQL-LOV, die eine Icon-Spalte liefert
   (`columnMapping { return: R  display: D  icon: ICON }`, Icon-Spalte z. B. `'fa ' || r`). Statische LOVs haben
   keine Icon-Spalte. `selectOne` kennt kein `displayExtraValues` (→ INVALID_PROPERTY).
+- **JavaScript in Python-Generatoren:** `"\n"` in einem normalen Python-String wird zum echten Zeilenumbruch – im
+  JS-Code der Dynamic Action steht dann ein unterbrochenes String-Literal (`SyntaxError: Invalid or unexpected token`),
+  und **alle** Dynamic Actions der Seite fallen aus (`apex.da.initDaEventList is not a function`). Im JS-Code keine
+  Backslash-Escapes verwenden (z. B. `String.fromCharCode(10)`) oder `\\n` bzw. Raw-Strings im Generator.
