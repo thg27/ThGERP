@@ -149,10 +149,9 @@ body .t-Header .t-NavigationBar-item .t-Button {
 
 /* Wichtige Anzeigefelder leicht hervorheben (z.B. Rechnungsnummer, Rechnungsdatum):
    Seitenelement > Appearance > CSS Classes "thg-hervorheben" (APEX setzt die Klasse auf den Feld-Container);
-   Farbe des Mandanten */
-.t-Form-fieldContainer.thg-hervorheben {
+   eingefaerbt wird nur die Flaeche innerhalb des Rahmens (Anzeige-Element), Farbe des Mandanten */
+.t-Form-fieldContainer.thg-hervorheben :is(.display_only, input:not([type=hidden]), textarea, select) {
   background-color: var(--thg-fokus) !important;
-  border-radius: var(--ut-field-border-radius, .25rem);
 }
 .t-Form-fieldContainer.thg-hervorheben .display_only {
   font-weight: 600;
@@ -161,11 +160,11 @@ body .t-Header .t-NavigationBar-item .t-Button {
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
    (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {
-  margin-block-end: .75rem;
+  margin'));
+    dbms_lob.append(l_inhalt, to_clob('-block-end: .75rem;
 }
 .thg-kompakt > .t-Region-header {
-  padding-block: .375rem;'));
-    dbms_lob.append(l_inhalt, to_clob('
+  padding-block: .375rem;
   min-block-size: 0;
 }
 .thg-kompakt > .t-Region-header .t-Region-headerItems {
@@ -194,11 +193,11 @@ body .t-Header .t-NavigationBar-item .t-Button {
   text-align: center;
 }
 .thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); }
-.thg-login-firma--rechts { right: clamp(2rem, 6vw, 10rem); }
+.thg-login-firma--recht'));
+    dbms_lob.append(l_inhalt, to_clob('s { right: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma img {
   display: block;
-  '));
-    dbms_lob.append(l_inhalt, to_clob('height: 10rem;
+  height: 10rem;
   margin: 0 auto .75rem;
 }
 .thg-login-firma-name { font-weight: 700; font-size: 1.75rem; line-height: 1.2; }

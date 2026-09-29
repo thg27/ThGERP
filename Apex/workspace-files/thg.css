@@ -84,10 +84,9 @@ body .t-Header .t-NavigationBar-item .t-Button {
 
 /* Wichtige Anzeigefelder leicht hervorheben (z.B. Rechnungsnummer, Rechnungsdatum):
    Seitenelement > Appearance > CSS Classes "thg-hervorheben" (APEX setzt die Klasse auf den Feld-Container);
-   Farbe des Mandanten */
-.t-Form-fieldContainer.thg-hervorheben {
+   eingefaerbt wird nur die Flaeche innerhalb des Rahmens (Anzeige-Element), Farbe des Mandanten */
+.t-Form-fieldContainer.thg-hervorheben :is(.display_only, input:not([type=hidden]), textarea, select) {
   background-color: var(--thg-fokus) !important;
-  border-radius: var(--ut-field-border-radius, .25rem);
 }
 .t-Form-fieldContainer.thg-hervorheben .display_only {
   font-weight: 600;
