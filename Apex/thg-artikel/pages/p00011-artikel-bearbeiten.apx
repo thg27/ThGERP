@@ -581,7 +581,7 @@ page 11 (
         default {
             type: expression
             language: plsql
-            plsqlExpression: trunc(sysdate)
+            plsqlExpression: trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))
         }
     )
 

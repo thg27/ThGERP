@@ -158,7 +158,7 @@ begin
   ARTI_EK_PREIS number(12,2),
   ARTI_EAN varchar2(20 char),
   ARTI_ERLOESKONTO varchar2(20 char),
-  ARTI_AUFGENOMMEN_AM date default trunc(sysdate) not null,
+  ARTI_AUFGENOMMEN_AM date default trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) not null,
   ARTI_KOMMENTAR clob,
   ARTI_BILD blob,
   ARTI_BILD_MIMETYPE varchar2(100 char),
@@ -184,7 +184,7 @@ begin
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_EK_PREIS', 'number(12,2)', 'Y');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_EAN', 'varchar2(20 char)', 'Y');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_ERLOESKONTO', 'varchar2(20 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_AUFGENOMMEN_AM', 'date', 'N', q'~trunc(sysdate)~');
+    DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_AUFGENOMMEN_AM', 'date', 'N', q'~trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))~');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_KOMMENTAR', 'clob', 'Y');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_BILD', 'blob', 'Y');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_BILD_MIMETYPE', 'varchar2(100 char)', 'Y');

@@ -60,7 +60,7 @@ begin
   RECH_NUMMER varchar2(30 char),
   RECH_STATUS varchar2(10 char) default 'ENTWURF' not null,
   RECH_BETREFF varchar2(200 char),
-  RECH_DATUM date default trunc(sysdate) not null,
+  RECH_DATUM date default trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) not null,
   RECH_FAELLIG_AM date,
   RECH_LEISTUNGSZEITRAUM varchar2(100 char),
   RECH_LEISTUNG_VON date,
@@ -104,7 +104,7 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_NUMMER', 'varchar2(30 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_STATUS', 'varchar2(10 char)', 'N', q'~'ENTWURF'~');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_BETREFF', 'varchar2(200 char)', 'Y');
-    DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_DATUM', 'date', 'N', q'~trunc(sysdate)~');
+    DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_DATUM', 'date', 'N', q'~trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))~');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_FAELLIG_AM', 'date', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_LEISTUNGSZEITRAUM', 'varchar2(100 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_LEISTUNG_VON', 'date', 'Y');

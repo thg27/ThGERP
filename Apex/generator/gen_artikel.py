@@ -470,7 +470,7 @@ def seite_11():
     s += item("P11_ARTI_AUFGENOMMEN_AM", "datePicker", "Aufgenommen am", 20, zf, col="ARTI_AUFGENOMMEN_AM",
               dtype="date", req=True, neue_zeile=False, spalten=3,
               extra="        default {\n            type: expression\n            language: plsql\n"
-                    "            plsqlExpression: trunc(sysdate)\n        }\n")
+                    "            plsqlExpression: trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))\n        }\n")
     s += item("P11_ARTI_EK_PREIS", "numberField", "Einkaufspreis netto", 30, zf, col="ARTI_EK_PREIS",
               dtype="number", neue_zeile=False, spalten=2)
     s += item("P11_ARTI_ERLOESKONTO", "textField", "Erlöskonto", 40, zf, col="ARTI_ERLOESKONTO", maxlen=20,
