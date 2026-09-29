@@ -14,7 +14,7 @@ body:has([data-mandant="EDV"]) {
   --thg-primaer: #108024;   /* THG-EDV GmbH: Gruen */
   --thg-fokus: #e7f3e9;     /* helles Gruen fuer aktive Eingabefelder */
 }
-body:has([data-mandant="TG"]) {
+body:has([data-mandant="HOLDING"]) {
   --thg-primaer: #003096;   /* Thomas Gesslbauer GmbH: Blau */
   --thg-fokus: #e6ecf7;     /* helles Blau */
 }

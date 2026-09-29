@@ -235,12 +235,12 @@ begin
     bank('EDV', 'Raiffeisenbank Mürztal eGen', 'AT50 3818 6000 0040 9797', 'Y', 10);
     komm('EDV', 'EMAIL', 'office@thg-edv.com');
 
-    firma('TG', 'Maierleitn', '1', '8661', 'St. Barbara im Mürztal',
+    firma('HOLDING', 'Maierleitn', '1', '8661', 'St. Barbara im Mürztal',
           'ATU65026349', 'FN 329125 h', 'LG Leoben', 'St. Barbara im Mürztal');
-    bank('TG', 'Raiffeisenbank Mürztal eGen', 'AT39 3818 6000 0803 6329', 'Y', 10);  -- Standard
-    bank('TG', 'Steiermärkische Sparkasse', 'AT61 2081 5000 4246 1467', 'N', 20);
-    komm('TG', 'EMAIL', 'office@thg-edv.com');
-    komm('TG', 'TEL', '+43 (0) 660 466 80 88');
+    bank('HOLDING', 'Raiffeisenbank Mürztal eGen', 'AT39 3818 6000 0803 6329', 'Y', 10);  -- Standard
+    bank('HOLDING', 'Steiermärkische Sparkasse', 'AT61 2081 5000 4246 1467', 'N', 20);
+    komm('HOLDING', 'EMAIL', 'office@thg-edv.com');
+    komm('HOLDING', 'TEL', '+43 (0) 660 466 80 88');
 end;
 /
 commit;

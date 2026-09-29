@@ -254,9 +254,9 @@ FAKT = [
   [('ZAHL_RECH_I', 'ZAHL_RECH_ID')], ''),
 ]
 
-# Nummernkreise 2026: zuletzt vergebene Nummern lt. Ausgangsrechnungen (EDV: 2026 - 13, TG: 2026 - 199)
+# Nummernkreise 2026: zuletzt vergebene Nummern lt. Ausgangsrechnungen (EDV: 2026 - 13, HOLDING: 2026 - 199)
 grund_fakt = []
-for code, letzte in (('EDV', 13), ('TG', 199)):
+for code, letzte in (('EDV', 13), ('HOLDING', 199)):
     grund_fakt.append(f"""insert into FAKT_NUMMERNKREISE (NKRS_MAND_ID, NKRS_BELEGART, NKRS_JAHR, NKRS_LETZTE_NUMMER)
   select MAND_ID, 'RECHNUNG', 2026, {letzte} from ADMIN_MANDANTEN m
    where MAND_CODE = '{code}'
@@ -267,7 +267,7 @@ for code, letzte in (('EDV', 13), ('TG', 199)):
 -- ThGERP (Gruppe FAKT)
 -- 20 – Fakturierung: Ausgangsrechnungen, abgeleitet aus der Kingbill-Rechnungseingabe
 --      neu: FAKT_NUMMERNKREISE, FAKT_RECHNUNGEN, FAKT_RECHNUNGSPOSITIONEN, FAKT_ZAHLUNGEN
---      Grunddaten: Nummernkreise 2026 (EDV zuletzt 13, TG zuletzt 199)
+--      Grunddaten: Nummernkreise 2026 (EDV zuletzt 13, HOLDING zuletzt 199)
 -- Voraussetzung: 17/18 (Mandanten), 19 (Artikelstamm)
 -- GENERIERT mit generator/gen_19_20_artikel_fakturierung.py – nicht von Hand bearbeiten
 -- Erzeugt: 2026-09-26

@@ -2,7 +2,7 @@
 -- ThGERP (Gruppe FAKT)
 -- 20 – Fakturierung: Ausgangsrechnungen, abgeleitet aus der Kingbill-Rechnungseingabe
 --      neu: FAKT_NUMMERNKREISE, FAKT_RECHNUNGEN, FAKT_RECHNUNGSPOSITIONEN, FAKT_ZAHLUNGEN
---      Grunddaten: Nummernkreise 2026 (EDV zuletzt 13, TG zuletzt 199)
+--      Grunddaten: Nummernkreise 2026 (EDV zuletzt 13, HOLDING zuletzt 199)
 -- Voraussetzung: 17/18 (Mandanten), 19 (Artikelstamm)
 -- GENERIERT mit generator/gen_19_20_artikel_fakturierung.py – nicht von Hand bearbeiten
 -- Erzeugt: 2026-09-26
@@ -478,7 +478,7 @@ insert into FAKT_NUMMERNKREISE (NKRS_MAND_ID, NKRS_BELEGART, NKRS_JAHR, NKRS_LET
      and not exists (select 1 from FAKT_NUMMERNKREISE where NKRS_MAND_ID = m.MAND_ID and NKRS_BELEGART = 'RECHNUNG' and NKRS_JAHR = 2026);
 insert into FAKT_NUMMERNKREISE (NKRS_MAND_ID, NKRS_BELEGART, NKRS_JAHR, NKRS_LETZTE_NUMMER)
   select MAND_ID, 'RECHNUNG', 2026, 199 from ADMIN_MANDANTEN m
-   where MAND_CODE = 'TG'
+   where MAND_CODE = 'HOLDING'
      and not exists (select 1 from FAKT_NUMMERNKREISE where NKRS_MAND_ID = m.MAND_ID and NKRS_BELEGART = 'RECHNUNG' and NKRS_JAHR = 2026);
 commit;
 

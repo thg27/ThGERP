@@ -127,8 +127,8 @@ insert into ADMIN_MANDANTEN (MAND_CODE, MAND_NAME, MAND_KURZNAME, MAND_LOGO_DATE
   select 'EDV', 'THG-EDV GmbH', 'THG-EDV', 'thg-logo-edv.png', 10
     from dual where not exists (select 1 from ADMIN_MANDANTEN where MAND_CODE = 'EDV');
 insert into ADMIN_MANDANTEN (MAND_CODE, MAND_NAME, MAND_KURZNAME, MAND_LOGO_DATEI, MAND_SORTIERUNG)
-  select 'TG', 'Thomas Geßlbauer GmbH', 'Thomas Geßlbauer', 'thg-logo-tg.png', 20
-    from dual where not exists (select 1 from ADMIN_MANDANTEN where MAND_CODE = 'TG');
+  select 'HOLDING', 'Thomas Geßlbauer GmbH', 'Thomas Geßlbauer', 'thg-logo-tg.png', 20
+    from dual where not exists (select 1 from ADMIN_MANDANTEN where MAND_CODE = 'HOLDING');
 commit;
 
 prompt ADMIN_MANDANTEN und ALLG_MITARBEITER (Mandant) installiert bzw. abgeglichen.

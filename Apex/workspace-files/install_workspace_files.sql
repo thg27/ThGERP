@@ -76,14 +76,14 @@ body:has([data-mandant="EDV"]) {
   --thg-primaer: #108024;   /* THG-EDV GmbH: Gruen */
   --thg-fokus: #e7f3e9;     /* helles Gruen fuer aktive Eingabefelder */
 }
-body:has([data-mandant="TG"]) {
+body:has([data-mandant="HOLDING"]) {
   --thg-primaer: #003096;   /* Thomas Gesslbauer GmbH: Blau */
   --thg-fokus: #e6ecf7;     /* helles Blau */
 }
 
 /* Header (Banner ganz oben) in allen Theme-Stilen in der Mandantenfarbe mit weisser Schrift.
-   !important, weil die Stil-CSS (Vita, Iris, Redwood '));
-    dbms_lob.append(l_inhalt, to_clob('…) nach dieser Datei geladen wird und den Header einfaerbt;
+   !important, weil die Stil-CSS (Vita, Iris, Red'));
+    dbms_lob.append(l_inhalt, to_clob('wood …) nach dieser Datei geladen wird und den Header einfaerbt;
    die Farbe kommt ausschliesslich vom Mandanten. */
 body .t-Header {
   --ut-header-background-color: var(--thg-primaer) !important;
@@ -113,9 +113,9 @@ body .t-Header .t-NavigationBar-item .t-Button {
   align-items: center;
   background: #fff;
   border-radius: 6px;
-  padding: 2px 6px;
-  m'));
-    dbms_lob.append(l_inhalt, to_clob('argin-inline-end: .75rem;
+  padding: 2px 6px'));
+    dbms_lob.append(l_inhalt, to_clob(';
+  margin-inline-end: .75rem;
   vertical-align: middle;
 }
 .t-Header-logo .thg-mandant-logo img {
@@ -141,8 +141,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
 /* Aktives Eingabefeld hervorheben (Hintergrund), damit sofort sichtbar ist, wo der Cursor steht;
    Radio-/Checkbox-Gruppen ausgenommen (dort wäre die ganze Gruppe eingefärbt) */
 .t-Form-fieldContainer:focus-within .t-Form-inputContainer :is(input:not([type=radio]):not([type=checkbox]), textarea, select),
-.t-Form-fieldCon'));
-    dbms_lob.append(l_inhalt, to_clob('tainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-fieldContainer-inner,
+.t-Form-fie'));
+    dbms_lob.append(l_inhalt, to_clob('ldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-fieldContainer-inner,
 .t-Form-fieldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-itemWrapper {
   background-color: var(--thg-fokus) !important;
 }
@@ -168,8 +168,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
 }
 
 /* Dialog ohne Redwood-Musterstreifen über der Titelleiste: Klasse "thg-dialog-schlicht" am .ui-dialog
-   (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, per Jav'));
-    dbms_lob.append(l_inhalt, to_clob('aScript) */
+   (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, pe'));
+    dbms_lob.append(l_inhalt, to_clob('r JavaScript) */
 .ui-dialog.thg-dialog-schlicht .ui-dialog-titlebar::before {
   display: none !important;
 }
@@ -200,8 +200,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
     padding: 1rem;
   }
   .thg-login-firma { position: static; font-size: .75rem; }
-  .thg-login-firma-name { font'));
-    dbms_lob.append(l_inhalt, to_clob('-size: 1rem; }
+  .thg-login-firma-name {'));
+    dbms_lob.append(l_inhalt, to_clob(' font-size: 1rem; }
   .thg-login-firma img { height: 5rem; }
 }
 '));
