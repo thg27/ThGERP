@@ -355,31 +355,12 @@ def seite_11():
         }
     )
 
-    pageItem P11_MANDANT (
-        type: displayOnly
-        label {
-            label: Mandant (Wechsel im Portal)
-            alignment: left
-        }
-        layout {
-            sequence: 61
-            region: @allgemein
-            slot: regionBody
-            columnSpan: 4
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-    )
-
 """
-    s += item("P11_RECH_MITA_ID", "selectList", "Bearbeiter", 70, a, col="RECH_MITA_ID", dtype="number",
-              neue_zeile=False, spalten=4, extra=lov("lov-mitarbeiter", "-") + default_sql(
+    s += item("P11_RECH_PROJEKT", "textField", "Projekt", 70, a, col="RECH_PROJEKT", maxlen=200,
+              spalten=6, **f)
+    s += item("P11_RECH_MITA_ID", "selectList", "Bearbeiter", 80, a, col="RECH_MITA_ID", dtype="number",
+              neue_zeile=False, spalten=6, extra=lov("lov-mitarbeiter", "-") + default_sql(
                   "select MITA_ID from ALLG_MITARBEITER where MITA_BENUTZERNAME = :APP_USER"), **f)
-    s += item("P11_RECH_PROJEKT", "textField", "Projekt", 80, a, col="RECH_PROJEKT", maxlen=200,
-              neue_zeile=False, spalten=4, **f)
     s += item("P11_RECH_IST_BRUTTO", "switch", "Preise sind brutto", 90, a, col="RECH_IST_BRUTTO", spalten=3,
               extra=SWITCH("N"), **f)
     s += item("P11_RECH_IST_FAELLIGKEIT_ANZEIGEN", "switch", "Fälligkeit anzeigen", 100, a,
@@ -672,7 +653,6 @@ def seite_11():
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
-                select max(MAND_KURZNAME) into :P11_MANDANT from ADMIN_MANDANTEN where MAND_ID = coalesce(:P11_RECH_MAND_ID, :MANDANT_ID);
                 ```
         }
         execution {

@@ -353,22 +353,30 @@ page 11 (
         }
     )
 
-    pageItem P11_MANDANT (
-        type: displayOnly
+    pageItem P11_RECH_PROJEKT (
+        type: textField
         label {
-            label: Mandant (Wechsel im Portal)
+            label: Projekt
             alignment: left
         }
         layout {
-            sequence: 61
+            sequence: 70
             region: @allgemein
             slot: regionBody
-            columnSpan: 4
+            columnSpan: 6
             alignment: left
         }
         appearance {
             template: @/optional-floating
             templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_PROJEKT
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
         }
     )
 
@@ -379,11 +387,11 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 70
+            sequence: 80
             region: @allgemein
             slot: regionBody
             startNewRow: false
-            columnSpan: 4
+            columnSpan: 6
             alignment: left
         }
         appearance {
@@ -408,34 +416,6 @@ page 11 (
                 ```sql
                 select MITA_ID from ALLG_MITARBEITER where MITA_BENUTZERNAME = :APP_USER
                 ```
-        }
-    )
-
-    pageItem P11_RECH_PROJEKT (
-        type: textField
-        label {
-            label: Projekt
-            alignment: left
-        }
-        layout {
-            sequence: 80
-            region: @allgemein
-            slot: regionBody
-            startNewRow: false
-            columnSpan: 4
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @rechnung
-            column: RECH_PROJEKT
-            dataType: varchar2
-        }
-        validation {
-            maxLength: 200
         }
     )
 
@@ -1898,7 +1878,6 @@ page 11 (
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
-                select max(MAND_KURZNAME) into :P11_MANDANT from ADMIN_MANDANTEN where MAND_ID = coalesce(:P11_RECH_MAND_ID, :MANDANT_ID);
                 ```
         }
         execution {

@@ -11,9 +11,9 @@ Tests im Browser (Claude in Chrome) laufen in der Sitzung des Anwenders. `apex i
   danach jederzeit wieder mit derselben Sitzung aufgerufen werden (Session Sharing), auch nachdem eine Sub-App
   eingespielt wurde.
 - **Vor jedem `apex import` einer Sub-App** muss der Tab auf der Portal-Startseite stehen.
-- **Anmeldung über die Portal-App** (`thg-portal/login`): Wurde die Sitzung durch eine Anmeldung direkt in einer
-  Sub-App erzeugt (z.B. `thg-finanz/login`), ist sie nach dem Einspielen dieser Sub-App weg – auch wenn der Tab dabei
-  im Portal stand (2026-09-30 beobachtet). Den Anwender dann um eine Anmeldung im Portal bitten.
+- Offene Beobachtung (2026-09-30): Beim Einspielen von THG-FINANZ war die Sitzung jedes Mal weg – auch bei Anmeldung
+  über das Portal und Tab auf der Portal-Startseite. Ursache ungeklärt; nicht auf eine Regel verallgemeinern, sondern
+  nach dem Import prüfen und den Anwender ggf. um eine neue Anmeldung bitten.
 - Sub-Apps immer mit `?session=<Sitzung>` bzw. über das Portal aufrufen; eine URL ohne Sitzung startet eine neue
   Sitzung → Anmeldeseite.
 - Muss das Portal eingespielt werden, am besten gesammelt am Ende und den Anwender dann um eine neue Anmeldung bitten.
