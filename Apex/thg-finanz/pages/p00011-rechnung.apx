@@ -276,11 +276,6 @@ page 11 (
             column: RECH_DATUM
             dataType: date
         }
-        default {
-            type: expression
-            language: plsql
-            plsqlExpression: trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))
-        }
     )
 
     pageItem P11_RECH_FAELLIG_AM (
@@ -1959,25 +1954,6 @@ page 11 (
         }
         successMessage {
             successMessage: Rechnung gelöscht.
-        }
-    )
-
-    process datum-vorbelegen (
-        name: Rechnungsdatum beim Anlegen setzen
-        type: executeCode
-        source {
-            plsqlCode:
-                ```plsql
-                -- Rechnungsdatum ist nur Anzeige (nicht aenderbar): beim Anlegen das heutige Datum
-                -- Datum in Oesterreich (Datenbankserver laeuft in UTC); NLS-Datumsformat der Sitzung = Format der App
-                :P11_RECH_DATUM := to_char(trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)));
-                ```
-        }
-        execution {
-            sequence: 8
-        }
-        serverSideCondition {
-            whenButtonPressed: @create
         }
     )
 

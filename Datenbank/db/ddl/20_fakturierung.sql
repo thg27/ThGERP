@@ -60,7 +60,7 @@ begin
   RECH_NUMMER varchar2(30 char),
   RECH_STATUS varchar2(10 char) default 'ENTWURF' not null,
   RECH_BETREFF varchar2(200 char),
-  RECH_DATUM date default trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) not null,
+  RECH_DATUM date,
   RECH_FAELLIG_AM date,
   RECH_LEISTUNGSZEITRAUM varchar2(100 char),
   RECH_LEISTUNG_VON date,
@@ -104,7 +104,7 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_NUMMER', 'varchar2(30 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_STATUS', 'varchar2(10 char)', 'N', q'~'ENTWURF'~');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_BETREFF', 'varchar2(200 char)', 'Y');
-    DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_DATUM', 'date', 'N', q'~trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))~');
+    DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_DATUM', 'date', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_FAELLIG_AM', 'date', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_LEISTUNGSZEITRAUM', 'varchar2(100 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_LEISTUNG_VON', 'date', 'Y');
@@ -138,6 +138,7 @@ begin
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_PK', 'P', 'RECH_ID');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_ALT_ID_UK', 'U', q'~RECH_ALT_ID~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_STATUS_CK', 'C', q'~RECH_STATUS in ('ENTWURF', 'OFFEN', 'BEZAHLT', 'STORNIERT')~');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_DATUM_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_DATUM is not null~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_NUMMER_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_LEISTUNG_CK', 'C', q'~RECH_LEISTUNG_BIS is null or RECH_LEISTUNG_VON is null or RECH_LEISTUNG_BIS >= RECH_LEISTUNG_VON~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_IST_BRUTTO_CK', 'C', q'~RECH_IST_BRUTTO in ('Y', 'N')~');
@@ -400,7 +401,7 @@ comment on column FAKT_RECHNUNGEN.RECH_EMPF_LAND_CODE is 'Empfaenger (Kopie beim
 comment on column FAKT_RECHNUNGEN.RECH_NUMMER is 'Rechnungsnummer (eindeutig je Mandant), vergeben beim Abschliessen';
 comment on column FAKT_RECHNUNGEN.RECH_STATUS is 'ENTWURF, OFFEN, BEZAHLT, STORNIERT';
 comment on column FAKT_RECHNUNGEN.RECH_BETREFF is 'Betreff, z.B. Rechnung 2026 - 13';
-comment on column FAKT_RECHNUNGEN.RECH_DATUM is 'Rechnungsdatum';
+comment on column FAKT_RECHNUNGEN.RECH_DATUM is 'Rechnungsdatum, gesetzt beim Abschliessen zusammen mit der Nummer (Entwurf: leer)';
 comment on column FAKT_RECHNUNGEN.RECH_FAELLIG_AM is 'Faelligkeitsdatum';
 comment on column FAKT_RECHNUNGEN.RECH_LEISTUNGSZEITRAUM is 'Leistungszeitraum als Text, z.B. Juli 2026';
 comment on column FAKT_RECHNUNGEN.RECH_LEISTUNG_VON is 'Leistungszeitraum von (optional, fuer Auswertungen)';

@@ -325,16 +325,11 @@ def seite_11():
 
 """
     a = "allgemein"
-    # Rechnungsnummer (vergibt "Rechnung abschliessen") und Rechnungsdatum (beim Anlegen: heute) nur Anzeige,
+    # Rechnungsnummer und Rechnungsdatum (beide vergibt "Rechnung abschliessen") nur Anzeige,
     # leicht hervorgehoben (thg.css .thg-hervorheben)
     s += hervorheben(item("P11_RECH_NUMMER", "displayOnly", "Rechnungsnummer", 10, a, col="RECH_NUMMER", spalten=3, **f))
     s += hervorheben(item("P11_RECH_DATUM", "displayOnly", "Rechnungsdatum", 20, a, col="RECH_DATUM", dtype="date",
-              neue_zeile=False, spalten=3, extra="""        default {
-            type: expression
-            language: plsql
-            plsqlExpression: trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))
-        }
-""", **f))
+              neue_zeile=False, spalten=3, **f))
     s += item("P11_RECH_FAELLIG_AM", "datePicker", "Fällig am (leer: aus Zahlungsbedingung)", 30, a,
               col="RECH_FAELLIG_AM", dtype="date", neue_zeile=False, spalten=6, **f)
     s += item("P11_RECH_LEISTUNGSZEITRAUM", "textField", "Leistungszeitraum", 40, a, col="RECH_LEISTUNGSZEITRAUM",
@@ -727,25 +722,6 @@ def seite_11():
         }
         successMessage {
             successMessage: Rechnung gelöscht.
-        }
-    )
-
-    process datum-vorbelegen (
-        name: Rechnungsdatum beim Anlegen setzen
-        type: executeCode
-        source {
-            plsqlCode:
-                ```plsql
-                -- Rechnungsdatum ist nur Anzeige (nicht aenderbar): beim Anlegen das heutige Datum
-                -- Datum in Oesterreich (Datenbankserver laeuft in UTC); NLS-Datumsformat der Sitzung = Format der App
-                :P11_RECH_DATUM := to_char(trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)));
-                ```
-        }
-        execution {
-            sequence: 8
-        }
-        serverSideCondition {
-            whenButtonPressed: @create
         }
     )
 
