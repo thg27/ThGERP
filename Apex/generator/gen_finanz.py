@@ -569,7 +569,7 @@ def seite_11():
         when {
             event: change
             selectionType: items
-            items: P11_RECH_EMPF_NAME,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_EMPF_UID_NUMMER
+            items: P11_RECH_EMPF_NAME,P11_RECH_EMPF_KONTAKTPERSON,P11_RECH_EMPF_STRASSE,P11_RECH_EMPF_PLZ,P11_RECH_EMPF_ORT,P11_RECH_EMPF_LAND_CODE,P11_RECH_EMPF_UID_NUMMER
         }
 
         action anschrift-zusammensetzen (
@@ -577,10 +577,12 @@ def seite_11():
             settings {
                 jsCode:
                     ```javascript
-                    // Firmenname / Adresse / PLZ Ort / Land / UID – leere Zeilen entfallen
+                    // Firmenname / z.H. Kontaktperson / Adresse / PLZ Ort / Land / UID – leere Zeilen entfallen
                     var land = $v("P11_RECH_EMPF_LAND_CODE") ? $("#P11_RECH_EMPF_LAND_CODE option:selected").text().split(" (")[0] : "",   // ohne Ländercode
                         uid  = $v("P11_RECH_EMPF_UID_NUMMER"),
+                        kontakt = $v("P11_RECH_EMPF_KONTAKTPERSON"),
                         zeilen = [$v("P11_RECH_EMPF_NAME"),
+                                  kontakt ? "z.H. " + kontakt : "",
                                   $v("P11_RECH_EMPF_STRASSE"),
                                   ($v("P11_RECH_EMPF_PLZ") + " " + $v("P11_RECH_EMPF_ORT")).trim(),
                                   land,
