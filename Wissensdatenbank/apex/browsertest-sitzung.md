@@ -14,6 +14,10 @@ Tests im Browser (Claude in Chrome) laufen in der Sitzung des Anwenders. `apex i
 - Offene Beobachtung (2026-09-30): Beim Einspielen von THG-FINANZ war die Sitzung jedes Mal weg – auch bei Anmeldung
   über das Portal und Tab auf der Portal-Startseite. Ursache ungeklärt; nicht auf eine Regel verallgemeinern, sondern
   nach dem Import prüfen und den Anwender ggf. um eine neue Anmeldung bitten.
+  Messung 00:10–00:15 UTC per `apex_workspace_sessions`: Sitzung aus der Anmeldung auf `thg-finanz/login` → beim
+  Import von THG-FINANZ gelöscht (Import THG-ALLGEMEIN davor: blieb). Sitzung aus der Anmeldung auf
+  `thg-portal/login` → Import von THG-FINANZ überstanden. Also für Tests immer über `thg-portal/login` anmelden
+  und vor/nach dem Import `apex_workspace_sessions` prüfen.
 - Sub-Apps immer mit `?session=<Sitzung>` bzw. über das Portal aufrufen; eine URL ohne Sitzung startet eine neue
   Sitzung → Anmeldeseite.
 - Muss das Portal eingespielt werden, am besten gesammelt am Ende und den Anwender dann um eine neue Anmeldung bitten.
