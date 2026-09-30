@@ -28,11 +28,12 @@ page 11 (
                 var summe = function (satz) {
                     var s = zahl(modell.getValue(satz, "RPOS_MENGE")) * zahl(modell.getValue(satz, "RPOS_EINZELPREIS"))
                             * (1 - zahl(modell.getValue(satz, "RPOS_RABATT_PROZENT")) / 100);
-                    // Spalte Summe ist schreibgeschuetzt (berechnet): Schreibschutz im Modell kurz aufheben
+                    // Spalte Summe ist schreibgeschuetzt (berechnet): Schreibschutz im Modell kurz aufheben;
+                    // ohne Tausendertrennzeichen, sonst lehnt die Zahlenpruefung beim Speichern den Wert ab
                     var feld = modell.getOption("fields").RPOS_SUMME, schutz = feld.readonly;
                     feld.readonly = false;
                     try {
-                        modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, "FM999G999G990D00"));
+                        modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, "FM999999990D00"));
                     } finally {
                         feld.readonly = schutz;
                     }
