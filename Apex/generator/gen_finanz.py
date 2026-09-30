@@ -245,7 +245,86 @@ def hervorheben(s):
                      "            templateOptions: #DEFAULT#\n            cssClasses: thg-hervorheben\n        }\n", 1)
 
 
-POS_JS = '    javaScript {\n        executeWhenPageLoads:\n            ```javascript-browser\n            // Positionen (Interactive Grid "positionen"):\n            //  * neue Zeile: fortlaufende Positionsnummer in 10er-Schritten\n            //  * Artikel gewaehlt: Name, Einheit, Einzelpreis, MwSt., Beschreibung aus dem Artikelstamm (AJAX ARTIKEL_DATEN)\n            //  * Menge, Einzelpreis, Rabatt geaendert: Summe der Position sofort berechnen\n            (function () {\n                var region = apex.region("positionen");\n                if (!region) {\n                    return;   // neue Rechnung: Positionen erst nach dem Anlegen\n                }\n                var modell = region.widget().interactiveGrid("getViews", "grid").model;\n                var zahl = function (w) {\n                    return (w === null || w === undefined || w === "") ? 0 : (apex.locale.toNumber(String(w)) || 0);\n                };\n                var summe = function (satz) {\n                    var s = zahl(modell.getValue(satz, "RPOS_MENGE")) * zahl(modell.getValue(satz, "RPOS_EINZELPREIS"))\n                            * (1 - zahl(modell.getValue(satz, "RPOS_RABATT_PROZENT")) / 100);\n                    modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, "FM999G999G990D00"));\n                };\n                var naechstePosition = function () {\n                    var max = 0;\n                    modell.forEach(function (satz) {\n                        var meta = modell.getRecordMetadata(modell.getRecordId(satz));\n                        if (!meta || !meta.deleted) {\n                            max = Math.max(max, zahl(modell.getValue(satz, "RPOS_POSITION")));\n                        }\n                    });\n                    return String(Math.floor(max / 10) * 10 + 10);\n                };\n                var artikelUebernehmen = function (satz) {\n                    var id = modell.getValue(satz, "RPOS_ARTI_ID");\n                    if (!id) {\n                        return;\n                    }\n                    apex.server.process("ARTIKEL_DATEN", { x01: id }, { dataType: "json" }).then(function (a) {\n                        modell.setValue(satz, "RPOS_NAME", a.name || "");\n                        modell.setValue(satz, "RPOS_EINHEIT", a.einheit || "");\n                        modell.setValue(satz, "RPOS_EINZELPREIS", a.preis || "");\n                        modell.setValue(satz, "RPOS_MWST_PROZENT", a.mwst || "");\n                        modell.setValue(satz, "RPOS_BESCHREIBUNG", a.beschreibung || "");\n                        if (!modell.getValue(satz, "RPOS_MENGE")) {\n                            modell.setValue(satz, "RPOS_MENGE", "1");\n                        }\n                        summe(satz);\n                    });\n                };\n                modell.subscribe({\n                    onChange: function (art, daten) {\n                        if (art === "insert" && daten.record && !modell.getValue(daten.record, "RPOS_POSITION")) {\n                            modell.setValue(daten.record, "RPOS_POSITION", naechstePosition());\n                        } else if (art === "set" && daten.record) {\n                            if (daten.field === "RPOS_ARTI_ID") {\n                                artikelUebernehmen(daten.record);\n                            } else if (["RPOS_MENGE", "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT"].indexOf(daten.field) >= 0) {\n                                summe(daten.record);\n                            }\n                        }\n                    }\n                });\n            })();\n            ```\n    }\n'
+# Seitenskript Rechnung: Logik der Positionen im Interactive Grid (ohne Backslashes – siehe Wissensdatenbank)
+POS_JS = """    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            // Positionen (Interactive Grid "positionen"):
+            //  * neue Zeile: fortlaufende Positionsnummer in 10er-Schritten
+            //  * Artikel gewaehlt: Name, Einheit, Einzelpreis, MwSt., Beschreibung aus dem Artikelstamm (AJAX ARTIKEL_DATEN)
+            //  * Menge, Einzelpreis, Rabatt geaendert: Summe der Position sofort berechnen
+            (function () {
+                var region = apex.region("positionen");
+                if (!region) {
+                    return;   // neue Rechnung: Positionen erst nach dem Anlegen
+                }
+                var modell = region.widget().interactiveGrid("getViews", "grid").model;
+                var zahl = function (w) {
+                    return (w === null || w === undefined || w === "") ? 0 : (apex.locale.toNumber(String(w)) || 0);
+                };
+                var summe = function (satz) {
+                    var s = zahl(modell.getValue(satz, "RPOS_MENGE")) * zahl(modell.getValue(satz, "RPOS_EINZELPREIS"))
+                            * (1 - zahl(modell.getValue(satz, "RPOS_RABATT_PROZENT")) / 100);
+                    // Spalte Summe ist schreibgeschuetzt (berechnet): Schreibschutz im Modell kurz aufheben
+                    var feld = modell.getOption("fields").RPOS_SUMME, schutz = feld.readonly;
+                    feld.readonly = false;
+                    try {
+                        modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, "FM999G999G990D00"));
+                    } finally {
+                        feld.readonly = schutz;
+                    }
+                };
+                var naechstePosition = function () {
+                    var max = 0;
+                    modell.forEach(function (satz) {
+                        var meta = modell.getRecordMetadata(modell.getRecordId(satz));
+                        if (!meta || !meta.deleted) {
+                            max = Math.max(max, zahl(modell.getValue(satz, "RPOS_POSITION")));
+                        }
+                    });
+                    return String(Math.floor(max / 10) * 10 + 10);
+                };
+                var artikelUebernehmen = function (satz) {
+                    var id = modell.getValue(satz, "RPOS_ARTI_ID");
+                    if (!id) {
+                        return;
+                    }
+                    apex.server.process("ARTIKEL_DATEN", { x01: id }, { dataType: "json" }).then(function (a) {
+                        modell.setValue(satz, "RPOS_NAME", a.name || "");
+                        modell.setValue(satz, "RPOS_EINHEIT", a.einheit || "");
+                        modell.setValue(satz, "RPOS_EINZELPREIS", a.preis || "");
+                        modell.setValue(satz, "RPOS_MWST_PROZENT", a.mwst || "");
+                        modell.setValue(satz, "RPOS_BESCHREIBUNG", a.beschreibung || "");
+                        if (!modell.getValue(satz, "RPOS_MENGE")) {
+                            modell.setValue(satz, "RPOS_MENGE", "1");
+                        }
+                        summe(satz);
+                    });
+                };
+                modell.subscribe({
+                    onChange: function (art, daten) {
+                        if (art === "insert" && daten.record && !modell.getValue(daten.record, "RPOS_POSITION")) {
+                            modell.setValue(daten.record, "RPOS_POSITION", naechstePosition());
+                        } else if (art === "set" && daten.record) {
+                            if (daten.field === "RPOS_ARTI_ID") {
+                                artikelUebernehmen(daten.record);
+                            } else if (["RPOS_MENGE", "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT"].indexOf(daten.field) >= 0) {
+                                summe(daten.record);
+                            }
+                        }
+                    }
+                });
+                // Zeilen, die das Grid schon beim Laden neu angelegt hat (leeres Grid): Positionsnummer nachtragen
+                modell.forEach(function (satz) {
+                    var meta = modell.getRecordMetadata(modell.getRecordId(satz));
+                    if (meta && meta.inserted && !modell.getValue(satz, "RPOS_POSITION")) {
+                        modell.setValue(satz, "RPOS_POSITION", naechstePosition());
+                    }
+                });
+            })();
+            ```
+    }
+"""
 
 
 def seite_11():
