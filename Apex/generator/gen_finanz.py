@@ -170,7 +170,7 @@ IG_DEFAULT = lambda wert: f"""            default {{
 """
 
 
-def ig_region(sid, name, seq, sql, spalten, anzeige, bedingung, ops="add\n                update\n                delete"):
+def ig_region(sid, name, seq, sql, spalten, anzeige, bedingung, ops="add\n                update\n                delete", nur_lesen=""):
     disp = "".join(f"""            displayColumn (
                 column: @{c}
                 layout {{
@@ -184,7 +184,7 @@ def ig_region(sid, name, seq, sql, spalten, anzeige, bedingung, ops="add\n      
         advanced {{
             htmlDomId: {sid}
         }}
-        source {{
+{nur_lesen}        source {{
             location: localDatabase
             type: sqlQuery
             sqlQuery:
@@ -236,6 +236,15 @@ def ig_region(sid, name, seq, sql, spalten, anzeige, bedingung, ops="add\n      
 
 {spalten}    )
 
+"""
+
+
+# Abgeschlossene Rechnung (Status <> ENTWURF) nur lesen – ausser nach bewusstem "Rechnung bearbeiten" (P11_BEARBEITEN = Y)
+NUR_LESEN = """        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
 """
 
 
@@ -361,8 +370,8 @@ def seite_11():
     )
 
 """
-    s += region("allgemein", "1. Allgemein", 10, parent="rechnung")
-    s += region("kunde", "2. Kunde", 20, parent="rechnung")
+    s += region("allgemein", "1. Allgemein", 10, parent="rechnung", extra=NUR_LESEN)
+    s += region("kunde", "2. Kunde", 20, parent="rechnung", extra=NUR_LESEN)
     # Unterregionen von "2. Kunde" nebeneinander (je halbe Breite, ohne eigenen Rahmen)
     halb = lambda r, neue_zeile: r.replace("            slot: subRegions\n",
         "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n") +
@@ -370,7 +379,7 @@ def seite_11():
     s += halb(region("empfaenger", "Empfänger", 10, template="@/blank-with-attributes", parent="kunde"), True)
     s += halb(region("anschrift-vorschau", "Anschrift-Vorschau", 20, template="@/blank-with-attributes",
                      parent="kunde"), False)
-    s += region("details", "Texte", 30, template="@/tabs-container", parent="rechnung")
+    s += region("details", "Texte", 30, template="@/tabs-container", parent="rechnung", extra=NUR_LESEN)
     s += region("tab-zahlungsbed", "Zahlungsbedingungen", 10, parent="details")
     s += region("tab-vortext", "Vortext", 20, parent="details")
     s += region("tab-schlusstext", "Schlusstext", 30, parent="details")
@@ -400,6 +409,15 @@ def seite_11():
         layout {
             sequence: 2
             region: @allgemein
+            slot: regionBody
+        }
+    )
+
+    pageItem P11_BEARBEITEN (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @kunde
             slot: regionBody
         }
     )
@@ -514,7 +532,7 @@ def seite_11():
            + ig_spalte("RPOS_IST_OPTIONAL", "selectList", "Optional", 120, "varchar2",
                        IG_LOV("lov-ja-nein", False) + IG_DEFAULT("N"))
            + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", readonly=True)
-           + ig_spalte("RPOS_BESCHREIBUNG", "textarea", "Beschreibung", 140, "clob"))
+           + ig_spalte("RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, "clob"))
     s += ig_region("positionen", "3. Artikel (Positionen)", 40, """                select RPOS_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTI_ID, RPOS_NAME,
                        RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
                        RPOS_IST_OPTIONAL, RPOS_SUMME, RPOS_BESCHREIBUNG
@@ -523,7 +541,7 @@ def seite_11():
                  order by RPOS_POSITION""", pos,
                    ["RPOS_POSITION", "RPOS_KAPITEL", "RPOS_ARTI_ID", "RPOS_NAME", "RPOS_MENGE", "RPOS_EINHEIT",
                     "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT", "RPOS_MWST_PROZENT", "RPOS_IST_OPTIONAL", "RPOS_SUMME"],
-                   NICHT_NULL("P11_RECH_ID"))
+                   NICHT_NULL("P11_RECH_ID"), nur_lesen=NUR_LESEN)
 
     # ------------------------------------------------ Summen je Steuersatz
     s += f"""    region summen (
@@ -624,7 +642,27 @@ def seite_11():
 """)
     s += button("save", "SAVE", "Speichern", 20, "breadcrumb", "next", hot=False,
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
-                bedingung=NICHT_NULL("P11_RECH_ID"))
+                bedingung="""        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and (:P11_RECH_STATUS = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y')
+        }
+""")
+    s += button("bearbeiten", "BEARBEITEN", "Rechnung bearbeiten", 18, "breadcrumb", "next", "@/text-with-icon",
+                icon="fa-pencil", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="""            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+""", bedingung="""        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
+        confirmation {
+            message: Die Rechnung &P11_RECH_NUMMER. ist abgeschlossen. Wirklich ändern? Rechnungsnummer und Rechnungsdatum bleiben unverändert.
+            style: warning
+        }
+""")
     s += button("abschliessen", "ABSCHLIESSEN", "Rechnung abschließen", 25, "breadcrumb", "next", hot=True,
                 verhalten="""            warnOnUnsavedChanges: doNotCheck
             databaseAction: update
@@ -733,6 +771,27 @@ def seite_11():
             }
         )
 
+    )
+
+    process bearbeitung-freigeben (
+        name: Abgeschlossene Rechnung zur Bearbeitung freigeben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- bewusste Aktion "Rechnung bearbeiten": Maske und Positionen fuer diese Rechnung wieder aenderbar
+                :P11_BEARBEITEN := 'Y';
+                ```
+        }
+        execution {
+            sequence: 1
+        }
+        serverSideCondition {
+            whenButtonPressed: @bearbeiten
+        }
+        successMessage {
+            successMessage: Rechnung zur Bearbeitung freigegeben.
+        }
     )
 
     process initialize-form-rechnung (
@@ -899,8 +958,8 @@ def seite_11():
                     l_pos    number := to_number(:RPOS_POSITION);
                 begin
                     select RECH_STATUS into l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
-                    if l_status <> 'ENTWURF' then
-                        raise_application_error(-20210, 'Positionen können nur im Entwurf geändert werden.');
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
                     if :APEX$ROW_STATUS = 'D' then
                         delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = :RPOS_ID;

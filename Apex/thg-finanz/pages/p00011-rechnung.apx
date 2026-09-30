@@ -147,6 +147,11 @@ page 11 (
     region allgemein (
         name: 1. Allgemein
         type: staticContent
+        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
         layout {
             sequence: 10
             parentRegion: @rechnung
@@ -161,6 +166,11 @@ page 11 (
     region kunde (
         name: 2. Kunde
         type: staticContent
+        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
         layout {
             sequence: 20
             parentRegion: @rechnung
@@ -206,6 +216,11 @@ page 11 (
     region details (
         name: Texte
         type: staticContent
+        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
         layout {
             sequence: 30
             parentRegion: @rechnung
@@ -296,6 +311,15 @@ page 11 (
         layout {
             sequence: 2
             region: @allgemein
+            slot: regionBody
+        }
+    )
+
+    pageItem P11_BEARBEITEN (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @kunde
             slot: regionBody
         }
     )
@@ -1065,6 +1089,11 @@ page 11 (
         advanced {
             htmlDomId: positionen
         }
+        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
         source {
             location: localDatabase
             type: sqlQuery
@@ -1414,7 +1443,7 @@ page 11 (
         )
 
         column RPOS_BESCHREIBUNG (
-            type: textarea
+            type: richTextEditor
             heading {
                 heading: Beschreibung
             }
@@ -1794,8 +1823,41 @@ page 11 (
             databaseAction: update
         }
         serverSideCondition {
-            type: itemIsNotNull
-            item: P11_RECH_ID
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and (:P11_RECH_STATUS = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y')
+        }
+    )
+
+    button bearbeiten (
+        buttonName: BEARBEITEN
+        label: Rechnung bearbeiten
+        layout {
+            sequence: 18
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-pencil
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
+        confirmation {
+            message: Die Rechnung &P11_RECH_NUMMER. ist abgeschlossen. Wirklich ändern? Rechnungsnummer und Rechnungsdatum bleiben unverändert.
+            style: warning
         }
     )
 
@@ -1965,6 +2027,27 @@ page 11 (
 
     )
 
+    process bearbeitung-freigeben (
+        name: Abgeschlossene Rechnung zur Bearbeitung freigeben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- bewusste Aktion "Rechnung bearbeiten": Maske und Positionen fuer diese Rechnung wieder aenderbar
+                :P11_BEARBEITEN := 'Y';
+                ```
+        }
+        execution {
+            sequence: 1
+        }
+        serverSideCondition {
+            whenButtonPressed: @bearbeiten
+        }
+        successMessage {
+            successMessage: Rechnung zur Bearbeitung freigegeben.
+        }
+    )
+
     process initialize-form-rechnung (
         name: Formular Rechnung initialisieren
         type: formInitialization
@@ -2129,8 +2212,8 @@ page 11 (
                     l_pos    number := to_number(:RPOS_POSITION);
                 begin
                     select RECH_STATUS into l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
-                    if l_status <> 'ENTWURF' then
-                        raise_application_error(-20210, 'Positionen können nur im Entwurf geändert werden.');
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
                     if :APEX$ROW_STATUS = 'D' then
                         delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = :RPOS_ID;
