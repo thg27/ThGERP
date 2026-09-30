@@ -284,16 +284,20 @@ POS_JS = """    javaScript {
                     });
                     return String(Math.floor(max / 10) * 10 + 10);
                 };
+                // Spalten mit Werteliste speichern im Modell {v: Wert, d: Anzeige}, sonst einfache Werte
+                var wert = function (w) {
+                    return (w && typeof w === "object") ? w.v : w;
+                };
                 var artikelUebernehmen = function (satz) {
-                    var id = modell.getValue(satz, "RPOS_ARTI_ID");
+                    var id = wert(modell.getValue(satz, "RPOS_ARTI_ID"));
                     if (!id) {
                         return;
                     }
                     apex.server.process("ARTIKEL_DATEN", { x01: id }, { dataType: "json" }).then(function (a) {
                         modell.setValue(satz, "RPOS_NAME", a.name || "");
-                        modell.setValue(satz, "RPOS_EINHEIT", a.einheit || "");
+                        modell.setValue(satz, "RPOS_EINHEIT", a.einheit ? { v: a.einheit, d: a.einheit } : "");
                         modell.setValue(satz, "RPOS_EINZELPREIS", a.preis || "");
-                        modell.setValue(satz, "RPOS_MWST_PROZENT", a.mwst || "");
+                        modell.setValue(satz, "RPOS_MWST_PROZENT", a.mwst ? { v: a.mwst, d: a.mwst_anzeige } : "");
                         modell.setValue(satz, "RPOS_BESCHREIBUNG", a.beschreibung || "");
                         if (!modell.getValue(satz, "RPOS_MENGE")) {
                             modell.setValue(satz, "RPOS_MENGE", "1");
@@ -800,6 +804,7 @@ def seite_11():
                     apex_json.write('einheit', l_einh);
                     apex_json.write('preis', to_char(a.ARTI_VK_PREIS, 'FM999999990D00'));
                     apex_json.write('mwst', to_char(l_mwst));
+                    apex_json.write('mwst_anzeige', to_char(l_mwst, 'FM990D00') || ' %');   -- wie LOV_MWST_PROZENT
                     apex_json.write('beschreibung', a.ARTI_BESCHREIBUNG);
                     apex_json.close_object;
                 end;
