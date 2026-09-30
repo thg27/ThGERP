@@ -31,6 +31,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 21_finanz.sql | Package FAKT_RECHNUNG (Empfänger übernehmen, Summen, Abschließen mit Nummernkreis, Zahlungsstatus), Views FAKT_RECHNUNGEN_V, FAKT_RECHNUNG_MWST_V; Löschen (Entwurf bzw. letzte Rechnung); Mitarbeiter, Textvorlagen, Portal-Kachel THG-FINANZ; wiederholbar |
 | 22_finanz_nummernschutz.sql | Trigger RECH_NUMMER_BUD, NKRS_NUMMER_BU: Rechnungsnummer/Nummernkreis nur über das Package FAKT_RECHNUNG änderbar, abgeschlossene Rechnungen nur als letzte löschbar; wiederholbar |
 | 23_mitarbeiter_theme.sql | ALLG_MITARBEITER.MITA_THEME_STIL: Theme-Stil je Mitarbeiter (gilt nach dem Login in allen Apps); wiederholbar |
+| 24_rechnung_pdf.sql | Package FAKT_RECHNUNG_PDF: Rechnung als PDF (AS_PDF) im Layout der bisherigen Ausgangsrechnungen je Mandant (Logo, Anschrift, Positionen mit Rich-Text-Beschreibung, Summen je Steuersatz, Fuß mit Banken/Firmenbuch); wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

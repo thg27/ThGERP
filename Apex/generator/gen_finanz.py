@@ -713,6 +713,23 @@ def seite_11():
             style: warning
         }
 """)
+    # PDF-Ausdruck (Vorschau-Dialog Seite 13 mit Drucken/Herunterladen), sobald die Rechnung abgeschlossen ist
+    s += button("pdf", "PDF", "Rechnung drucken", 17, "breadcrumb", "next", "@/text-with-icon",
+                icon="fa-file-pdf-o", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 13
+                items: {
+                    P13_RECH_ID: &P11_RECH_ID.
+                }
+            }
+            warnOnUnsavedChanges: doNotCheck
+""", bedingung="""        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS <> 'ENTWURF'
+        }
+""")
     s += button("abschliessen", "ABSCHLIESSEN", "Rechnung abschließen", 25, "breadcrumb", "next", hot=True,
                 verhalten="""            warnOnUnsavedChanges: doNotCheck
             databaseAction: update
@@ -1349,6 +1366,32 @@ def lovs_abonnieren():
     p.write_text(s, encoding="utf-8")
 
 
+def pdf_seiten():
+    """Seite 12 (Rechnung als PDF, inline) und 13 (Vorschau-Dialog mit Drucken/Herunterladen/Schliessen) –
+    abgeleitet vom Kundenstammblatt (THG-KUNDEN Seiten 12/13), PDF aus FAKT_RECHNUNG_PDF (Skript 24)"""
+    ersetzen = [
+        ("P12_KUND_ID", "P12_RECH_ID"), ("P13_KUND_ID", "P13_RECH_ID"),
+        ("KUND_STAMMBLATT.", "FAKT_RECHNUNG_PDF."),
+        ("region stammblatt (", "region rechnung-pdf ("), ("@stammblatt", "@rechnung-pdf"),
+        ("stammblatt-pdf", "rechnung-pdf"),
+        ("name: Kundenstammblatt anzeigen", "name: Rechnung anzeigen"),
+        ("alias: KUNDENSTAMMBLATT-ANZEIGEN", "alias: RECHNUNG-ANZEIGEN"),
+        ("alias: KUNDENSTAMMBLATT", "alias: RECHNUNG-PDF"),
+        ("name: Kundenstammblatt als PDF ausliefern", "name: Rechnung als PDF ausliefern"),
+        ("name: Kundenstammblatt", "name: Rechnung PDF"),
+        ("title: Kundenstammblatt", "title: Rechnung"),
+        ('title="Kundenstammblatt"', 'title="Rechnung"'),
+        ("Kundenstammblatt konnte nicht", "Rechnung konnte nicht"),
+    ]
+    for nr, datei in ((12, "p00012-kundenstammblatt.apx"), (13, "p00013-kundenstammblatt-anzeigen.apx")):
+        s = (APEX / "thg-kunden" / "pages" / datei).read_text(encoding="utf-8")
+        for a, b in ersetzen:
+            s = s.replace(a, b)
+        assert "KUND" not in s and "stammblatt" not in s.lower(), f"Seite {nr}: Reste vom Kundenstammblatt"
+        name = "p00012-rechnung-pdf.apx" if nr == 12 else "p00013-rechnung-anzeigen.apx"
+        (FIN / "pages" / name).write_text(s, encoding="utf-8")
+
+
 if __name__ == "__main__":
     if not FIN.exists():
         shutil.copytree(ALLG, FIN)
@@ -1370,6 +1413,7 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00001-home.apx").write_text(startseite(), encoding="utf-8")
     (FIN / "pages" / "p00010-rechnungen.apx").write_text(seite_10(), encoding="utf-8")
     (FIN / "pages" / "p00011-rechnung.apx").write_text(seite_11(), encoding="utf-8")
+    pdf_seiten()
     (FIN / "pages" / "p00100-wertelisten.apx").write_text(
         wl.uebersicht("wertelisten-finanz", "Wertelisten Finanz"), encoding="utf-8")
     ga.wl_seiten(FIN, WL_FINANZ)

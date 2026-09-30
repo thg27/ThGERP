@@ -1872,6 +1872,39 @@ page 11 (
         }
     )
 
+    button pdf (
+        buttonName: PDF
+        label: Rechnung drucken
+        layout {
+            sequence: 17
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-file-pdf-o
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 13
+                items: {
+                    P13_RECH_ID: &P11_RECH_ID.
+                }
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS <> 'ENTWURF'
+        }
+    )
+
     button abschliessen (
         buttonName: ABSCHLIESSEN
         label: Rechnung abschließen

@@ -31,5 +31,6 @@ whenever sqlerror exit failure rollback
 @@21_finanz.sql
 @@22_finanz_nummernschutz.sql
 @@23_mitarbeiter_theme.sql
+@@24_rechnung_pdf.sql
 
 prompt Installation abgeschlossen.

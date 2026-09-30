@@ -5,6 +5,7 @@
 -- Voraussetzung: Oracle 12.2+ (Objektnamen > 30 Zeichen), getestet fuer 19c
 -- =====================================================================
 
+drop package FAKT_RECHNUNG_PDF;
 drop package FAKT_RECHNUNG;
 drop view FAKT_RECHNUNGEN_V;
 drop view FAKT_RECHNUNG_MWST_V;
