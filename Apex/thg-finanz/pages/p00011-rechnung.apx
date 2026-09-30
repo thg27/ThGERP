@@ -90,6 +90,37 @@ page 11 (
         }
     )
 
+    region empfaenger (
+        name: Empfänger
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @kunde
+            slot: subRegions
+            columnSpan: 6
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region anschrift-vorschau (
+        name: Anschrift-Vorschau
+        type: staticContent
+        layout {
+            sequence: 20
+            parentRegion: @kunde
+            slot: subRegions
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
     region details (
         name: Texte
         type: staticContent
@@ -621,26 +652,6 @@ page 11 (
         }
     )
 
-    pageItem P11_ANSCHRIFT (
-        type: displayOnly
-        label {
-            label: Kunde (Anschrift)
-            alignment: left
-        }
-        layout {
-            sequence: 40
-            region: @kunde
-            slot: regionBody
-            columnSpan: 6
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-            cssClasses: thg-anschrift
-        }
-    )
-
     pageItem P11_RECH_EMPF_NAME (
         type: textField
         label {
@@ -648,11 +659,9 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 50
-            region: @kunde
+            sequence: 10
+            region: @empfaenger
             slot: regionBody
-            startNewRow: false
-            columnSpan: 6
             alignment: left
         }
         appearance {
@@ -669,6 +678,32 @@ page 11 (
         }
     )
 
+    pageItem P11_RECH_EMPF_KONTAKTPERSON (
+        type: textField
+        label {
+            label: Kontaktperson
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @empfaenger
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @rechnung
+            column: RECH_EMPF_KONTAKTPERSON
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
     pageItem P11_RECH_EMPF_STRASSE (
         type: textField
         label {
@@ -676,10 +711,9 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 80
-            region: @kunde
+            sequence: 30
+            region: @empfaenger
             slot: regionBody
-            columnSpan: 6
             alignment: left
         }
         appearance {
@@ -703,11 +737,10 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 90
-            region: @kunde
+            sequence: 40
+            region: @empfaenger
             slot: regionBody
-            startNewRow: false
-            columnSpan: 1
+            columnSpan: 3
             alignment: left
         }
         appearance {
@@ -731,11 +764,11 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 100
-            region: @kunde
+            sequence: 50
+            region: @empfaenger
             slot: regionBody
             startNewRow: false
-            columnSpan: 3
+            columnSpan: 5
             alignment: left
         }
         appearance {
@@ -759,11 +792,11 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 110
-            region: @kunde
+            sequence: 60
+            region: @empfaenger
             slot: regionBody
             startNewRow: false
-            columnSpan: 2
+            columnSpan: 4
             alignment: left
         }
         appearance {
@@ -784,33 +817,6 @@ page 11 (
         }
     )
 
-    pageItem P11_RECH_EMPF_KONTAKTPERSON (
-        type: textField
-        label {
-            label: Kontaktperson
-            alignment: left
-        }
-        layout {
-            sequence: 120
-            region: @kunde
-            slot: regionBody
-            columnSpan: 6
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @rechnung
-            column: RECH_EMPF_KONTAKTPERSON
-            dataType: varchar2
-        }
-        validation {
-            maxLength: 200
-        }
-    )
-
     pageItem P11_RECH_EMPF_UID_NUMMER (
         type: textField
         label {
@@ -818,11 +824,9 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 130
-            region: @kunde
+            sequence: 70
+            region: @empfaenger
             slot: regionBody
-            startNewRow: false
-            columnSpan: 6
             alignment: left
         }
         appearance {
@@ -836,6 +840,25 @@ page 11 (
         }
         validation {
             maxLength: 20
+        }
+    )
+
+    pageItem P11_ANSCHRIFT (
+        type: displayOnly
+        label {
+            label: Kunde (Anschrift)
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @anschrift-vorschau
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            cssClasses: thg-anschrift
         }
     )
 

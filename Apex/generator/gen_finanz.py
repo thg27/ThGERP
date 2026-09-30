@@ -273,6 +273,13 @@ def seite_11():
 """
     s += region("allgemein", "1. Allgemein", 10, parent="rechnung")
     s += region("kunde", "2. Kunde", 20, parent="rechnung")
+    # Unterregionen von "2. Kunde" nebeneinander (je halbe Breite, ohne eigenen Rahmen)
+    halb = lambda r, neue_zeile: r.replace("            slot: subRegions\n",
+        "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n") +
+        "            columnSpan: 6\n", 1)
+    s += halb(region("empfaenger", "Empfänger", 10, template="@/blank-with-attributes", parent="kunde"), True)
+    s += halb(region("anschrift-vorschau", "Anschrift-Vorschau", 20, template="@/blank-with-attributes",
+                     parent="kunde"), False)
     s += region("details", "Texte", 30, template="@/tabs-container", parent="rechnung")
     s += region("tab-zahlungsbed", "Zahlungsbedingungen", 10, parent="details")
     s += region("tab-vortext", "Vortext", 20, parent="details")
@@ -379,25 +386,23 @@ def seite_11():
               dtype="number", neue_zeile=False, spalten=3, extra=lov("lov-zahlungsbedingungen", "-"), **f)
     s += item("P11_RECH_IST_OHNE_MWST", "switch", "Keine MwSt. (Reverse Charge)", 30, k, col="RECH_IST_OHNE_MWST",
               neue_zeile=False, spalten=3, extra=SWITCH("N"), **f)
-    # Anschrift wie am Ausdruck (nur Anzeige): Firmenname, Adresse, PLZ Ort, Land, UID – aus den Feldern darunter,
-    # per Dynamic Action "Anschrift-Vorschau" sofort aktualisiert (thg.css .thg-anschrift: Zeilenumbrueche)
-    s += item("P11_ANSCHRIFT", "displayOnly", "Kunde (Anschrift)", 40, k, spalten=6, **f).replace(
+    # Empfaenger in zwei Unterregionen nebeneinander: links die Felder untereinander (Firmenname, Kontaktperson,
+    # Adresse, PLZ/Ort/Land, UID-Nr.), rechts die Anschrift wie am Ausdruck (nur Anzeige, per Dynamic Action
+    # "Anschrift-Vorschau" sofort aktualisiert; thg.css .thg-anschrift: Zeilenumbrueche)
+    e, v = "empfaenger", "anschrift-vorschau"
+    s += item("P11_RECH_EMPF_NAME", "textField", "Firmenname", 10, e, col="RECH_EMPF_NAME", maxlen=400, **f)
+    s += item("P11_RECH_EMPF_KONTAKTPERSON", "textField", "Kontaktperson", 20, e, col="RECH_EMPF_KONTAKTPERSON",
+              maxlen=200, **f)
+    s += item("P11_RECH_EMPF_STRASSE", "textField", "Adresse", 30, e, col="RECH_EMPF_STRASSE", maxlen=250, **f)
+    s += item("P11_RECH_EMPF_PLZ", "textField", "PLZ", 40, e, col="RECH_EMPF_PLZ", maxlen=10, spalten=3, **f)
+    s += item("P11_RECH_EMPF_ORT", "textField", "Ort", 50, e, col="RECH_EMPF_ORT", maxlen=100, neue_zeile=False,
+              spalten=5, **f)
+    s += item("P11_RECH_EMPF_LAND_CODE", "selectList", "Land", 60, e, col="RECH_EMPF_LAND_CODE",
+              neue_zeile=False, spalten=4, extra=lov("lov-laender", "-"), **f)
+    s += item("P11_RECH_EMPF_UID_NUMMER", "textField", "UID-Nr.", 70, e, col="RECH_EMPF_UID_NUMMER", maxlen=20, **f)
+    s += item("P11_ANSCHRIFT", "displayOnly", "Kunde (Anschrift)", 10, v, **f).replace(
         "            templateOptions: #DEFAULT#\n        }\n",
         "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
-    s += item("P11_RECH_EMPF_NAME", "textField", "Firmenname", 50, k, col="RECH_EMPF_NAME", maxlen=400,
-              neue_zeile=False, spalten=6, **f)
-    s += item("P11_RECH_EMPF_STRASSE", "textField", "Adresse", 80, k, col="RECH_EMPF_STRASSE", maxlen=250,
-              spalten=6, **f)
-    s += item("P11_RECH_EMPF_PLZ", "textField", "PLZ", 90, k, col="RECH_EMPF_PLZ", maxlen=10, neue_zeile=False,
-              spalten=1, **f)
-    s += item("P11_RECH_EMPF_ORT", "textField", "Ort", 100, k, col="RECH_EMPF_ORT", maxlen=100, neue_zeile=False,
-              spalten=3, **f)
-    s += item("P11_RECH_EMPF_LAND_CODE", "selectList", "Land", 110, k, col="RECH_EMPF_LAND_CODE",
-              neue_zeile=False, spalten=2, extra=lov("lov-laender", "-"), **f)
-    s += item("P11_RECH_EMPF_KONTAKTPERSON", "textField", "Kontaktperson", 120, k, col="RECH_EMPF_KONTAKTPERSON",
-              maxlen=200, spalten=6, **f)
-    s += item("P11_RECH_EMPF_UID_NUMMER", "textField", "UID-Nr.", 130, k, col="RECH_EMPF_UID_NUMMER", maxlen=20,
-              neue_zeile=False, spalten=6, **f)
 
     txt = lambda art: default_sql(f"select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = '{art}' and TXVL_IST_STANDARD = 'Y'")
     s += item("P11_RECH_ZAHLUNGSBED_TEXT", "textarea", "Zahlungsbedingungen", 10, "tab-zahlungsbed",
