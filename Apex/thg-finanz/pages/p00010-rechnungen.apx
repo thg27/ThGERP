@@ -107,7 +107,7 @@ page 10 (
         )
 
         column MANDANT (
-            type: plainText
+            type: hidden
             heading {
                 heading: Mandant
             }
@@ -198,7 +198,7 @@ page 10 (
         )
 
         column RECH_BETREFF (
-            type: plainText
+            type: hidden
             heading {
                 heading: Betreff
             }
@@ -211,7 +211,7 @@ page 10 (
         )
 
         column RECH_LEISTUNGSZEITRAUM (
-            type: plainText
+            type: hidden
             heading {
                 heading: Leistungszeitraum
             }

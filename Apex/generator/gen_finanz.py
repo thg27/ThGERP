@@ -102,12 +102,12 @@ def seite_10():
         messages {{
             whenNoDataFound: Keine Rechnungen vorhanden.
         }}
-{ir_spalten([("RECH_ID", "ID", "hidden", "NUMBER"), ("MANDANT", "Mandant", "plainText", "STRING"),
+{ir_spalten([("RECH_ID", "ID", "hidden", "NUMBER"), ("MANDANT", "Mandant", "hidden", "STRING"),
              ("RECH_NUMMER", "Nummer", "plainText", "STRING"), ("STATUS", "Status", "plainText", "STRING"),
              ("RECH_DATUM", "Datum", "plainText", "DATE"), ("RECH_FAELLIG_AM", "Fällig am", "plainText", "DATE"),
              ("KUND_NUMMER", "Kundennr.", "plainText", "STRING"), ("KUNDE", "Kunde", "plainText", "STRING"),
-             ("RECH_BETREFF", "Betreff", "plainText", "STRING"),
-             ("RECH_LEISTUNGSZEITRAUM", "Leistungszeitraum", "plainText", "STRING"),
+             ("RECH_BETREFF", "Betreff", "hidden", "STRING"),
+             ("RECH_LEISTUNGSZEITRAUM", "Leistungszeitraum", "hidden", "STRING"),
              ("RECH_SUMME_NETTO", "Netto", "plainText", "NUMBER", BETRAG),
              ("RECH_SUMME_BRUTTO", "Brutto", "plainText", "NUMBER", BETRAG),
              ("OFFEN", "Offen", "plainText", "NUMBER", BETRAG),
