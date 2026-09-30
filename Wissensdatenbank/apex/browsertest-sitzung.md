@@ -11,15 +11,10 @@ Tests im Browser (Claude in Chrome) laufen in der Sitzung des Anwenders. `apex i
   danach jederzeit wieder mit derselben Sitzung aufgerufen werden (Session Sharing), auch nachdem eine Sub-App
   eingespielt wurde.
 - **Vor jedem `apex import` einer Sub-App** muss der Tab auf der Portal-Startseite stehen.
-- Offene Beobachtung (2026-09-30): Beim Einspielen von THG-FINANZ war die Sitzung jedes Mal weg – auch bei Anmeldung
-  über das Portal und Tab auf der Portal-Startseite. Ursache ungeklärt; nicht auf eine Regel verallgemeinern, sondern
-  nach dem Import prüfen und den Anwender ggf. um eine neue Anmeldung bitten.
-  Messung 00:10–00:15 UTC per `apex_workspace_sessions`: Sitzung aus der Anmeldung auf `thg-finanz/login` → beim
-  Import von THG-FINANZ gelöscht (Import THG-ALLGEMEIN davor: blieb). Sitzung aus der Anmeldung auf
-  `thg-portal/login` → einen Import von THG-FINANZ überstanden, beim nächsten Import (nachdem in der Sitzung
-  Seite 11 von THG-FINANZ aufgerufen worden war) aber gelöscht. Keine verlässliche Regel – vermutlich löscht der
-  Import Sitzungen, die die App schon verwendet haben. Vor/nach dem Import `apex_workspace_sessions` prüfen,
-  Importe einer App bündeln und den Anwender erst danach um die Anmeldung bitten.
+- **Ursache Sitzungsverlust (geklärt 2026-09-30):** `apex import` löscht standardmäßig alle Sitzungen, die die
+  eingespielte App verwendet haben – mit Session Sharing auch die Portal-Sitzung. Abhilfe: vor dem Import in derselben
+  SQLcl-Sitzung `apex_application_install.set_keep_sessions(p_keep_sessions => true)` (siehe
+  `sqlcl/apex-import-ablauf.md`). Dann bleibt die Sitzung erhalten, egal wo angemeldet wurde.
 - Sub-Apps immer mit `?session=<Sitzung>` bzw. über das Portal aufrufen; eine URL ohne Sitzung startet eine neue
   Sitzung → Anmeldeseite.
 - Muss das Portal eingespielt werden, am besten gesammelt am Ende und den Anwender dann um eine neue Anmeldung bitten.

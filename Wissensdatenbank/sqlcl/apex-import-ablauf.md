@@ -4,9 +4,17 @@
 Befehle **einzeln nacheinander** (der SQLcl-MCP-Server hat nur eine Sitzung), immer mit App-ID und Deployment:
 
 ```text
+begin apex_application_install.set_keep_sessions(p_keep_sessions => true); end;
+/
 apex validate -input Apex/<app> -deployment Apex/<app>/deployments/default.json
 apex import   -input Apex/<app> -deployment Apex/<app>/deployments/default.json -id <app-id>
 ```
+**Sitzungen erhalten:** Ohne `set_keep_sessions(true)` löscht APEX beim Ersetzen einer App alle Sitzungen, die diese
+App verwendet haben (Instanz-Standard „Keep Sessions on Upgrade“ = Nein). Mit Session Sharing (Workspace) ist das
+dieselbe Sitzung wie im Portal → Anwender muss sich neu anmelden. Die Einstellung gilt für die DB-Sitzung von SQLcl
+(Package-Zustand) – nach einem Neuverbinden erneut setzen. Nachweis 2026-09-30: Import THG-FINANZ mit
+`set_keep_sessions(true)` → alle Sitzungen in `apex_workspace_sessions` erhalten, Finanz-App lief in derselben
+Sitzung weiter.
 Reihenfolge: Portal (20000) → Sub-Apps → Subscriptions aktualisieren:
 
 ```sql
