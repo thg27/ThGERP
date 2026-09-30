@@ -45,3 +45,9 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
   JS-Code der Dynamic Action steht dann ein unterbrochenes String-Literal (`SyntaxError: Invalid or unexpected token`),
   und **alle** Dynamic Actions der Seite fallen aus (`apex.da.initDaEventList is not a function`). Im JS-Code keine
   Backslash-Escapes verwenden (z. B. `String.fromCharCode(10)`) oder `\\n` bzw. Raw-Strings im Generator.
+- **Interactive Grid mit Formatmaske (z. B. `FML999G999G990D00`):** Im Modell und in den Bind-Variablen eigener
+  Speicherprozesse stehen die Werte formatiert (`€1.250,00`) – `to_number(:SPALTE)` → ORA-01722. Im Prozess mit
+  eigener Umwandlung arbeiten (Währungszeichen entfernen, `to_number(…, '999G999G999G990D99999',
+  'NLS_NUMERIC_CHARACTERS='',.''')`); im JavaScript `apex.locale.formatNumber/toNumber` mit derselben Maske verwenden,
+  sonst meldet die Prüfung „must be a valid number“. Lokale PL/SQL-Funktionen nicht direkt in SQL verwenden
+  (PLS-00231) → vorher in eine Variable. Werteliste-Spalten stehen im Modell als `{v, d}`.

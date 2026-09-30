@@ -268,18 +268,24 @@ POS_JS = """    javaScript {
                     return;   // neue Rechnung: Positionen erst nach dem Anlegen
                 }
                 var modell = region.widget().interactiveGrid("getViews", "grid").model;
+                // Betraege (Einzelpreis, Summe) im Format der Spalten: EUR, Tausendertrennzeichen, 2 Nachkommastellen
+                var BETRAG = "FML999G999G990D00";
                 var zahl = function (w) {
-                    return (w === null || w === undefined || w === "") ? 0 : (apex.locale.toNumber(String(w)) || 0);
+                    if (w === null || w === undefined || w === "") {
+                        return 0;
+                    }
+                    var n = apex.locale.toNumber(String(w), BETRAG);   // mit Maske: auch Werte ohne Waehrungszeichen
+                    return isNaN(n) ? (apex.locale.toNumber(String(w)) || 0) : n;
                 };
                 var summe = function (satz) {
                     var s = zahl(modell.getValue(satz, "RPOS_MENGE")) * zahl(modell.getValue(satz, "RPOS_EINZELPREIS"))
                             * (1 - zahl(modell.getValue(satz, "RPOS_RABATT_PROZENT")) / 100);
                     // Spalte Summe ist schreibgeschuetzt (berechnet): Schreibschutz im Modell kurz aufheben;
-                    // ohne Tausendertrennzeichen, sonst lehnt die Zahlenpruefung beim Speichern den Wert ab
+                    // im Formatmuster der Spalte (FML999G999G990D00), sonst lehnt die Zahlenpruefung beim Speichern ab
                     var feld = modell.getOption("fields").RPOS_SUMME, schutz = feld.readonly;
                     feld.readonly = false;
                     try {
-                        modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, "FM999999990D00"));
+                        modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, BETRAG));
                     } finally {
                         feld.readonly = schutz;
                     }
@@ -306,7 +312,7 @@ POS_JS = """    javaScript {
                     apex.server.process("ARTIKEL_DATEN", { x01: id }, { dataType: "json" }).then(function (a) {
                         modell.setValue(satz, "RPOS_NAME", a.name || "");
                         modell.setValue(satz, "RPOS_EINHEIT", a.einheit ? { v: a.einheit, d: a.einheit } : "");
-                        modell.setValue(satz, "RPOS_EINZELPREIS", a.preis || "");
+                        modell.setValue(satz, "RPOS_EINZELPREIS", a.preis ? apex.locale.formatNumber(zahl(a.preis), BETRAG) : "");
                         modell.setValue(satz, "RPOS_MWST_PROZENT", a.mwst ? { v: a.mwst, d: a.mwst_anzeige } : "");
                         modell.setValue(satz, "RPOS_BESCHREIBUNG", a.beschreibung || "");
                         if (!modell.getValue(satz, "RPOS_MENGE")) {
@@ -334,6 +340,10 @@ POS_JS = """    javaScript {
                     if (meta && meta.inserted && !modell.getValue(satz, "RPOS_POSITION")) {
                         modell.setValue(satz, "RPOS_POSITION", naechstePosition());
                     }
+                });
+                // Speichern nur ueber das Grid: Summen-Bereich neu laden
+                $("#positionen").on("interactivegridsave", function () {
+                    apex.region("summen").refresh();
                 });
             })();
             ```
@@ -527,12 +537,12 @@ def seite_11():
            + ig_spalte("RPOS_NAME", "textField", "Name", 60, "varchar2")
            + ig_spalte("RPOS_MENGE", "numberField", "Menge", 70, "number", IG_DEFAULT(1))
            + ig_spalte("RPOS_EINHEIT", "selectList", "Einheit", 80, "varchar2", IG_LOV("lov-einheiten-code"))
-           + ig_spalte("RPOS_EINZELPREIS", "numberField", "Einzelpreis", 90, "number")
+           + ig_spalte("RPOS_EINZELPREIS", "numberField", "Einzelpreis", 90, "number", BETRAG)
            + ig_spalte("RPOS_RABATT_PROZENT", "numberField", "Rabatt %", 100, "number")
            + ig_spalte("RPOS_MWST_PROZENT", "selectList", "MwSt. %", 110, "number", IG_LOV("lov-mwst-prozent"))
            + ig_spalte("RPOS_IST_OPTIONAL", "selectList", "Optional", 120, "varchar2",
                        IG_LOV("lov-ja-nein", False) + IG_DEFAULT("N"))
-           + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", readonly=True)
+           + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", BETRAG, readonly=True)
            + ig_spalte("RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, "clob"))
     s += ig_region("positionen", "3. Artikel (Positionen)", 40, """                select RPOS_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTI_ID, RPOS_NAME,
                        RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
@@ -548,6 +558,9 @@ def seite_11():
     s += f"""    region summen (
         name: Summen
         type: interactiveReport
+        advanced {{
+            htmlDomId: summen
+        }}
         source {{
             location: localDatabase
             type: sqlQuery
@@ -957,6 +970,13 @@ def seite_11():
                     l_mwst   ALLG_MWST_SAETZE.MWST_PROZENT%type;
                     l_einh   ALLG_EINHEITEN.EINH_CODE%type;
                     l_pos    number := to_number(:RPOS_POSITION);
+                    l_preis  number;
+                    -- Betraege kommen im Format der Spalte (z.B. EUR 1.250,00) oder als einfache Zahl
+                    function betrag(p_wert in varchar2) return number is
+                    begin
+                        return to_number(replace(replace(p_wert, nchr(8364)), ' '), '999G999G999G990D99999',
+                                         'NLS_NUMERIC_CHARACTERS='',.''');
+                    end;
                 begin
                     select RECH_STATUS into l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
                     if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
@@ -964,8 +984,10 @@ def seite_11():
                     end if;
                     if :APEX$ROW_STATUS = 'D' then
                         delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = :RPOS_ID;
+                        FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);   -- auch beim Speichern nur ueber das Grid
                         return;
                     end if;
+                    l_preis := betrag(:RPOS_EINZELPREIS);   -- lokale Funktion nicht direkt in SQL (PLS-00231)
                     if :RPOS_ARTI_ID is not null then
                         select * into a from ARTI_ARTIKEL where ARTI_ID = to_number(:RPOS_ARTI_ID);
                         select MWST_PROZENT into l_mwst from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
@@ -982,7 +1004,7 @@ def seite_11():
                                RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO)
                         values (:P11_RECH_ID, to_number(:RPOS_ARTI_ID), l_pos, :RPOS_KAPITEL, :RPOS_UNTERKAPITEL, a.ARTI_NUMMER,
                                 coalesce(:RPOS_NAME, a.ARTI_NAME), coalesce(to_clob(:RPOS_BESCHREIBUNG), a.ARTI_BESCHREIBUNG),
-                                nvl(to_number(:RPOS_MENGE), 1), coalesce(:RPOS_EINHEIT, l_einh), coalesce(to_number(:RPOS_EINZELPREIS), a.ARTI_VK_PREIS, 0),
+                                nvl(to_number(:RPOS_MENGE), 1), coalesce(:RPOS_EINHEIT, l_einh), coalesce(l_preis, a.ARTI_VK_PREIS, 0),
                                 to_number(:RPOS_RABATT_PROZENT), coalesce(to_number(:RPOS_MWST_PROZENT), l_mwst, 20), nvl(:RPOS_IST_OPTIONAL, 'N'),
                                 a.ARTI_ERLOESKONTO)
                         returning RPOS_ID into :RPOS_ID;
@@ -997,12 +1019,13 @@ def seite_11():
                                RPOS_BESCHREIBUNG   = coalesce(to_clob(:RPOS_BESCHREIBUNG), a.ARTI_BESCHREIBUNG),
                                RPOS_MENGE          = nvl(to_number(:RPOS_MENGE), 1),
                                RPOS_EINHEIT        = coalesce(:RPOS_EINHEIT, l_einh),
-                               RPOS_EINZELPREIS    = coalesce(to_number(:RPOS_EINZELPREIS), a.ARTI_VK_PREIS, 0),
+                               RPOS_EINZELPREIS    = coalesce(l_preis, a.ARTI_VK_PREIS, 0),
                                RPOS_RABATT_PROZENT = to_number(:RPOS_RABATT_PROZENT),
                                RPOS_MWST_PROZENT   = coalesce(to_number(:RPOS_MWST_PROZENT), l_mwst, 20),
                                RPOS_IST_OPTIONAL   = nvl(:RPOS_IST_OPTIONAL, 'N')
                          where RPOS_ID = :RPOS_ID;
                     end if;
+                    FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);   -- Rechnungssummen auch beim Speichern nur ueber das Grid
                 end;
                 ```
         }
