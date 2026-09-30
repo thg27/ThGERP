@@ -181,6 +181,9 @@ def ig_region(sid, name, seq, sql, spalten, anzeige, bedingung, ops="add\n      
     return f"""    region {sid} (
         name: {name}
         type: interactiveGrid
+        advanced {{
+            htmlDomId: {sid}
+        }}
         source {{
             location: localDatabase
             type: sqlQuery
@@ -242,8 +245,12 @@ def hervorheben(s):
                      "            templateOptions: #DEFAULT#\n            cssClasses: thg-hervorheben\n        }\n", 1)
 
 
+POS_JS = '    javaScript {\n        executeWhenPageLoads:\n            ```javascript-browser\n            // Positionen (Interactive Grid "positionen"):\n            //  * neue Zeile: fortlaufende Positionsnummer in 10er-Schritten\n            //  * Artikel gewaehlt: Name, Einheit, Einzelpreis, MwSt., Beschreibung aus dem Artikelstamm (AJAX ARTIKEL_DATEN)\n            //  * Menge, Einzelpreis, Rabatt geaendert: Summe der Position sofort berechnen\n            (function () {\n                var region = apex.region("positionen");\n                if (!region) {\n                    return;   // neue Rechnung: Positionen erst nach dem Anlegen\n                }\n                var modell = region.widget().interactiveGrid("getViews", "grid").model;\n                var zahl = function (w) {\n                    return (w === null || w === undefined || w === "") ? 0 : (apex.locale.toNumber(String(w)) || 0);\n                };\n                var summe = function (satz) {\n                    var s = zahl(modell.getValue(satz, "RPOS_MENGE")) * zahl(modell.getValue(satz, "RPOS_EINZELPREIS"))\n                            * (1 - zahl(modell.getValue(satz, "RPOS_RABATT_PROZENT")) / 100);\n                    modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, "FM999G999G990D00"));\n                };\n                var naechstePosition = function () {\n                    var max = 0;\n                    modell.forEach(function (satz) {\n                        var meta = modell.getRecordMetadata(modell.getRecordId(satz));\n                        if (!meta || !meta.deleted) {\n                            max = Math.max(max, zahl(modell.getValue(satz, "RPOS_POSITION")));\n                        }\n                    });\n                    return String(Math.floor(max / 10) * 10 + 10);\n                };\n                var artikelUebernehmen = function (satz) {\n                    var id = modell.getValue(satz, "RPOS_ARTI_ID");\n                    if (!id) {\n                        return;\n                    }\n                    apex.server.process("ARTIKEL_DATEN", { x01: id }, { dataType: "json" }).then(function (a) {\n                        modell.setValue(satz, "RPOS_NAME", a.name || "");\n                        modell.setValue(satz, "RPOS_EINHEIT", a.einheit || "");\n                        modell.setValue(satz, "RPOS_EINZELPREIS", a.preis || "");\n                        modell.setValue(satz, "RPOS_MWST_PROZENT", a.mwst || "");\n                        modell.setValue(satz, "RPOS_BESCHREIBUNG", a.beschreibung || "");\n                        if (!modell.getValue(satz, "RPOS_MENGE")) {\n                            modell.setValue(satz, "RPOS_MENGE", "1");\n                        }\n                        summe(satz);\n                    });\n                };\n                modell.subscribe({\n                    onChange: function (art, daten) {\n                        if (art === "insert" && daten.record && !modell.getValue(daten.record, "RPOS_POSITION")) {\n                            modell.setValue(daten.record, "RPOS_POSITION", naechstePosition());\n                        } else if (art === "set" && daten.record) {\n                            if (daten.field === "RPOS_ARTI_ID") {\n                                artikelUebernehmen(daten.record);\n                            } else if (["RPOS_MENGE", "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT"].indexOf(daten.field) >= 0) {\n                                summe(daten.record);\n                            }\n                        }\n                    }\n                });\n            })();\n            ```\n    }\n'
+
+
 def seite_11():
     s = KOPF(11, "Rechnung", "RECHNUNG").replace("title: Rechnung", "title: &P11_TITEL.")
+    s = s.replace("    security {", POS_JS + "    security {", 1)
     s += BREADCRUMB("&P11_TITEL.")
     s += """    region rechnung (
         name: Rechnung
@@ -415,16 +422,16 @@ def seite_11():
            + ig_spalte("RPOS_KAPITEL", "textField", "Kapitel", 30, "varchar2")
            + ig_spalte("RPOS_UNTERKAPITEL", "textField", "Unterkapitel", 40, "varchar2")
            + ig_spalte("RPOS_ARTI_ID", "selectList", "Artikel", 50, "number", IG_LOV("lov-artikel"))
-           + ig_spalte("RPOS_NAME", "textField", "Name (leer: vom Artikel)", 60, "varchar2")
+           + ig_spalte("RPOS_NAME", "textField", "Name", 60, "varchar2")
            + ig_spalte("RPOS_MENGE", "numberField", "Menge", 70, "number", IG_DEFAULT(1))
            + ig_spalte("RPOS_EINHEIT", "selectList", "Einheit", 80, "varchar2", IG_LOV("lov-einheiten-code"))
-           + ig_spalte("RPOS_EINZELPREIS", "numberField", "Einzelpreis (leer: vom Artikel)", 90, "number")
+           + ig_spalte("RPOS_EINZELPREIS", "numberField", "Einzelpreis", 90, "number")
            + ig_spalte("RPOS_RABATT_PROZENT", "numberField", "Rabatt %", 100, "number")
            + ig_spalte("RPOS_MWST_PROZENT", "selectList", "MwSt. %", 110, "number", IG_LOV("lov-mwst-prozent"))
            + ig_spalte("RPOS_IST_OPTIONAL", "selectList", "Optional", 120, "varchar2",
                        IG_LOV("lov-ja-nein", False) + IG_DEFAULT("N"))
            + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", readonly=True)
-           + ig_spalte("RPOS_BESCHREIBUNG", "textarea", "Beschreibung (leer: vom Artikel)", 140, "clob"))
+           + ig_spalte("RPOS_BESCHREIBUNG", "textarea", "Beschreibung", 140, "clob"))
     s += ig_region("positionen", "3. Artikel (Positionen)", 40, """                select RPOS_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTI_ID, RPOS_NAME,
                        RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
                        RPOS_IST_OPTIONAL, RPOS_SUMME, RPOS_BESCHREIBUNG
@@ -694,6 +701,37 @@ def seite_11():
         }
     )
 
+    process artikel-daten (
+        name: ARTIKEL_DATEN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Artikeldaten fuer eine Position (AJAX aus dem Grid "positionen"): Werte im Format der Sitzung
+                declare
+                    a      ARTI_ARTIKEL%rowtype;
+                    l_einh ALLG_EINHEITEN.EINH_CODE%type;
+                    l_mwst ALLG_MWST_SAETZE.MWST_PROZENT%type;
+                begin
+                    select * into a from ARTI_ARTIKEL where ARTI_ID = to_number(apex_application.g_x01);
+                    select max(EINH_CODE) into l_einh from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
+                    select max(MWST_PROZENT) into l_mwst from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
+                    apex_json.open_object;
+                    apex_json.write('name', a.ARTI_NAME);
+                    apex_json.write('einheit', l_einh);
+                    apex_json.write('preis', to_char(a.ARTI_VK_PREIS, 'FM999999990D00'));
+                    apex_json.write('mwst', to_char(l_mwst));
+                    apex_json.write('beschreibung', a.ARTI_BESCHREIBUNG);
+                    apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+    )
+
     process rechnung-loeschen (
         name: Rechnung löschen (Entwurf oder letzte Rechnung)
         type: executeCode
@@ -790,7 +828,7 @@ def seite_11():
                         select max(EINH_CODE) into l_einh from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
                     end if;
                     if l_pos is null then
-                        select nvl(max(RPOS_POSITION), 0) + 1 into l_pos
+                        select trunc(nvl(max(RPOS_POSITION), 0) / 10) * 10 + 10 into l_pos   -- 10er-Schritte
                           from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = :P11_RECH_ID;
                     end if;
                     if :APEX$ROW_STATUS = 'C' then

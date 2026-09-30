@@ -9,6 +9,70 @@ page 11 (
     navigation {
         cursorFocus: doNotFocusCursor
     }
+    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            // Positionen (Interactive Grid "positionen"):
+            //  * neue Zeile: fortlaufende Positionsnummer in 10er-Schritten
+            //  * Artikel gewaehlt: Name, Einheit, Einzelpreis, MwSt., Beschreibung aus dem Artikelstamm (AJAX ARTIKEL_DATEN)
+            //  * Menge, Einzelpreis, Rabatt geaendert: Summe der Position sofort berechnen
+            (function () {
+                var region = apex.region("positionen");
+                if (!region) {
+                    return;   // neue Rechnung: Positionen erst nach dem Anlegen
+                }
+                var modell = region.widget().interactiveGrid("getViews", "grid").model;
+                var zahl = function (w) {
+                    return (w === null || w === undefined || w === "") ? 0 : (apex.locale.toNumber(String(w)) || 0);
+                };
+                var summe = function (satz) {
+                    var s = zahl(modell.getValue(satz, "RPOS_MENGE")) * zahl(modell.getValue(satz, "RPOS_EINZELPREIS"))
+                            * (1 - zahl(modell.getValue(satz, "RPOS_RABATT_PROZENT")) / 100);
+                    modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, "FM999G999G990D00"));
+                };
+                var naechstePosition = function () {
+                    var max = 0;
+                    modell.forEach(function (satz) {
+                        var meta = modell.getRecordMetadata(modell.getRecordId(satz));
+                        if (!meta || !meta.deleted) {
+                            max = Math.max(max, zahl(modell.getValue(satz, "RPOS_POSITION")));
+                        }
+                    });
+                    return String(Math.floor(max / 10) * 10 + 10);
+                };
+                var artikelUebernehmen = function (satz) {
+                    var id = modell.getValue(satz, "RPOS_ARTI_ID");
+                    if (!id) {
+                        return;
+                    }
+                    apex.server.process("ARTIKEL_DATEN", { x01: id }, { dataType: "json" }).then(function (a) {
+                        modell.setValue(satz, "RPOS_NAME", a.name || "");
+                        modell.setValue(satz, "RPOS_EINHEIT", a.einheit || "");
+                        modell.setValue(satz, "RPOS_EINZELPREIS", a.preis || "");
+                        modell.setValue(satz, "RPOS_MWST_PROZENT", a.mwst || "");
+                        modell.setValue(satz, "RPOS_BESCHREIBUNG", a.beschreibung || "");
+                        if (!modell.getValue(satz, "RPOS_MENGE")) {
+                            modell.setValue(satz, "RPOS_MENGE", "1");
+                        }
+                        summe(satz);
+                    });
+                };
+                modell.subscribe({
+                    onChange: function (art, daten) {
+                        if (art === "insert" && daten.record && !modell.getValue(daten.record, "RPOS_POSITION")) {
+                            modell.setValue(daten.record, "RPOS_POSITION", naechstePosition());
+                        } else if (art === "set" && daten.record) {
+                            if (daten.field === "RPOS_ARTI_ID") {
+                                artikelUebernehmen(daten.record);
+                            } else if (["RPOS_MENGE", "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT"].indexOf(daten.field) >= 0) {
+                                summe(daten.record);
+                            }
+                        }
+                    }
+                });
+            })();
+            ```
+    }
     security {
         pageAccessProtection: argumentsMustHaveChecksum
         formAutoComplete: false
@@ -980,6 +1044,9 @@ page 11 (
     region positionen (
         name: 3. Artikel (Positionen)
         type: interactiveGrid
+        advanced {
+            htmlDomId: positionen
+        }
         source {
             location: localDatabase
             type: sqlQuery
@@ -1190,7 +1257,7 @@ page 11 (
         column RPOS_NAME (
             type: textField
             heading {
-                heading: Name (leer: vom Artikel)
+                heading: Name
             }
             layout {
                 sequence: 60
@@ -1242,7 +1309,7 @@ page 11 (
         column RPOS_EINZELPREIS (
             type: numberField
             heading {
-                heading: Einzelpreis (leer: vom Artikel)
+                heading: Einzelpreis
             }
             layout {
                 sequence: 90
@@ -1331,7 +1398,7 @@ page 11 (
         column RPOS_BESCHREIBUNG (
             type: textarea
             heading {
-                heading: Beschreibung (leer: vom Artikel)
+                heading: Beschreibung
             }
             layout {
                 sequence: 140
@@ -1438,6 +1505,9 @@ page 11 (
     region zahlungen (
         name: Zahlungen
         type: interactiveGrid
+        advanced {
+            htmlDomId: zahlungen
+        }
         source {
             location: localDatabase
             type: sqlQuery
@@ -1926,6 +1996,37 @@ page 11 (
         }
     )
 
+    process artikel-daten (
+        name: ARTIKEL_DATEN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Artikeldaten fuer eine Position (AJAX aus dem Grid "positionen"): Werte im Format der Sitzung
+                declare
+                    a      ARTI_ARTIKEL%rowtype;
+                    l_einh ALLG_EINHEITEN.EINH_CODE%type;
+                    l_mwst ALLG_MWST_SAETZE.MWST_PROZENT%type;
+                begin
+                    select * into a from ARTI_ARTIKEL where ARTI_ID = to_number(apex_application.g_x01);
+                    select max(EINH_CODE) into l_einh from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
+                    select max(MWST_PROZENT) into l_mwst from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
+                    apex_json.open_object;
+                    apex_json.write('name', a.ARTI_NAME);
+                    apex_json.write('einheit', l_einh);
+                    apex_json.write('preis', to_char(a.ARTI_VK_PREIS, 'FM999999990D00'));
+                    apex_json.write('mwst', to_char(l_mwst));
+                    apex_json.write('beschreibung', a.ARTI_BESCHREIBUNG);
+                    apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+    )
+
     process rechnung-loeschen (
         name: Rechnung löschen (Entwurf oder letzte Rechnung)
         type: executeCode
@@ -2022,7 +2123,7 @@ page 11 (
                         select max(EINH_CODE) into l_einh from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
                     end if;
                     if l_pos is null then
-                        select nvl(max(RPOS_POSITION), 0) + 1 into l_pos
+                        select trunc(nvl(max(RPOS_POSITION), 0) / 10) * 10 + 10 into l_pos   -- 10er-Schritte
                           from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = :P11_RECH_ID;
                     end if;
                     if :APEX$ROW_STATUS = 'C' then
