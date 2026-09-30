@@ -164,6 +164,11 @@ body .t-Header .t-NavigationBar-item .t-Button {
     dbms_lob.append(l_inhalt, to_clob('em;
 }
 
+/* Summen der Rechnung (Finanz Seite 11, vom Seitenskript gefuellt) */
+.thg-summen-tabelle { width: 100%; border-collapse: collapse; }
+.thg-summen-tabelle .thg-summen-betrag { text-align: end; white-space: nowrap; }
+.thg-summen-tabelle .thg-summen-fett td { font-weight: 600; border-top: 1px solid var(--ut-component-border-color, #ddd); }
+
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
    (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {
@@ -184,14 +189,14 @@ body .t-Header .t-NavigationBar-item .t-Button {
   padding: .375rem .5rem .5rem;
 }
 
-/* Dialog ohne Redwood-Musterstreifen über der Titelleiste: Klasse "thg-dialog-schlicht" am .ui-dialog
+/* Dialog ohne Redwood-Musterstreifen über der Titelleiste: Klasse "thg-'));
+    dbms_lob.append(l_inhalt, to_clob('dialog-schlicht" am .ui-dialog
    (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, per JavaScript) */
 .ui-dialog.thg-dialog-schlicht .ui-dialog-titlebar::before {
   display: none !important;
 }
 
-/* Login-Seite (Portal): Firmenlogos mit Anschrift - Logo mit zentriertem Namen/Anschrift darunter, Thomas Gesslbauer GmbH links oben, THG-EDV '));
-    dbms_lob.append(l_inhalt, to_clob('GmbH rechts oben */
+/* Login-Seite (Portal): Firmenlogos mit Anschrift - Logo mit zentriertem Namen/Anschrift darunter, Thomas Gesslbauer GmbH links oben, THG-EDV GmbH rechts oben */
 .thg-login-firma {
   position: fixed;
   top: 3rem;
@@ -215,7 +220,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem;
-  }
+'));
+    dbms_lob.append(l_inhalt, to_clob('  }
   .thg-login-firma { position: static; font-size: .75rem; }
   .thg-login-firma-name { font-size: 1rem; }
   .thg-login-firma img { height: 5rem; }

@@ -51,3 +51,8 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
   'NLS_NUMERIC_CHARACTERS='',.''')`); im JavaScript `apex.locale.formatNumber/toNumber` mit derselben Maske verwenden,
   sonst meldet die Prüfung „must be a valid number“. Lokale PL/SQL-Funktionen nicht direkt in SQL verwenden
   (PLS-00231) → vorher in eine Variable. Werteliste-Spalten stehen im Modell als `{v, d}`.
+- **Berechnete Spalte im Interactive Grid per JavaScript setzen:** Ist die Spalte serverseitig „nur lesen“
+  (`readOnly { type: always }`), bekommt jede geladene Zeile eine Prüfsumme (`ck`) und `model.setValue` scheitert mit
+  „Set value not allowed for field“ – bei neuen Zeilen funktioniert es, daher leicht übersehen. Lösung: Spalte
+  serverseitig nicht schreibgeschützt, im Browser `model.getOption("fields").SPALTE.readonly = true` setzen und beim
+  Setzen kurz aufheben; den Wert serverseitig nicht übernehmen (Trigger/Prozess berechnet ihn).

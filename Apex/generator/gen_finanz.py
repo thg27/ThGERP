@@ -268,6 +268,9 @@ POS_JS = """    javaScript {
                     return;   // neue Rechnung: Positionen erst nach dem Anlegen
                 }
                 var modell = region.widget().interactiveGrid("getViews", "grid").model;
+                // Summe: nur im Browser schreibgeschuetzt (serverseitig "nur lesen" haengt eine Pruefsumme an, dann
+                // laesst das Modell bei gespeicherten Zeilen kein Setzen zu); berechnet wird sie im Trigger RPOS_BIU
+                modell.getOption("fields").RPOS_SUMME.readonly = true;
                 // Betraege (Einzelpreis, Summe) im Format der Spalten: EUR, Tausendertrennzeichen, 2 Nachkommastellen
                 var BETRAG = "FML999G999G990D00";
                 var zahl = function (w) {
@@ -341,10 +344,69 @@ POS_JS = """    javaScript {
                         modell.setValue(satz, "RPOS_POSITION", naechstePosition());
                     }
                 });
-                // Speichern nur ueber das Grid: Summen-Bereich neu laden
-                $("#positionen").on("interactivegridsave", function () {
-                    apex.region("summen").refresh();
-                });
+                // Summen je Steuersatz wie FAKT_RECHNUNG_MWST_V (ohne optionale Positionen; "Preise sind brutto",
+                // "Keine MwSt." beruecksichtigt), Bezahlt/Offen aus den Zahlungen – sofort bei jeder Aenderung
+                var zahlungen = apex.region("zahlungen") ? apex.region("zahlungen").widget().interactiveGrid("getViews", "grid").model : null;
+                var runden = function (n) {
+                    return Math.round(n * 100) / 100;
+                };
+                var aktiv = function (m, satz) {
+                    var meta = m.getRecordMetadata(m.getRecordId(satz));
+                    return !meta || !meta.deleted;
+                };
+                var summenZeigen = function () {
+                    var ohne = $v("P11_RECH_IST_OHNE_MWST") === "Y", brutto = $v("P11_RECH_IST_BRUTTO") === "Y";
+                    var saetze = {}, anzahl = 0;
+                    modell.forEach(function (satz) {
+                        if (!aktiv(modell, satz) || wert(modell.getValue(satz, "RPOS_IST_OPTIONAL")) === "Y") {
+                            return;
+                        }
+                        var betrag = zahl(modell.getValue(satz, "RPOS_SUMME")),
+                            pz = ohne ? 0 : zahl(wert(modell.getValue(satz, "RPOS_MWST_PROZENT")));
+                        saetze[pz] = (saetze[pz] || 0) + (brutto ? betrag / (1 + pz / 100) : betrag);
+                        anzahl++;
+                    });
+                    var ziel = document.getElementById("summen-inhalt");
+                    if (!ziel) {
+                        return;
+                    }
+                    if (!anzahl) {
+                        ziel.textContent = "Noch keine Positionen.";
+                        return;
+                    }
+                    var zeilen = [], netto = 0, gesamt = 0;
+                    Object.keys(saetze).map(Number).sort(function (x, y) { return y - x; }).forEach(function (pz) {
+                        var n = runden(saetze[pz]), m = runden(saetze[pz] * pz / 100);
+                        netto += n;
+                        gesamt += n + m;
+                        zeilen.push([apex.locale.formatNumber(pz, "FM990") + " % MwSt.", m]);
+                    });
+                    zeilen.unshift(["Netto", runden(netto)]);
+                    zeilen.push(["Gesamtbetrag", runden(gesamt)]);
+                    if ($v("P11_RECH_STATUS") !== "ENTWURF" && zahlungen) {
+                        var bezahlt = 0;
+                        zahlungen.forEach(function (satz) {
+                            if (aktiv(zahlungen, satz)) {
+                                bezahlt += zahl(zahlungen.getValue(satz, "ZAHL_BETRAG")) + zahl(zahlungen.getValue(satz, "ZAHL_SKONTO"));
+                            }
+                        });
+                        zeilen.push(["Bezahlt", runden(bezahlt)]);
+                        zeilen.push(["Offen", runden(gesamt - bezahlt)]);
+                    }
+                    var html = "<table class='t-Report-report thg-summen-tabelle'><tbody>";
+                    zeilen.forEach(function (z, i) {
+                        var fett = (z[0] === "Gesamtbetrag" || z[0] === "Offen") ? " thg-summen-fett" : "";
+                        html += "<tr class='" + fett + "'><td class='t-Report-cell'>" + apex.util.escapeHTML(z[0]) +
+                                "</td><td class='t-Report-cell thg-summen-betrag'>" + apex.locale.formatNumber(z[1], BETRAG) + "</td></tr>";
+                    });
+                    ziel.innerHTML = html + "</tbody></table>";
+                };
+                modell.subscribe({ onChange: function () { summenZeigen(); } });
+                if (zahlungen) {
+                    zahlungen.subscribe({ onChange: function () { summenZeigen(); } });
+                }
+                $("#P11_RECH_IST_BRUTTO, #P11_RECH_IST_OHNE_MWST").on("change", summenZeigen);
+                summenZeigen();
             })();
             ```
     }
@@ -542,7 +604,7 @@ def seite_11():
            + ig_spalte("RPOS_MWST_PROZENT", "selectList", "MwSt. %", 110, "number", IG_LOV("lov-mwst-prozent"))
            + ig_spalte("RPOS_IST_OPTIONAL", "selectList", "Optional", 120, "varchar2",
                        IG_LOV("lov-ja-nein", False) + IG_DEFAULT("N"))
-           + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", BETRAG, readonly=True)
+           + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", BETRAG)
            + ig_spalte("RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, "clob"))
     s += ig_region("positionen", "3. Artikel (Positionen)", 40, """                select RPOS_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTI_ID, RPOS_NAME,
                        RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
@@ -557,29 +619,15 @@ def seite_11():
     # ------------------------------------------------ Summen je Steuersatz
     s += f"""    region summen (
         name: Summen
-        type: interactiveReport
+        type: staticContent
         advanced {{
             htmlDomId: summen
         }}
         source {{
-            location: localDatabase
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select 1 as SORT, 'Netto' as ZEILE, sum(NETTO) as BETRAG from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID
-                union all
-                select 2, to_char(MWST_PROZENT, 'FM990') || ' % MwSt.', MWST from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID
-                union all
-                select 3, 'Gesamtbetrag', sum(NETTO + MWST) from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID
-                union all
-                select 4, 'Bezahlt', BEZAHLT from FAKT_RECHNUNGEN_V where RECH_ID = :P11_RECH_ID and RECH_STATUS <> 'ENTWURF'
-                union all
-                select 5, 'Offen', OFFEN from FAKT_RECHNUNGEN_V where RECH_ID = :P11_RECH_ID and RECH_STATUS <> 'ENTWURF'
-                order by 1, 2
+            htmlCode:
+                ```html
+                <div id="summen-inhalt" class="thg-summen"></div>
                 ```
-            pageItemsToSubmit: [
-                P11_RECH_ID
-            ]
         }}
         layout {{
             sequence: 50
@@ -589,19 +637,7 @@ def seite_11():
             template: @/standard
             templateOptions: #DEFAULT#
         }}
-        componentAppearance {{
-            showNullValuesAs: -
-        }}
-        pagination {{
-            type: rowRangesXToY
-        }}
-        messages {{
-            whenNoDataFound: Noch keine Positionen.
-        }}
-{NICHT_NULL("P11_RECH_ID")}{ir_spalten([("SORT", "Sort", "hidden", "NUMBER"), ("ZEILE", "Position", "plainText", "STRING"),
-                ("BETRAG", "Betrag", "plainText", "NUMBER", BETRAG)]).rstrip()}
-
-    )
+{NICHT_NULL("P11_RECH_ID")}    )
 
 """
     # ------------------------------------------------ Zahlungen

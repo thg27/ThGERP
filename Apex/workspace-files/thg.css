@@ -98,6 +98,11 @@ body .t-Header .t-NavigationBar-item .t-Button {
   min-height: 7.5rem;
 }
 
+/* Summen der Rechnung (Finanz Seite 11, vom Seitenskript gefuellt) */
+.thg-summen-tabelle { width: 100%; border-collapse: collapse; }
+.thg-summen-tabelle .thg-summen-betrag { text-align: end; white-space: nowrap; }
+.thg-summen-tabelle .thg-summen-fett td { font-weight: 600; border-top: 1px solid var(--ut-component-border-color, #ddd); }
+
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
    (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {
