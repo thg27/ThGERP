@@ -122,7 +122,11 @@ Seite 11 hat das Formular „Rechnung“ und daneben Felder einer Position (`P11
   - Dieselbe Zeile macht die **Seite „geändert“** (`apex.page.isChanged()`, „Seite verlassen?“). Beim `insert`-Ereignis
     ist `autoInserted` noch nicht gesetzt → Vorgabewerte erst beim ersten `set` eines anderen Feldes schreiben.
   - Neue Zeilen haben `inserted` **und** `updated` → „ungespeichert?“ für neue Zeilen am Inhalt (Name/Artikel) festmachen.
-  - War die Region ausgeblendet: nach dem Einblenden `ansicht.view$.grid("resize")`.
+  - War die Region beim Seitenaufbau ausgeblendet (`display: none`), baut das Raster seine Werkzeugleiste mit Breite 0
+    auf: nach dem Einblenden liegen „Bearbeiten/Speichern/Zeile hinzufügen“ untereinander über den Zeilen. Nach dem
+    Einblenden `apex.widget.util.visibilityChange(regionElement, true)` aufrufen (benachrichtigt alle Widgets der
+    Region), dazu `ansicht.view$.grid("resize")`. Der Fehler zeigt sich nur direkt nach dem Laden – nach einem
+    Fenster-Resize oder Region-Refresh sieht es richtig aus, daher im Test die Seite neu laden.
   - Nach dem Speichern feuert `interactivegridsave` auf der Region → Baum und Summen neu laden.
 - **Reihenfolge per Drag & Drop (HTML5):** Knoten mit `draggable='true'`; `dragstart` (`dataTransfer.setData` – sonst
   zieht Firefox nicht), `dragover` mit `preventDefault()` nur dort, wo abgelegt werden darf, `drop`, `dragend`.

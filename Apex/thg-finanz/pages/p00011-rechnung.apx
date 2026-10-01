@@ -221,7 +221,7 @@ page 11 (
                     $("#pos-titel").text("Keine Position gewählt");
                     $(".thg-pos-speichern").hide();
                     apex.item("P11_HAUPT_ID").setValue("", null, true);
-                    $("#pos-felder, #pos-aktionen, #positionen").hide();
+                    $("#pos-felder, #positionen").hide();
                     markieren();
                 };
                 // Antwort von POS_LADEN in die Felder
@@ -248,7 +248,7 @@ page 11 (
                     }
                     var haupt = !zustand.hauptId, mitUnter = haupt && zustand.unter > 0;
                     $("#pos-titel").text(d.titel);
-                    $("#pos-felder, #pos-aktionen").show();
+                    $("#pos-felder").show();
                     NUR_ARTIKEL.forEach(function (name) {
                         apex.item(name)[mitUnter ? "hide" : "show"]();
                     });
@@ -268,7 +268,9 @@ page 11 (
                     apex.item("P11_HAUPT_ID").setValue(raster ? zustand.id : "", null, true);
                     $("#positionen").toggle(raster);
                     if (raster) {
-                        ansicht.view$.grid("resize");   // das Raster war ausgeblendet
+                        // das Raster war ausgeblendet: Werkzeugleiste und Spalten wurden mit Breite 0 aufgebaut
+                        apex.widget.util.visibilityChange($("#positionen")[0], true);
+                        ansicht.view$.grid("resize");
                         if (!ohneRaster) {
                             // ein Modell mit Aenderungen (auch nur die leere neue Zeile) wird nicht neu geladen;
                             // echte ungespeicherte Eingaben hat sicher() vorher abgefangen
@@ -570,7 +572,7 @@ page 11 (
             .thg-pos-hinweistext { font-size: .75rem; opacity: .7; margin: 0; }
             .thg-pos-kopf { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 .75rem; }
             .thg-pos-titel { margin: 0; font-size: 1.125rem; font-weight: 600; }
-            .thg-pos-aktionen { display: flex; justify-content: flex-end; margin: .5rem 0 1rem; }
+            .thg-pos-summen-titel { margin: 1.25rem 0 .5rem; font-size: 1rem; font-weight: 600; }
             ```
     }
     security {
@@ -1596,6 +1598,8 @@ page 11 (
                 <div id="pos-baum" class="thg-pos-baum" role="tree" aria-label="Positionen"></div>
                 <div id="pos-ende" class="thg-pos-ende"></div>
                 <p id="pos-hinweis" class="thg-pos-hinweistext">Reihenfolge mit der Maus ziehen. Auf eine Hauptposition gezogen wird die Position ihre Unterposition, zwischen zwei Hauptpositionen wird sie selbst Hauptposition.</p>
+                <h4 class="thg-pos-summen-titel">Summen</h4>
+                <div id="summen-inhalt" class="thg-summen"></div>
                 ```
         }
         layout {
@@ -1657,31 +1661,6 @@ page 11 (
         }
         layout {
             sequence: 20
-            parentRegion: @pos-rechts
-            slot: subRegions
-        }
-        appearance {
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }
-    )
-
-    region pos-aktionen (
-        name: Position (Speichern)
-        type: staticContent
-        advanced {
-            htmlDomId: pos-aktionen
-        }
-        source {
-            htmlCode:
-                ```html
-                <div class="thg-pos-aktionen">
-                    <button type="button" id="pos-speichern" class="t-Button t-Button--hot thg-pos-speichern"><span class="t-Button-label">Position speichern</span></button>
-                </div>
-                ```
-        }
-        layout {
-            sequence: 30
             parentRegion: @pos-rechts
             slot: subRegions
         }
@@ -2363,32 +2342,6 @@ page 11 (
             }
         )
 
-    )
-
-    region summen (
-        name: Summen
-        type: staticContent
-        advanced {
-            htmlDomId: summen
-        }
-        source {
-            htmlCode:
-                ```html
-                <div id="summen-inhalt" class="thg-summen"></div>
-                ```
-        }
-        layout {
-            sequence: 50
-            slot: body
-        }
-        appearance {
-            template: @/standard
-            templateOptions: #DEFAULT#
-        }
-        serverSideCondition {
-            type: itemIsNotNull
-            item: P11_RECH_ID
-        }
     )
 
     region zahlungen (

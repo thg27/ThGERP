@@ -504,7 +504,7 @@ POS_JS = """    javaScript {
                     $("#pos-titel").text("Keine Position gewählt");
                     $(".thg-pos-speichern").hide();
                     apex.item("P11_HAUPT_ID").setValue("", null, true);
-                    $("#pos-felder, #pos-aktionen, #positionen").hide();
+                    $("#pos-felder, #positionen").hide();
                     markieren();
                 };
                 // Antwort von POS_LADEN in die Felder
@@ -531,7 +531,7 @@ POS_JS = """    javaScript {
                     }
                     var haupt = !zustand.hauptId, mitUnter = haupt && zustand.unter > 0;
                     $("#pos-titel").text(d.titel);
-                    $("#pos-felder, #pos-aktionen").show();
+                    $("#pos-felder").show();
                     NUR_ARTIKEL.forEach(function (name) {
                         apex.item(name)[mitUnter ? "hide" : "show"]();
                     });
@@ -551,7 +551,9 @@ POS_JS = """    javaScript {
                     apex.item("P11_HAUPT_ID").setValue(raster ? zustand.id : "", null, true);
                     $("#positionen").toggle(raster);
                     if (raster) {
-                        ansicht.view$.grid("resize");   // das Raster war ausgeblendet
+                        // das Raster war ausgeblendet: Werkzeugleiste und Spalten wurden mit Breite 0 aufgebaut
+                        apex.widget.util.visibilityChange($("#positionen")[0], true);
+                        ansicht.view$.grid("resize");
                         if (!ohneRaster) {
                             // ein Modell mit Aenderungen (auch nur die leere neue Zeile) wird nicht neu geladen;
                             // echte ungespeicherte Eingaben hat sicher() vorher abgefangen
@@ -853,7 +855,7 @@ POS_JS = """    javaScript {
             .thg-pos-hinweistext { font-size: .75rem; opacity: .7; margin: 0; }
             .thg-pos-kopf { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 .75rem; }
             .thg-pos-titel { margin: 0; font-size: 1.125rem; font-weight: 600; }
-            .thg-pos-aktionen { display: flex; justify-content: flex-end; margin: .5rem 0 1rem; }
+            .thg-pos-summen-titel { margin: 1.25rem 0 .5rem; font-size: 1rem; font-weight: 600; }
             ```
     }
 """
@@ -1059,7 +1061,10 @@ def seite_11():
                                   + "                <div id=\"pos-ende\" class=\"thg-pos-ende\"></div>\n"
                                   + "                <p id=\"pos-hinweis\" class=\"thg-pos-hinweistext\">Reihenfolge mit der Maus ziehen. "
                                     "Auf eine Hauptposition gezogen wird die Position ihre Unterposition, "
-                                    "zwischen zwei Hauptpositionen wird sie selbst Hauptposition.</p>\n")),
+                                    "zwischen zwei Hauptpositionen wird sie selbst Hauptposition.</p>\n"
+                                  # Summen je Steuersatz unter dem Baum (gefuellt aus POSITIONEN)
+                                  + "                <h4 class=\"thg-pos-summen-titel\">Summen</h4>\n"
+                                  + "                <div id=\"summen-inhalt\" class=\"thg-summen\"></div>\n")),
                 4, True)
     s += spalte(region("pos-rechts", "Position", 20, template=blank, parent="positionen-bereich"), 8, False)
     s += region("pos-kopf", "Position (Titel)", 10, template=blank, parent="pos-rechts",
@@ -1069,13 +1074,6 @@ def seite_11():
                            "<span class=\"t-Button-label\">Position speichern</span></button>\n"
                            "                </div>\n"))
     s += region("pos-felder", "Position (Felder)", 20, template=blank, parent="pos-rechts", extra=dom_id("pos-felder"))
-    s += region("pos-aktionen", "Position (Speichern)", 30, template=blank, parent="pos-rechts",
-                extra=dom_id("pos-aktionen")
-                + html("                <div class=\"thg-pos-aktionen\">\n"
-                       "                    <button type=\"button\" id=\"pos-speichern\" class=\"t-Button t-Button--hot thg-pos-speichern\">"
-                       "<span class=\"t-Button-label\">Position speichern</span></button>\n"
-                       "                </div>\n"))
-
     # Felder der gewaehlten Position: ohne Formularquelle, per AJAX geladen (POS_LADEN) und gespeichert (POS_SPEICHERN).
     # Keine Pflichtfeld-Pruefung am Element (wuerde das Speichern der Rechnung blockieren) – geprueft wird im Prozess.
     p = "pos-felder"
@@ -1152,30 +1150,6 @@ def seite_11():
         "            sequence: 40\n            parentRegion: @pos-rechts\n            slot: subRegions\n", 1).replace(
         "                P11_RECH_ID\n            ]", "                P11_RECH_ID\n                P11_HAUPT_ID\n            ]", 1)
 
-    # ------------------------------------------------ Summen je Steuersatz
-    s += f"""    region summen (
-        name: Summen
-        type: staticContent
-        advanced {{
-            htmlDomId: summen
-        }}
-        source {{
-            htmlCode:
-                ```html
-                <div id="summen-inhalt" class="thg-summen"></div>
-                ```
-        }}
-        layout {{
-            sequence: 50
-            slot: body
-        }}
-        appearance {{
-            template: @/standard
-            templateOptions: #DEFAULT#
-        }}
-{NICHT_NULL("P11_RECH_ID")}    )
-
-"""
     # ------------------------------------------------ Zahlungen
     zahl = (ig_spalte("ZAHL_ID", "hidden", "ID", 10, "number", pk=True)
             + ig_spalte("ZAHL_RECH_ID", "hidden", "Rechnung", 20, "number",
