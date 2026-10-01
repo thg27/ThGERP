@@ -2,8 +2,8 @@
 """Erzeugt die App THG-FINANZ (20050): Ausgangsrechnungen (Fakturierung, Tabellen FAKT_*).
 
 Seiten: 1 Startseite, 10 Rechnungen (Liste), 11 Rechnung (Maske nach Kingbill: Allgemein, Kunde,
-Texte, Positionen, Summen je Steuersatz, Zahlungen), 12/13 Rechnung als PDF, 14 Position (Dialog),
-100 Wertelisten, 110/111 Nummernkreise.
+Texte, Positionen als Baum aus Haupt- und Unterpositionen mit Detailfeldern, Summen je Steuersatz, Zahlungen),
+12/13 Rechnung als PDF, 100 Wertelisten, 110/111 Nummernkreise.
 Logik in der Datenbank: Package FAKT_RECHNUNG (21_finanz.sql).
 Grundgeruest: Kopie von THG-ALLGEMEIN (beim ersten Lauf).
 Aufruf:  python3.13 Apex/generator/gen_finanz.py   (f-Strings nach PEP 701)
@@ -255,6 +255,12 @@ def hervorheben(s):
                      "            templateOptions: #DEFAULT#\n            cssClasses: thg-hervorheben\n        }\n", 1)
 
 
+def maske(it, m):
+    """Seitenelement mit Formatmaske"""
+    return it.replace("            templateOptions: #DEFAULT#\n        }\n",
+                      f"            templateOptions: #DEFAULT#\n            formatMask: {m}\n        }}\n", 1)
+
+
 def da_klick(sid, name, seq, knopf, js):
     """Dynamic Action: Klick auf einen Button fuehrt JavaScript aus"""
     return f"""    dynamicAction {sid} (
@@ -284,27 +290,36 @@ def da_klick(sid, name, seq, knopf, js):
 """
 
 
-# Seitenskript Rechnung: Logik der Positionen im Interactive Grid (ohne Backslashes – siehe Wissensdatenbank)
+# Seitenskript Rechnung: Positionen als Baum (Haupt-/Unterpositionen) mit Detailfeldern und Raster der
+# Unterpositionen (ohne Backslashes – siehe Wissensdatenbank)
 POS_JS = """    javaScript {
         executeWhenPageLoads:
             ```javascript-browser
-            // Positionen (Interactive Grid "positionen"):
-            //  * Kapitel gruppiert die Positionen: je Kapitel fortlaufende Positionsnummer in 10er-Schritten ab 10
-            //    (neue Zeile: Nummer der Positionen ohne Kapitel; Kapitel eingegeben/geaendert: naechste Nummer dieses Kapitels)
-            //  * Schnelleingabe (neue Zeile im Raster) und Detail (Dialog Seite 14) – Buttons der Region, window.thgPositionen
-            //  * Artikel gewaehlt: Name, Einheit, Einzelpreis, MwSt., Beschreibung aus dem Artikelstamm (AJAX ARTIKEL_DATEN)
-            //  * Menge, Einzelpreis, Rabatt geaendert: Summe der Position sofort berechnen
+            // Positionen der Rechnung:
+            //  * links der Baum (#pos-baum): Hauptpositionen 1, 2, 3 … mit ihren Unterpositionen 10, 20, 30 …
+            //    und der Summe je Zeile; Buttons Hauptposition / Unterposition / Löschen
+            //  * rechts die Felder der gewaehlten Position (P11_POS_*), gespeichert per AJAX (POS_SPEICHERN)
+            //  * bei einer Hauptposition darunter das Raster ihrer Unterpositionen (Schnelleingabe)
+            //  * Hauptposition mit Unterpositionen: Summe der Unterpositionen, Rabatt, Pauschalsumme, Zwischensumme
+            //  * ob geaendert werden darf, liefert der Server (Status der Rechnung bzw. "Rechnung bearbeiten")
             (function () {
-                var region = apex.region("positionen");
-                if (!region) {
+                if (!document.getElementById("pos-baum")) {
                     return;   // neue Rechnung: Positionen erst nach dem Anlegen
                 }
-                var modell = region.widget().interactiveGrid("getViews", "grid").model;
-                // Summe: nur im Browser schreibgeschuetzt (serverseitig "nur lesen" haengt eine Pruefsumme an, dann
-                // laesst das Modell bei gespeicherten Zeilen kein Setzen zu); berechnet wird sie im Trigger RPOS_BIU
-                modell.getOption("fields").RPOS_SUMME.readonly = true;
-                // Betraege (Einzelpreis, Summe) im Format der Spalten: EUR, Tausendertrennzeichen, 2 Nachkommastellen
-                var BETRAG = "FML999G999G990D00";
+                var BETRAG = "FML999G999G990D00", PREIS = "999G999G990D00";
+                // Eingabefelder (werden beim Speichern mitgeschickt) und reine Anzeigen
+                var EINGABE = ["P11_POS_ARTI_ID", "P11_POS_POSITION", "P11_POS_NAME", "P11_POS_OPTIONAL", "P11_POS_EINZELPREIS",
+                               "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST", "P11_POS_RABATT", "P11_POS_PAUSCHAL",
+                               "P11_POS_BESCHREIBUNG"];
+                // nur bei Positionen ohne Unterpositionen (Unterposition bzw. Hauptposition, die selbst rechnet)
+                var NUR_EINZELN = ["P11_POS_ARTI_ID", "P11_POS_ARTIKELNUMMER", "P11_POS_GRUPPE", "P11_POS_EINZELPREIS",
+                                   "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST"];
+                // nur bei Hauptpositionen mit Unterpositionen
+                var NUR_SUMME = ["P11_POS_SUMME_UNTERPOS", "P11_POS_PAUSCHAL"];
+                var zustand = { daten: null, aenderbar: false, id: null, hauptId: null, unter: 0, summeUnter: 0,
+                                offen: false, geaendert: false, laedt: false };
+                var baum$ = $("#pos-baum");
+
                 var zahl = function (w) {
                     if (w === null || w === undefined || w === "") {
                         return 0;
@@ -312,28 +327,45 @@ POS_JS = """    javaScript {
                     var n = apex.locale.toNumber(String(w), BETRAG);   // mit Maske: auch Werte ohne Waehrungszeichen
                     return isNaN(n) ? (apex.locale.toNumber(String(w)) || 0) : n;
                 };
-                var summe = function (satz) {
+                var runden = function (n) {
+                    return Math.round(n * 100) / 100;
+                };
+                // P11_RECH_ID mitschicken: der Wert aus der Formular-Initialisierung steht nicht im Sitzungsstatus
+                var server = function (prozess, daten) {
+                    daten = daten || {};
+                    daten.pageItems = ["P11_RECH_ID"].concat(daten.pageItems || []);
+                    return apex.server.process(prozess, daten, { dataType: "json" });
+                };
+                var fehler = function (text) {
+                    apex.message.clearErrors();
+                    apex.message.showErrors([{ type: "error", location: "page", message: text, unsafe: false }]);
+                };
+
+                // ---------------------------------------------------------------- Raster der Unterpositionen
+                var region = apex.region("positionen");
+                var ansicht = region.widget().interactiveGrid("getViews", "grid");
+                var modell = ansicht.model;
+                // Summe: nur im Browser schreibgeschuetzt (serverseitig "nur lesen" haengt eine Pruefsumme an, dann
+                // laesst das Modell bei gespeicherten Zeilen kein Setzen zu); berechnet wird sie im Trigger RPOS_BIU
+                modell.getOption("fields").RPOS_SUMME.readonly = true;
+                var zeilenSumme = function (satz) {
                     var s = zahl(modell.getValue(satz, "RPOS_MENGE")) * zahl(modell.getValue(satz, "RPOS_EINZELPREIS"))
                             * (1 - zahl(modell.getValue(satz, "RPOS_RABATT_PROZENT")) / 100);
-                    // Spalte Summe ist schreibgeschuetzt (berechnet): Schreibschutz im Modell kurz aufheben;
-                    // im Formatmuster der Spalte (FML999G999G990D00), sonst lehnt die Zahlenpruefung beim Speichern ab
+                    // im Formatmuster der Spalte, sonst lehnt die Zahlenpruefung beim Speichern ab
                     var feld = modell.getOption("fields").RPOS_SUMME, schutz = feld.readonly;
                     feld.readonly = false;
                     try {
-                        modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(Math.round(s * 100) / 100, BETRAG));
+                        modell.setValue(satz, "RPOS_SUMME", apex.locale.formatNumber(runden(s), BETRAG));
                     } finally {
                         feld.readonly = schutz;
                     }
                 };
-                var kapitelVon = function (satz) {
-                    return String(modell.getValue(satz, "RPOS_KAPITEL") || "").trim();
-                };
-                // naechste Positionsnummer im Kapitel der Zeile (ohne die Zeile selbst und ohne geloeschte Zeilen)
+                // naechste Nummer der Unterposition: 10, 20, 30 … (ohne die Zeile selbst und ohne geloeschte Zeilen)
                 var naechstePosition = function (zeile) {
-                    var max = 0, kapitel = kapitelVon(zeile), id = modell.getRecordId(zeile);
+                    var max = 0, id = modell.getRecordId(zeile);
                     modell.forEach(function (satz) {
                         var meta = modell.getRecordMetadata(modell.getRecordId(satz));
-                        if (modell.getRecordId(satz) !== id && (!meta || !meta.deleted) && kapitelVon(satz) === kapitel) {
+                        if (modell.getRecordId(satz) !== id && (!meta || !meta.deleted)) {
                             max = Math.max(max, zahl(modell.getValue(satz, "RPOS_POSITION")));
                         }
                     });
@@ -343,12 +375,12 @@ POS_JS = """    javaScript {
                 var wert = function (w) {
                     return (w && typeof w === "object") ? w.v : w;
                 };
-                var artikelUebernehmen = function (satz) {
+                var artikelInsRaster = function (satz) {
                     var id = wert(modell.getValue(satz, "RPOS_ARTI_ID"));
                     if (!id) {
                         return;
                     }
-                    apex.server.process("ARTIKEL_DATEN", { x01: id }, { dataType: "json" }).then(function (a) {
+                    server("ARTIKEL_DATEN", { x01: id }).then(function (a) {
                         modell.setValue(satz, "RPOS_NAME", a.name || "");
                         modell.setValue(satz, "RPOS_EINHEIT", a.einheit ? { v: a.einheit, d: a.einheit } : "");
                         modell.setValue(satz, "RPOS_EINZELPREIS", a.preis ? apex.locale.formatNumber(zahl(a.preis), BETRAG) : "");
@@ -357,162 +389,351 @@ POS_JS = """    javaScript {
                         if (!modell.getValue(satz, "RPOS_MENGE")) {
                             modell.setValue(satz, "RPOS_MENGE", "1");
                         }
-                        summe(satz);
+                        zeilenSumme(satz);
                     });
                 };
                 modell.subscribe({
                     onChange: function (art, daten) {
-                        if (art === "insert" && daten.record && !modell.getValue(daten.record, "RPOS_POSITION")) {
-                            modell.setValue(daten.record, "RPOS_POSITION", naechstePosition(daten.record));
-                        } else if (art === "set" && daten.record) {
-                            if (daten.field === "RPOS_KAPITEL") {
-                                // Kapitel gewechselt: Position wandert ans Ende des neuen Kapitels
-                                if (String(daten.oldValue || "").trim() !== kapitelVon(daten.record)) {
-                                    modell.setValue(daten.record, "RPOS_POSITION", naechstePosition(daten.record));
-                                }
-                            } else if (daten.field === "RPOS_ARTI_ID") {
-                                artikelUebernehmen(daten.record);
+                        var meta = daten.record ? (modell.getRecordMetadata(modell.getRecordId(daten.record)) || {}) : {};
+                        // Positionsnummer neuer Zeilen erst bei der ersten Eingabe: beim Einfuegen gesetzt, gaelte auch die
+                        // vom Raster selbst angelegte leere Zeile als Aenderung ("Seite verlassen?"); ohne Nummer
+                        // vergibt sie der Prozess beim Speichern
+                        if (art === "set" && daten.record) {
+                            if (daten.field !== "RPOS_POSITION" && meta.inserted && !modell.getValue(daten.record, "RPOS_POSITION")) {
+                                modell.setValue(daten.record, "RPOS_POSITION", naechstePosition(daten.record));
+                            }
+                            if (daten.field === "RPOS_ARTI_ID") {
+                                artikelInsRaster(daten.record);
                             } else if (["RPOS_MENGE", "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT"].indexOf(daten.field) >= 0) {
-                                summe(daten.record);
+                                zeilenSumme(daten.record);
                             }
                         }
                     }
                 });
-                // Zeilen, die das Grid schon beim Laden neu angelegt hat (leeres Grid): Positionsnummer nachtragen
-                modell.forEach(function (satz) {
-                    var meta = modell.getRecordMetadata(modell.getRecordId(satz));
-                    if (meta && meta.inserted && !modell.getValue(satz, "RPOS_POSITION")) {
-                        modell.setValue(satz, "RPOS_POSITION", naechstePosition(satz));
-                    }
-                });
-                // ---- Eingabe der Positionen: Schnelleingabe im Raster oder Detail-Dialog (Seite 14)
-                var ansicht = region.widget().interactiveGrid("getViews", "grid");
                 // ungespeicherte Aenderungen im Raster (die leere, automatisch angelegte Zeile zaehlt nicht)
-                var ungespeichert = function () {
+                var rasterGeaendert = function () {
                     var ja = false;
+                    if (!$("#positionen").is(":visible")) {
+                        return false;
+                    }
                     modell.forEach(function (satz) {
                         var meta = modell.getRecordMetadata(modell.getRecordId(satz)) || {};
-                        if (meta.deleted || meta.updated ||
-                                (meta.inserted && (wert(modell.getValue(satz, "RPOS_ARTI_ID")) || modell.getValue(satz, "RPOS_NAME")))) {
+                        // neue Zeilen gelten auch als "updated" (Positionsnummer wird gesetzt): nur mit Artikel oder Name zaehlen
+                        if (meta.inserted ? (wert(modell.getValue(satz, "RPOS_ARTI_ID")) || modell.getValue(satz, "RPOS_NAME"))
+                                          : (meta.deleted || meta.updated)) {
                             ja = true;
                         }
                     });
                     return ja;
                 };
-                var detail = function (rposId) {
-                    // der Dialog speichert direkt in die Datenbank, danach wird das Raster neu geladen
-                    if (ungespeichert()) {
-                        apex.message.alert("Bitte zuerst die Änderungen an den Positionen speichern.");
-                        return;
-                    }
-                    // P11_RECH_ID mitschicken: der Wert aus der Formular-Initialisierung steht nicht im Sitzungsstatus
-                    apex.server.process("DETAIL_URL", { x01: rposId || "", pageItems: "#P11_RECH_ID" }, { dataType: "json" }).then(function (d) {
-                        apex.navigation.redirect(d.url);
-                    });
-                };
                 window.thgPositionen = {
-                    // neue Zeile am Ende des Rasters, Cursor ins Kapitel
+                    // neue Unterposition am Ende des Rasters, Cursor in den Artikel
                     schnelleingabe: function () {
                         var letzte = null;
                         modell.forEach(function (satz) {
                             letzte = satz;
                         });
                         var id = modell.insertNewRecord(null, letzte);
-                        ansicht.view$.grid("gotoCell", id, "RPOS_KAPITEL");
+                        ansicht.view$.grid("gotoCell", id, "RPOS_ARTI_ID");
                         ansicht.view$.grid("setEditMode", true);
-                    },
-                    // neue Position im Dialog erfassen
-                    detail: function () {
-                        detail(null);
                     }
                 };
-                // Zeilenmenue: gespeicherte Position im Dialog oeffnen – immer moeglich; ob der Dialog aenderbar ist,
-                // richtet sich wie auf dieser Seite nach dem Status der Rechnung (Seite 14, P14_NUR_LESEN)
-                if (ansicht.rowActionMenu$) {
-                    var aenderbar = modell.getOption("editable");
-                    ansicht.rowActionMenu$.menu("option").items.unshift({
-                        type: "action",
-                        label: aenderbar ? "Detail bearbeiten" : "Detail anzeigen",
-                        icon: aenderbar ? "fa fa-pencil-square-o" : "fa fa-search",
-                        action: function (menue, element) {
-                            var satz = ansicht.getContextRecord(element)[0],
-                                meta = modell.getRecordMetadata(modell.getRecordId(satz)) || {};
-                            if (meta.inserted) {
-                                apex.message.alert("Bitte die neue Position zuerst speichern.");
-                            } else {
-                                detail(modell.getValue(satz, "RPOS_ID"));
-                            }
-                        }
-                    });
-                }
-                // Dialog geschlossen (gespeichert): Positionen und Summen neu laden
-                $("#positionen").on("apexafterclosedialog", function () {
-                    region.refresh();
-                });
-                // Summen je Steuersatz wie FAKT_RECHNUNG_MWST_V (ohne optionale Positionen; "Preise sind brutto",
-                // "Keine MwSt." beruecksichtigt), Bezahlt/Offen aus den Zahlungen – sofort bei jeder Aenderung
-                var zahlungen = apex.region("zahlungen") ? apex.region("zahlungen").widget().interactiveGrid("getViews", "grid").model : null;
-                var runden = function (n) {
-                    return Math.round(n * 100) / 100;
+
+                // ---------------------------------------------------------------- Baum und Summen
+                var knoten = function (p, klasse) {
+                    return "<div class='thg-pos-knoten " + klasse + (p.optional ? " thg-pos-optional" : "") +
+                           "' role='treeitem' tabindex='0' data-id='" + p.id + "'>" +
+                           "<span class='thg-pos-nr'>" + p.pos + "</span>" +
+                           "<span class='thg-pos-name'>" + apex.util.escapeHTML(p.name) +
+                           (p.pauschal ? " <span class='thg-pos-hinweis'>pauschal</span>" : "") +
+                           (p.optional ? " <span class='thg-pos-hinweis'>optional</span>" : "") + "</span>" +
+                           "<span class='thg-pos-summe'>" + apex.util.escapeHTML(p.summe) + "</span></div>";
                 };
-                var aktiv = function (m, satz) {
-                    var meta = m.getRecordMetadata(m.getRecordId(satz));
-                    return !meta || !meta.deleted;
+                var markieren = function () {
+                    baum$.find(".thg-pos-knoten").removeClass("is-selected").attr("aria-selected", "false")
+                         .filter(function () { return zustand.id && $(this).attr("data-id") === zustand.id; })
+                         .addClass("is-selected").attr("aria-selected", "true");
+                    $("#pos-neu-unter").prop("disabled", !zustand.aenderbar || !(zustand.hauptId || zustand.id));
+                    $("#pos-loeschen").prop("disabled", !zustand.aenderbar || !zustand.id);
+                };
+                var baumZeigen = function () {
+                    var html = "";
+                    zustand.daten.positionen.forEach(function (h) {
+                        html += knoten(h, "thg-pos-haupt");
+                        h.unter.forEach(function (u) {
+                            html += knoten(u, "thg-pos-unter");
+                        });
+                    });
+                    baum$.html(html || "<div class='thg-pos-leer'>Noch keine Positionen.</div>");
+                    $("#pos-neu-haupt").prop("disabled", !zustand.aenderbar);
+                    markieren();
                 };
                 var summenZeigen = function () {
-                    var ohne = $v("P11_RECH_IST_OHNE_MWST") === "Y", brutto = $v("P11_RECH_IST_BRUTTO") === "Y";
-                    var saetze = {}, anzahl = 0;
-                    modell.forEach(function (satz) {
-                        if (!aktiv(modell, satz) || wert(modell.getValue(satz, "RPOS_IST_OPTIONAL")) === "Y") {
-                            return;
-                        }
-                        var betrag = zahl(modell.getValue(satz, "RPOS_SUMME")),
-                            pz = ohne ? 0 : zahl(wert(modell.getValue(satz, "RPOS_MWST_PROZENT")));
-                        saetze[pz] = (saetze[pz] || 0) + (brutto ? betrag / (1 + pz / 100) : betrag);
-                        anzahl++;
-                    });
-                    var ziel = document.getElementById("summen-inhalt");
+                    var ziel = document.getElementById("summen-inhalt"), zeilen = zustand.daten.summen;
                     if (!ziel) {
                         return;
                     }
-                    if (!anzahl) {
+                    if (!zeilen.length) {
                         ziel.textContent = "Noch keine Positionen.";
                         return;
                     }
-                    var zeilen = [], netto = 0, gesamt = 0;
-                    Object.keys(saetze).map(Number).sort(function (x, y) { return y - x; }).forEach(function (pz) {
-                        var n = runden(saetze[pz]), m = runden(saetze[pz] * pz / 100);
-                        netto += n;
-                        gesamt += n + m;
-                        zeilen.push([apex.locale.formatNumber(pz, "FM990") + " % MwSt.", m]);
-                    });
-                    zeilen.unshift(["Netto", runden(netto)]);
-                    zeilen.push(["Gesamtbetrag", runden(gesamt)]);
-                    if ($v("P11_RECH_STATUS") !== "ENTWURF" && zahlungen) {
-                        var bezahlt = 0;
-                        zahlungen.forEach(function (satz) {
-                            if (aktiv(zahlungen, satz)) {
-                                bezahlt += zahl(zahlungen.getValue(satz, "ZAHL_BETRAG")) + zahl(zahlungen.getValue(satz, "ZAHL_SKONTO"));
-                            }
-                        });
-                        zeilen.push(["Bezahlt", runden(bezahlt)]);
-                        zeilen.push(["Offen", runden(gesamt - bezahlt)]);
-                    }
                     var html = "<table class='t-Report-report thg-summen-tabelle'><tbody>";
-                    zeilen.forEach(function (z, i) {
-                        var fett = (z[0] === "Gesamtbetrag" || z[0] === "Offen") ? " thg-summen-fett" : "";
-                        html += "<tr class='" + fett + "'><td class='t-Report-cell'>" + apex.util.escapeHTML(z[0]) +
-                                "</td><td class='t-Report-cell thg-summen-betrag'>" + apex.locale.formatNumber(z[1], BETRAG) + "</td></tr>";
+                    zeilen.forEach(function (z) {
+                        html += "<tr class='" + (z.fett ? "thg-summen-fett" : "") + "'><td class='t-Report-cell'>" +
+                                apex.util.escapeHTML(z.label) + "</td><td class='t-Report-cell thg-summen-betrag'>" +
+                                apex.util.escapeHTML(z.betrag) + "</td></tr>";
                     });
                     ziel.innerHTML = html + "</tbody></table>";
                 };
-                modell.subscribe({ onChange: function () { summenZeigen(); } });
-                if (zahlungen) {
-                    zahlungen.subscribe({ onChange: function () { summenZeigen(); } });
-                }
-                $("#P11_RECH_IST_BRUTTO, #P11_RECH_IST_OHNE_MWST").on("change", summenZeigen);
-                summenZeigen();
+                // Baum und Summen vom Server holen
+                var laden = function () {
+                    return server("POSITIONEN").then(function (d) {
+                        zustand.daten = d;
+                        zustand.aenderbar = d.aenderbar;
+                        baumZeigen();
+                        summenZeigen();
+                    });
+                };
+
+                // ---------------------------------------------------------------- Detail der Position
+                var summeDetail = function () {
+                    var n = function (name) {
+                        var w = apex.item(name).getNativeValue();
+                        return (typeof w === "number" && !isNaN(w)) ? w : 0;
+                    };
+                    var mitUnter = !zustand.hauptId && zustand.unter > 0;
+                    var summe = (mitUnter ? zustand.summeUnter : n("P11_POS_MENGE") * n("P11_POS_EINZELPREIS"))
+                                * (1 - n("P11_POS_RABATT") / 100);
+                    if (mitUnter && $v("P11_POS_PAUSCHAL") !== "") {
+                        summe = n("P11_POS_PAUSCHAL");
+                    }
+                    apex.item("P11_POS_SUMME").setValue(apex.locale.formatNumber(runden(summe), BETRAG));
+                };
+                var leeren = function () {
+                    zustand.id = null;
+                    zustand.hauptId = null;
+                    zustand.offen = false;
+                    zustand.geaendert = false;
+                    $("#pos-titel").text("Keine Position gewählt");
+                    $("#pos-felder, #pos-aktionen, #positionen").hide();
+                    markieren();
+                };
+                // Antwort von POS_LADEN in die Felder
+                var zeigen = function (d, ohneRaster) {
+                    zustand.id = d.id || null;
+                    zustand.hauptId = d.haupt_id || null;
+                    zustand.unter = d.unter;
+                    zustand.summeUnter = d.summe_unterpos || 0;
+                    zustand.offen = true;
+                    // mit change-Ereignis (schwebende Beschriftungen richten sich danach); die eigenen Handler
+                    // ignorieren es waehrend des Ladens (zustand.laedt)
+                    zustand.laedt = true;
+                    try {
+                        Object.keys(d.felder).forEach(function (name) {
+                            var w = (d.felder[name] === null || d.felder[name] === undefined) ? "" : d.felder[name];
+                            if (name === "P11_POS_ARTI_ID") {
+                                apex.item(name).setValue(w, d.artikel_anzeige || "");
+                            } else {
+                                apex.item(name).setValue(w);
+                            }
+                        });
+                    } finally {
+                        zustand.laedt = false;
+                    }
+                    var haupt = !zustand.hauptId, mitUnter = haupt && zustand.unter > 0;
+                    $("#pos-titel").text(d.titel);
+                    $("#pos-felder, #pos-aktionen").show();
+                    NUR_EINZELN.forEach(function (name) {
+                        apex.item(name)[mitUnter ? "hide" : "show"]();
+                    });
+                    NUR_SUMME.forEach(function (name) {
+                        apex.item(name)[mitUnter ? "show" : "hide"]();
+                    });
+                    $("#P11_POS_SUMME_LABEL").text(mitUnter ? "Zwischensumme" : "Summe");
+                    EINGABE.forEach(function (name) {
+                        apex.item(name)[zustand.aenderbar ? "enable" : "disable"]();
+                    });
+                    $("#pos-speichern").toggle(zustand.aenderbar);
+                    // Raster der Unterpositionen nur bei einer gespeicherten Hauptposition (P11_HAUPT_ID setzt POS_LADEN)
+                    var raster = haupt && !!zustand.id;
+                    $("#positionen").toggle(raster);
+                    if (raster) {
+                        ansicht.view$.grid("resize");   // das Raster war ausgeblendet
+                        if (!ohneRaster) {
+                            // ein Modell mit Aenderungen (auch nur die leere neue Zeile) wird nicht neu geladen;
+                            // echte ungespeicherte Eingaben hat sicher() vorher abgefangen
+                            modell.clearChanges();
+                            region.refresh();
+                        }
+                    }
+                    zustand.geaendert = false;
+                    markieren();
+                };
+                // vor dem Wechsel der Position: ungespeicherte Eingaben nicht stillschweigend verwerfen
+                var sicher = function (weiter) {
+                    if (rasterGeaendert()) {
+                        apex.message.alert("Bitte zuerst die Änderungen an den Unterpositionen speichern.");
+                    } else if (zustand.geaendert && zustand.aenderbar) {
+                        apex.message.confirm("Die Änderungen an der Position wurden nicht gespeichert. Verwerfen?", function (ok) {
+                            if (ok) {
+                                weiter();
+                            }
+                        });
+                    } else {
+                        weiter();
+                    }
+                };
+                // x01 = Position (leer = neue Position), x02 = Hauptposition einer neuen Unterposition
+                var oeffnen = function (id, hauptId, ohneRaster) {
+                    return server("POS_LADEN", { x01: id || "", x02: hauptId || "" }).then(function (d) {
+                        zeigen(d, ohneRaster);
+                    });
+                };
+                var speichern = function () {
+                    server("POS_SPEICHERN", { x01: zustand.id || "", x02: zustand.hauptId || "", pageItems: EINGABE }).then(function (d) {
+                        if (d.fehler) {
+                            fehler(d.fehler);
+                            return;
+                        }
+                        apex.message.clearErrors();
+                        apex.message.showPageSuccess("Position gespeichert.");
+                        zustand.geaendert = false;
+                        laden().then(function () {
+                            oeffnen(d.id);
+                        });
+                    });
+                };
+                var loeschen = function () {
+                    var haupt = !zustand.hauptId, name = $v("P11_POS_NAME");
+                    apex.message.confirm((haupt ? "Hauptposition" : "Unterposition") + " „" + name + "“ löschen?" +
+                            (haupt && zustand.unter > 0 ? " Ihre " + zustand.unter + " Unterposition(en) werden mitgelöscht." : ""), function (ok) {
+                        if (!ok) {
+                            return;
+                        }
+                        var zurueck = zustand.hauptId;
+                        server("POS_LOESCHEN", { x01: zustand.id }).then(function (d) {
+                            if (d.fehler) {
+                                fehler(d.fehler);
+                                return;
+                            }
+                            apex.message.clearErrors();
+                            apex.message.showPageSuccess("Position gelöscht.");
+                            leeren();
+                            laden().then(function () {
+                                if (zurueck) {
+                                    oeffnen(zurueck);   // nach dem Loeschen einer Unterposition: ihre Hauptposition
+                                }
+                            });
+                        });
+                    });
+                };
+
+                // ---------------------------------------------------------------- Bedienung
+                baum$.on("click keydown", ".thg-pos-knoten", function (e) {
+                    if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") {
+                        return;
+                    }
+                    e.preventDefault();
+                    var id = $(this).attr("data-id");
+                    if (id !== zustand.id) {
+                        sicher(function () {
+                            oeffnen(id);
+                        });
+                    }
+                });
+                $("#pos-neu-haupt").on("click", function () {
+                    sicher(function () {
+                        oeffnen(null, null).then(function () {
+                            apex.item("P11_POS_NAME").setFocus();
+                        });
+                    });
+                });
+                $("#pos-neu-unter").on("click", function () {
+                    var haupt = zustand.hauptId || zustand.id;   // gewaehlt: Hauptposition oder eine ihrer Unterpositionen
+                    sicher(function () {
+                        oeffnen(null, haupt).then(function () {
+                            apex.item("P11_POS_ARTI_ID").setFocus();
+                        });
+                    });
+                });
+                $("#pos-loeschen").on("click", loeschen);
+                $("#pos-speichern").on("click", speichern);
+                $("#pos-felder").on("change", ":input", function () {
+                    if (!zustand.laedt) {
+                        zustand.geaendert = true;
+                    }
+                });
+                // Artikel gewaehlt: Name, Einheit, Einzelpreis, MwSt., Beschreibung aus dem Artikelstamm (danach aenderbar)
+                $("#P11_POS_ARTI_ID").on("change", function () {
+                    var id = $v("P11_POS_ARTI_ID");
+                    if (zustand.laedt) {
+                        return;
+                    }
+                    if (!id) {
+                        $s("P11_POS_ARTIKELNUMMER", "");
+                        $s("P11_POS_GRUPPE", "");
+                        return;
+                    }
+                    server("ARTIKEL_DATEN", { x01: id }).then(function (a) {
+                        apex.item("P11_POS_NAME").setValue(a.name || "");
+                        apex.item("P11_POS_EINHEIT").setValue(a.einheit || "");
+                        apex.item("P11_POS_EINZELPREIS").setValue(a.preis ? apex.locale.formatNumber(zahl(a.preis), PREIS) : "");
+                        apex.item("P11_POS_MWST").setValue(a.mwst || "");
+                        apex.item("P11_POS_BESCHREIBUNG").setValue(a.beschreibung || "");
+                        apex.item("P11_POS_ARTIKELNUMMER").setValue(a.artikelnummer || "");
+                        apex.item("P11_POS_GRUPPE").setValue(a.gruppe || "");
+                        if (!$v("P11_POS_MENGE")) {
+                            apex.item("P11_POS_MENGE").setValue("1");
+                        }
+                        summeDetail();
+                    });
+                });
+                $("#P11_POS_MENGE, #P11_POS_EINZELPREIS, #P11_POS_RABATT, #P11_POS_PAUSCHAL").on("change", function () {
+                    if (!zustand.laedt) {
+                        summeDetail();
+                    }
+                });
+                // Raster gespeichert: Baum, Summen und Felder der Hauptposition neu (das Raster hat sich selbst aktualisiert)
+                $("#positionen").on("interactivegridsave", function () {
+                    var id = zustand.id;
+                    laden().then(function () {
+                        if (id && !zustand.geaendert) {
+                            oeffnen(id, null, true);
+                        }
+                    });
+                });
+                // Zahlungen gespeichert: Bezahlt/Offen in den Summen
+                $("#zahlungen").on("interactivegridsave", laden);
+
+                // Start: erste Hauptposition anzeigen
+                leeren();
+                laden().then(function () {
+                    if (zustand.daten.positionen.length) {
+                        oeffnen(zustand.daten.positionen[0].id);
+                    }
+                });
             })();
+            ```
+    }
+    css {
+        inline:
+            ```css
+            .thg-pos-leiste { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .5rem; }
+            .thg-pos-baum { border: 1px solid var(--ut-component-border-color, #dcdcdc); border-radius: .25rem; max-height: 34rem; overflow: auto; background: var(--ut-component-background-color, #fff); }
+            .thg-pos-knoten { display: flex; align-items: baseline; gap: .5rem; padding: .4rem .6rem; cursor: pointer; border-bottom: 1px solid var(--ut-component-inner-border-color, #eee); }
+            .thg-pos-knoten:last-child { border-bottom: 0; }
+            .thg-pos-knoten:hover, .thg-pos-knoten:focus { background: rgba(0, 0, 0, .04); outline: none; }
+            .thg-pos-knoten.is-selected { background: rgba(0, 0, 0, .07); box-shadow: inset 4px 0 0 var(--thg-primaer, #0572ce); }
+            .thg-pos-haupt { font-weight: 600; }
+            .thg-pos-unter { padding-left: 2rem; }
+            .thg-pos-nr { min-width: 1.75rem; text-align: end; opacity: .7; font-variant-numeric: tabular-nums; }
+            .thg-pos-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .thg-pos-summe { white-space: nowrap; font-variant-numeric: tabular-nums; }
+            .thg-pos-optional .thg-pos-name, .thg-pos-optional .thg-pos-summe { font-style: italic; opacity: .7; }
+            .thg-pos-hinweis { font-size: .75rem; font-weight: 400; opacity: .7; border: 1px solid currentColor; border-radius: .75rem; padding: 0 .4rem; margin-left: .25rem; }
+            .thg-pos-leer { padding: .75rem; opacity: .7; }
+            .thg-pos-titel { margin: 0 0 .75rem; font-size: 1.125rem; font-weight: 600; }
+            .thg-pos-aktionen { display: flex; justify-content: flex-end; margin: .5rem 0 1rem; }
             ```
     }
 """
@@ -695,13 +916,95 @@ def seite_11():
     s += item("P11_RECH_LIEFERADRESSE", "textarea", "Lieferadresse", 10, "tab-lieferadresse",
               col="RECH_LIEFERADRESSE", maxlen=1000, spalten=12, **f)
 
-    # ------------------------------------------------ 3. Artikel (Positionen)
-    # Kapitel gruppiert die Positionen (je Kapitel Pos 10, 20, 30 …; ohne Kapitel am Anfang der Rechnung);
+    # ------------------------------------------------ 3. Positionen: Baum (links) | Felder der Position und Raster (rechts)
+    s += region("positionen-bereich", "3. Positionen", 40, bedingung="P11_RECH_ID")
+    spalte = lambda r, breite, neue_zeile: r.replace(
+        "            slot: subRegions\n",
+        "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n")
+        + f"            columnSpan: {breite}\n", 1)
+    dom_id = lambda sid: f"        advanced {{\n            htmlDomId: {sid}\n        }}\n"
+    html = lambda code: "        source {\n            htmlCode:\n                ```html\n" + code + "                ```\n        }\n"
+    knopf = lambda sid, label, icon, klassen="": (
+        f"                    <button type=\"button\" id=\"{sid}\" class=\"t-Button t-Button--small t-Button--icon t-Button--iconLeft {klassen}\">"
+        f"<span class=\"t-Icon t-Icon--left fa {icon}\" aria-hidden=\"true\"></span>"
+        f"<span class=\"t-Button-label\">{label}</span></button>\n")
+    blank = "@/blank-with-attributes"
+    s += spalte(region("pos-links", "Positionen (Baum)", 10, template=blank, parent="positionen-bereich",
+                       extra=html("                <div class=\"thg-pos-leiste\">\n"
+                                  + knopf("pos-neu-haupt", "Hauptposition", "fa-plus")
+                                  + knopf("pos-neu-unter", "Unterposition", "fa-plus")
+                                  + knopf("pos-loeschen", "Löschen", "fa-trash-o", "t-Button--danger t-Button--simple")
+                                  + "                </div>\n"
+                                  + "                <div id=\"pos-baum\" class=\"thg-pos-baum\" role=\"tree\" aria-label=\"Positionen\"></div>\n")),
+                4, True)
+    s += spalte(region("pos-rechts", "Position", 20, template=blank, parent="positionen-bereich"), 8, False)
+    s += region("pos-kopf", "Position (Titel)", 10, template=blank, parent="pos-rechts",
+                extra=html("                <h3 id=\"pos-titel\" class=\"thg-pos-titel\"></h3>\n"))
+    s += region("pos-felder", "Position (Felder)", 20, template=blank, parent="pos-rechts", extra=dom_id("pos-felder"))
+    s += region("pos-aktionen", "Position (Speichern)", 30, template=blank, parent="pos-rechts",
+                extra=dom_id("pos-aktionen")
+                + html("                <div class=\"thg-pos-aktionen\">\n"
+                       "                    <button type=\"button\" id=\"pos-speichern\" class=\"t-Button t-Button--hot\">"
+                       "<span class=\"t-Button-label\">Position speichern</span></button>\n"
+                       "                </div>\n"))
+
+    # Felder der gewaehlten Position: ohne Formularquelle, per AJAX geladen (POS_LADEN) und gespeichert (POS_SPEICHERN).
+    # Keine Pflichtfeld-Pruefung am Element (wuerde das Speichern der Rechnung blockieren) – geprueft wird im Prozess.
+    p = "pos-felder"
+    ohne = dict(form=None)
+    ignorieren = "        advanced {\n            warnOnUnsavedChanges: ignore\n        }\n"
+    # Anzeigefelder werden per JavaScript gesetzt: nicht absenden (sonst "Session state protection violation")
+    nur_anzeige = "        settings {\n            sendOnPageSubmit: false\n        }\n"
+    s += """    pageItem P11_HAUPT_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @pos-felder
+            slot: regionBody
+        }
+    )
+
+"""
+    # Zeile 1: Artikel | Artikelnummer | Gruppe (nur Positionen ohne Unterpositionen)
+    s += item("P11_POS_ARTI_ID", "popupLov", "Artikel (Suche nach Gruppe, Artikelnummer, Name)", 10, p, spalten=6,
+              extra="""        lov {
+            type: sharedComponent
+            lov: @lov-artikel
+            displayNullValue: true
+            nullDisplayValue: - ohne Artikel -
+        }
+""" + ignorieren, **ohne)
+    s += item("P11_POS_ARTIKELNUMMER", "displayOnly", "Artikelnummer", 20, p, neue_zeile=False, spalten=3,
+              extra=nur_anzeige, **ohne)
+    s += item("P11_POS_GRUPPE", "displayOnly", "Gruppe", 30, p, neue_zeile=False, spalten=3, extra=nur_anzeige, **ohne)
+    # Zeile 2: Pos | Name | Optional
+    s += item("P11_POS_POSITION", "numberField", "Pos", 40, p, spalten=2, extra=ignorieren, **ohne)
+    s += item("P11_POS_NAME", "textField", "Name", 50, p, maxlen=200, neue_zeile=False, spalten=7,
+              tmpl="@/required-floating", extra=ignorieren, **ohne)
+    s += item("P11_POS_OPTIONAL", "switch", "Optional (nicht in der Summe)", 60, p, neue_zeile=False, spalten=3,
+              extra=SWITCH("N") + ignorieren, **ohne)
+    # Zeile 3: Einzelpreis | Einheit | Menge | MwSt. (nur Positionen ohne Unterpositionen)
+    s += maske(item("P11_POS_EINZELPREIS", "numberField", "Einzelpreis", 70, p, spalten=3, extra=ignorieren, **ohne),
+               "999G999G990D00")
+    s += item("P11_POS_EINHEIT", "selectList", "Einheit", 80, p, neue_zeile=False, spalten=3,
+              extra=lov("lov-einheiten-code", "-") + ignorieren, **ohne)
+    s += item("P11_POS_MENGE", "numberField", "Menge", 90, p, neue_zeile=False, spalten=3, extra=ignorieren, **ohne)
+    s += item("P11_POS_MWST", "selectList", "MwSt. in %", 100, p, neue_zeile=False, spalten=3,
+              extra=lov("lov-mwst-prozent") + ignorieren, **ohne)
+    # Zeile 4: Summe der Unterpositionen (nur Hauptposition mit Unterpositionen)
+    s += item("P11_POS_SUMME_UNTERPOS", "displayOnly", "Summe Unterpositionen", 110, p, spalten=3, extra=nur_anzeige, **ohne)
+    # Zeile 5: Rabatt | Summe bzw. Zwischensumme | Pauschalsumme (nur Hauptposition mit Unterpositionen)
+    s += item("P11_POS_RABATT", "numberField", "Rabatt %", 120, p, spalten=3, extra=ignorieren, **ohne)
+    s += hervorheben(item("P11_POS_SUMME", "displayOnly", "Summe", 130, p, neue_zeile=False, spalten=3,
+                          extra=nur_anzeige, **ohne))
+    s += maske(item("P11_POS_PAUSCHAL", "numberField", "Pauschalsumme (statt Zwischensumme)", 140, p, neue_zeile=False,
+                    spalten=4, extra=ignorieren, **ohne), "999G999G990D00")
+    s += item("P11_POS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 150, p, spalten=12, extra=ignorieren, **ohne)
+
+    # Raster der Unterpositionen der gewaehlten Hauptposition (P11_HAUPT_ID im Sitzungsstatus, gesetzt von POS_LADEN);
     # Artikel als Popup LOV: Suche/Einschraenkung nach Gruppe, Artikelnummer, Name (Spalten von LOV_ARTIKEL im Portal)
     pos = (ig_spalte("RPOS_ID", "hidden", "ID", 10, "number", pk=True)
-           + ig_spalte("RPOS_KAPITEL", "textField", "Kapitel", 20, "varchar2")
            + ig_spalte("RPOS_POSITION", "numberField", "Pos", 30, "number")
-           + ig_spalte("RPOS_UNTERKAPITEL", "textField", "Unterkapitel", 40, "varchar2")
            + ig_spalte("RPOS_ARTI_ID", "popupLov", "Artikel", 50, "number",
                        IG_LOV("lov-artikel").replace("                displayExtraValues: false\n", ""))
            + ig_spalte("RPOS_NAME", "textField", "Name", 60, "varchar2")
@@ -714,15 +1017,18 @@ def seite_11():
                        IG_LOV("lov-ja-nein", False) + IG_DEFAULT("N"))
            + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", BETRAG)
            + ig_spalte("RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, "clob"))
-    s += ig_region("positionen", "3. Artikel (Positionen)", 40, """                select RPOS_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTI_ID, RPOS_NAME,
+    s += ig_region("positionen", "Unterpositionen", 40, """                select RPOS_ID, RPOS_POSITION, RPOS_ARTI_ID, RPOS_NAME,
                        RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
                        RPOS_IST_OPTIONAL, RPOS_SUMME, RPOS_BESCHREIBUNG
                   from FAKT_RECHNUNGSPOSITIONEN
                  where RPOS_RECH_ID = :P11_RECH_ID
-                 order by RPOS_KAPITEL nulls first, RPOS_POSITION""", pos,
-                   ["RPOS_KAPITEL", "RPOS_POSITION", "RPOS_ARTI_ID", "RPOS_NAME", "RPOS_MENGE", "RPOS_EINHEIT",
+                   and RPOS_HAUPT_RPOS_ID = to_number(:P11_HAUPT_ID)
+                 order by RPOS_POSITION""", pos,
+                   ["RPOS_POSITION", "RPOS_ARTI_ID", "RPOS_NAME", "RPOS_MENGE", "RPOS_EINHEIT",
                     "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT", "RPOS_MWST_PROZENT", "RPOS_IST_OPTIONAL", "RPOS_SUMME"],
-                   NICHT_NULL("P11_RECH_ID"), nur_lesen=NUR_LESEN)
+                   "", nur_lesen=NUR_LESEN).replace(
+        "            sequence: 40\n            slot: body\n",
+        "            sequence: 40\n            parentRegion: @pos-rechts\n            slot: subRegions\n", 1)
 
     # ------------------------------------------------ Summen je Steuersatz
     s += f"""    region summen (
@@ -850,7 +1156,7 @@ def seite_11():
     s += button("create", "CREATE", "Anlegen", 30, "breadcrumb", "next", hot=True,
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: insert\n",
                 bedingung=NULL("P11_RECH_ID"))
-    # Positionen erfassen: Schnelleingabe (neue Zeile im Raster) oder Detail (Dialog Seite 14) – nur wenn aenderbar
+    # Unterpositionen im Raster erfassen (neue Zeile) – nur wenn aenderbar
     aenderbar = """        serverSideCondition {
             type: expression
             language: plsql
@@ -860,8 +1166,6 @@ def seite_11():
     links = "[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]"
     s += button("schnelleingabe", "SCHNELLEINGABE", "Schnelleingabe", 10, "positionen", "edit", "@/text-with-icon",
                 icon="fa-bolt", options=links, verhalten="            action: definedByDynamicAction\n", bedingung=aenderbar)
-    s += button("zeile-detail", "ZEILE_DETAIL", "Zeile Detail", 20, "positionen", "edit", "@/text-with-icon",
-                icon="fa-plus", options=links, verhalten="            action: definedByDynamicAction\n", bedingung=aenderbar)
     s += button("up", "UP", "Zurück zur Rechnungsliste", 10, "breadcrumb", "up", "@/icon", icon="fa-arrow-up",
                 options=grau, verhalten="""            action: redirectThisApp
             target: {
@@ -873,8 +1177,6 @@ def seite_11():
     # ------------------------------------------------ Prozesse
     s += da_klick("schnelleingabe", "Schnelleingabe: neue Zeile im Raster", 30, "schnelleingabe",
                   "window.thgPositionen.schnelleingabe();")
-    s += da_klick("zeile-detail", "Zeile Detail: Position im Dialog erfassen", 40, "zeile-detail",
-                  "window.thgPositionen.detail();")
     s += """    dynamicAction anschrift-vorschau (
         name: Anschrift-Vorschau wie am Ausdruck
         execution {
@@ -1026,6 +1328,8 @@ def seite_11():
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
+                -- Raster der Unterpositionen: leer, bis im Baum eine Hauptposition gewaehlt ist (POS_LADEN)
+                :P11_HAUPT_ID := null;
                 ```
         }
         execution {
@@ -1040,7 +1344,8 @@ def seite_11():
         source {
             plsqlCode:
                 ```plsql
-                -- Artikeldaten fuer eine Position (AJAX aus dem Grid "positionen"): Werte im Format der Sitzung
+                -- Artikeldaten fuer eine Position (AJAX aus dem Raster "positionen" und den Feldern P11_POS_*):
+                -- Werte im Format der Sitzung
                 declare
                     a      ARTI_ARTIKEL%rowtype;
                     l_einh ALLG_EINHEITEN.EINH_CODE%type;
@@ -1056,6 +1361,10 @@ def seite_11():
                     apex_json.write('mwst', to_char(l_mwst));
                     apex_json.write('mwst_anzeige', to_char(l_mwst, 'FM990D00') || ' %');   -- wie LOV_MWST_PROZENT
                     apex_json.write('beschreibung', a.ARTI_BESCHREIBUNG);
+                    apex_json.write('artikelnummer', a.ARTI_NUMMER);
+                    for g in (select AGRP_BEZEICHNUNG from ARTI_ARTIKELGRUPPEN where AGRP_ID = a.ARTI_AGRP_ID) loop
+                        apex_json.write('gruppe', g.AGRP_BEZEICHNUNG);
+                    end loop;
                     apex_json.close_object;
                 end;
                 ```
@@ -1066,38 +1375,334 @@ def seite_11():
         }
     )
 
-    process detail-url (
-        name: DETAIL_URL
+    process positionen-json (
+        name: POSITIONEN
         type: executeCode
         source {
             plsqlCode:
                 ```plsql
-                -- URL des Dialogs "Position" (Seite 14, mit Pruefsumme): x01 = RPOS_ID (leer = neue Position);
-                -- der Dialog meldet sein Schliessen an die Region "positionen" (apexafterclosedialog)
+                -- Baum der Positionen (Hauptpositionen mit Unterpositionen) und Summen der Rechnung als JSON;
+                -- aenderbar: Entwurf oder nach "Rechnung bearbeiten". IDs als Text (zu gross fuer JavaScript-Zahlen).
                 declare
-                    l_id  varchar2(40) := apex_application.g_x01;
-                    l_anz pls_integer;
+                    l_mand    FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    l_status  FAKT_RECHNUNGEN.RECH_STATUS%type;
+                    l_netto   number := 0;
+                    l_mwst    number := 0;
+                    l_bezahlt number;
+                    l_anz     pls_integer := 0;
+                    function eur(p_wert in number) return varchar2 is
+                    begin
+                        return to_char(p_wert, 'FML999G999G990D00');
+                    end;
+                    procedure knoten(p in FAKT_RECHNUNGSPOSITIONEN%rowtype) is
+                    begin
+                        apex_json.write('id', to_char(p.RPOS_ID));
+                        apex_json.write('pos', p.RPOS_POSITION);
+                        apex_json.write('name', p.RPOS_NAME);
+                        apex_json.write('summe', eur(p.RPOS_SUMME));
+                        apex_json.write('optional', p.RPOS_IST_OPTIONAL = 'Y');
+                        apex_json.write('pauschal', p.RPOS_PAUSCHALSUMME is not null);
+                    end;
+                    procedure summe(p_label in varchar2, p_wert in number, p_fett in boolean default false) is
+                    begin
+                        apex_json.open_object;
+                        apex_json.write('label', p_label);
+                        apex_json.write('betrag', eur(p_wert));
+                        apex_json.write('fett', p_fett);
+                        apex_json.close_object;
+                    end;
                 begin
-                    if l_id is not null then
-                        select count(*) into l_anz
-                          from FAKT_RECHNUNGSPOSITIONEN
-                         where RPOS_ID = to_number(l_id) and RPOS_RECH_ID = :P11_RECH_ID;
-                        if l_anz = 0 then
-                            raise_application_error(-20211, 'Die Position gehört nicht zu dieser Rechnung.');
-                        end if;
+                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
                     apex_json.open_object;
-                    apex_json.write('url', apex_page.get_url(p_page               => 14,
-                                                             p_clear_cache        => '14',
-                                                             p_items              => 'P14_RPOS_ID,P14_RECH_ID',
-                                                             p_values             => l_id || ',' || :P11_RECH_ID,
-                                                             p_triggering_element => 'apex.jQuery(''#positionen'')'));
+                    apex_json.write('aenderbar', l_status = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y');
+                    apex_json.open_array('positionen');
+                    for h in (select * from FAKT_RECHNUNGSPOSITIONEN
+                               where RPOS_RECH_ID = :P11_RECH_ID and RPOS_HAUPT_RPOS_ID is null
+                               order by RPOS_POSITION)
+                    loop
+                        l_anz := l_anz + 1;
+                        apex_json.open_object;
+                        knoten(h);
+                        apex_json.open_array('unter');
+                        for u in (select * from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = h.RPOS_ID order by RPOS_POSITION) loop
+                            apex_json.open_object;
+                            knoten(u);
+                            apex_json.close_object;
+                        end loop;
+                        apex_json.close_array;
+                        apex_json.close_object;
+                    end loop;
+                    apex_json.close_array;
+                    -- Summen je Steuersatz wie am Ausdruck (FAKT_RECHNUNG_MWST_V), Bezahlt/Offen aus den Zahlungen
+                    apex_json.open_array('summen');
+                    if l_anz > 0 then
+                        select nvl(sum(NETTO), 0), nvl(sum(MWST), 0) into l_netto, l_mwst
+                          from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID;
+                        summe('Netto', l_netto);
+                        for m in (select MWST_PROZENT, MWST from FAKT_RECHNUNG_MWST_V where RECH_ID = :P11_RECH_ID
+                                   order by MWST_PROZENT desc)
+                        loop
+                            summe(rtrim(to_char(m.MWST_PROZENT, 'FM990D99'), ',.') || ' % MwSt.', m.MWST);
+                        end loop;
+                        summe('Gesamtbetrag', l_netto + l_mwst, true);
+                        if l_status <> 'ENTWURF' then
+                            select nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0) into l_bezahlt
+                              from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = :P11_RECH_ID;
+                            summe('Bezahlt', l_bezahlt);
+                            summe('Offen', l_netto + l_mwst - l_bezahlt, true);
+                        end if;
+                    end if;
+                    apex_json.close_array;
                     apex_json.close_object;
                 end;
                 ```
         }
         execution {
             sequence: 20
+            point: ajaxCallback
+        }
+    )
+
+    process pos-laden (
+        name: POS_LADEN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Felder einer Position fuer die Anzeige rechts: x01 = RPOS_ID (leer = neue Position mit Vorgaben),
+                -- x02 = Hauptposition einer neuen Unterposition. Zahlen im Format der Felder (Dezimalkomma).
+                -- Setzt P11_HAUPT_ID fuer das Raster der Unterpositionen (nur bei einer gespeicherten Hauptposition).
+                declare
+                    c_nls constant varchar2(40) := 'NLS_NUMERIC_CHARACTERS='',.''';
+                    l_id      number := to_number(apex_application.g_x01);
+                    l_haupt   number := to_number(apex_application.g_x02);
+                    l_mand    FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    p         FAKT_RECHNUNGSPOSITIONEN%rowtype;
+                    l_unter   pls_integer := 0;
+                    l_hpos    FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION%type;
+                    l_artnr   ARTI_ARTIKEL.ARTI_NUMMER%type;
+                    l_artname ARTI_ARTIKEL.ARTI_NAME%type;
+                    l_gruppe  ARTI_ARTIKELGRUPPEN.AGRP_BEZEICHNUNG%type;
+                    function preis(p_wert in number) return varchar2 is
+                    begin
+                        return to_char(p_wert, 'FM999G999G990D00', c_nls);
+                    end;
+                    -- Menge, Rabatt: ohne ueberfluessige Nachkommastellen
+                    function zahl(p_wert in number) return varchar2 is
+                    begin
+                        return rtrim(rtrim(to_char(p_wert, 'FM999999990D999', c_nls), '0'), ',');
+                    end;
+                begin
+                    select RECH_MAND_ID into l_mand from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    if l_id is not null then
+                        select * into p from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
+                        select count(*) into l_unter from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = l_id;
+                    else
+                        p.RPOS_HAUPT_RPOS_ID := l_haupt;
+                        p.RPOS_POSITION      := FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt);
+                        p.RPOS_MENGE         := 1;
+                        p.RPOS_EINZELPREIS   := 0;
+                        p.RPOS_IST_OPTIONAL  := 'N';
+                        select max(MWST_PROZENT) into p.RPOS_MWST_PROZENT from ALLG_MWST_SAETZE where MWST_IST_STANDARD = 'Y';
+                    end if;
+                    if p.RPOS_HAUPT_RPOS_ID is not null then
+                        select RPOS_POSITION into l_hpos
+                          from FAKT_RECHNUNGSPOSITIONEN
+                         where RPOS_ID = p.RPOS_HAUPT_RPOS_ID and RPOS_RECH_ID = :P11_RECH_ID and RPOS_HAUPT_RPOS_ID is null;
+                    end if;
+                    for a in (select a.ARTI_NUMMER, a.ARTI_NAME, g.AGRP_BEZEICHNUNG
+                                from ARTI_ARTIKEL a
+                                left join ARTI_ARTIKELGRUPPEN g on g.AGRP_ID = a.ARTI_AGRP_ID
+                               where a.ARTI_ID = p.RPOS_ARTI_ID)
+                    loop
+                        l_artnr   := a.ARTI_NUMMER;
+                        l_artname := a.ARTI_NAME;
+                        l_gruppe  := a.AGRP_BEZEICHNUNG;
+                    end loop;
+                    :P11_HAUPT_ID := case when l_id is not null and p.RPOS_HAUPT_RPOS_ID is null then to_char(l_id) end;
+
+                    apex_json.open_object;
+                    apex_json.write('id', to_char(l_id));
+                    apex_json.write('haupt_id', to_char(p.RPOS_HAUPT_RPOS_ID));
+                    apex_json.write('unter', l_unter);
+                    apex_json.write('summe_unterpos', nvl(p.RPOS_SUMME_UNTERPOS, 0));
+                    apex_json.write('titel', case when l_id is null then 'Neue ' end
+                                             || case when p.RPOS_HAUPT_RPOS_ID is null then 'Hauptposition ' || p.RPOS_POSITION
+                                                     else 'Unterposition ' || l_hpos || '.' || p.RPOS_POSITION end
+                                             || case when l_id is not null then ': ' || p.RPOS_NAME end);
+                    apex_json.write('artikel_anzeige', case when l_artnr is not null then l_artnr || ' – ' || l_artname end);
+                    apex_json.open_object('felder');
+                    apex_json.write('P11_POS_ARTI_ID', to_char(p.RPOS_ARTI_ID), true);
+                    apex_json.write('P11_POS_ARTIKELNUMMER', l_artnr, true);
+                    apex_json.write('P11_POS_GRUPPE', l_gruppe, true);
+                    apex_json.write('P11_POS_POSITION', to_char(p.RPOS_POSITION), true);
+                    apex_json.write('P11_POS_NAME', p.RPOS_NAME, true);
+                    apex_json.write('P11_POS_OPTIONAL', p.RPOS_IST_OPTIONAL, true);
+                    apex_json.write('P11_POS_EINZELPREIS', preis(p.RPOS_EINZELPREIS), true);
+                    apex_json.write('P11_POS_EINHEIT', p.RPOS_EINHEIT, true);
+                    apex_json.write('P11_POS_MENGE', zahl(p.RPOS_MENGE), true);
+                    apex_json.write('P11_POS_MWST', to_char(p.RPOS_MWST_PROZENT), true);
+                    apex_json.write('P11_POS_SUMME_UNTERPOS', to_char(p.RPOS_SUMME_UNTERPOS, 'FML999G999G990D00'), true);
+                    apex_json.write('P11_POS_RABATT', zahl(p.RPOS_RABATT_PROZENT), true);
+                    apex_json.write('P11_POS_PAUSCHAL', preis(p.RPOS_PAUSCHALSUMME), true);
+                    apex_json.write('P11_POS_SUMME', to_char(nvl(p.RPOS_SUMME, 0), 'FML999G999G990D00'), true);
+                    apex_json.write('P11_POS_BESCHREIBUNG', p.RPOS_BESCHREIBUNG, true);
+                    apex_json.close_object;
+                    apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 30
+            point: ajaxCallback
+        }
+    )
+
+    process pos-speichern (
+        name: POS_SPEICHERN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Position aus den Feldern P11_POS_* speichern: x01 = RPOS_ID (leer = neu), x02 = Hauptposition einer
+                -- neuen Unterposition. Fachliche Fehler kommen als {"fehler": …} zurueck.
+                declare
+                    l_id     number := to_number(apex_application.g_x01);
+                    l_haupt  number := to_number(apex_application.g_x02);
+                    l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                    l_name   FAKT_RECHNUNGSPOSITIONEN.RPOS_NAME%type := trim(:P11_POS_NAME);
+                    l_pos    number;
+                    l_mwst   number;
+                    l_menge  number;
+                    l_preis  number;
+                    l_rabatt number;
+                    l_pausch number;
+                    -- Zahlen kommen im Format der Felder (z.B. 1.250,00)
+                    function zahl(p_wert in varchar2) return number is
+                    begin
+                        return to_number(replace(replace(p_wert, nchr(8364)), ' '), '999G999G999G990D99999',
+                                         'NLS_NUMERIC_CHARACTERS='',.''');
+                    end;
+                begin
+                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+                    end if;
+                    if l_name is null then
+                        raise_application_error(-20214, 'Bitte einen Namen für die Position eingeben.');
+                    end if;
+                    -- lokale Funktion nicht direkt in SQL (PLS-00231): Werte vorher in Variablen
+                    l_pos    := nvl(zahl(:P11_POS_POSITION), case when l_id is null then FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt) end);
+                    l_menge  := nvl(zahl(:P11_POS_MENGE), 1);
+                    l_preis  := nvl(zahl(:P11_POS_EINZELPREIS), 0);
+                    l_rabatt := zahl(:P11_POS_RABATT);
+                    l_pausch := zahl(:P11_POS_PAUSCHAL);
+                    select coalesce(to_number(:P11_POS_MWST), max(MWST_PROZENT)) into l_mwst
+                      from ALLG_MWST_SAETZE where MWST_IST_STANDARD = 'Y';
+                    if l_id is null then
+                        insert into FAKT_RECHNUNGSPOSITIONEN
+                              (RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_NAME, RPOS_BESCHREIBUNG,
+                               RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
+                               RPOS_IST_OPTIONAL)
+                        values (:P11_RECH_ID, l_haupt, to_number(:P11_POS_ARTI_ID),
+                                l_pos, l_name, :P11_POS_BESCHREIBUNG,
+                                l_menge, :P11_POS_EINHEIT, l_preis,
+                                l_rabatt, nvl(l_mwst, 20), nvl(:P11_POS_OPTIONAL, 'N'))
+                        returning RPOS_ID into l_id;
+                    else
+                        update FAKT_RECHNUNGSPOSITIONEN
+                           set RPOS_ARTI_ID        = to_number(:P11_POS_ARTI_ID),
+                               RPOS_POSITION       = nvl(l_pos, RPOS_POSITION),
+                               RPOS_NAME           = l_name,
+                               RPOS_BESCHREIBUNG   = :P11_POS_BESCHREIBUNG,
+                               RPOS_MENGE          = l_menge,
+                               RPOS_EINHEIT        = :P11_POS_EINHEIT,
+                               RPOS_EINZELPREIS    = l_preis,
+                               RPOS_RABATT_PROZENT = l_rabatt,
+                               RPOS_MWST_PROZENT   = nvl(l_mwst, RPOS_MWST_PROZENT),
+                               RPOS_IST_OPTIONAL   = nvl(:P11_POS_OPTIONAL, 'N'),
+                               RPOS_PAUSCHALSUMME  = case when RPOS_HAUPT_RPOS_ID is null then l_pausch end
+                         where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
+                        if sql%rowcount = 0 then
+                            raise_application_error(-20211, 'Die Position gehört nicht zu dieser Rechnung.');
+                        end if;
+                    end if;
+                    -- Artikelnummer und Erloeskonto als Kopie vom Artikel
+                    update FAKT_RECHNUNGSPOSITIONEN p
+                       set (RPOS_ARTIKELNUMMER, RPOS_ERLOESKONTO) =
+                           (select a.ARTI_NUMMER, a.ARTI_ERLOESKONTO from ARTI_ARTIKEL a where a.ARTI_ID = p.RPOS_ARTI_ID)
+                     where p.RPOS_ID = l_id;
+                    FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);
+                    apex_json.open_object;
+                    apex_json.write('id', to_char(l_id));
+                    apex_json.close_object;
+                exception
+                    when others then
+                        rollback;
+                        apex_json.open_object;
+                        apex_json.write('fehler', case
+                            when sqlcode = -1 then 'Diese Positionsnummer ist bereits vergeben.'
+                            when sqlcode in (-1722, -6502, -1438) then 'Bitte gültige Zahlen eingeben.'
+                            when sqlcode = -2290 then 'Rabatt und MwSt. müssen zwischen 0 und 100 liegen.'
+                            else regexp_replace(sqlerrm, '^ORA-\\d+: ') end);
+                        apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 40
+            point: ajaxCallback
+        }
+    )
+
+    process pos-loeschen (
+        name: POS_LOESCHEN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Position loeschen (x01 = RPOS_ID); eine Hauptposition nimmt ihre Unterpositionen mit (RPOS_HAUPT_RPOS_FK)
+                declare
+                    l_id     number := to_number(apex_application.g_x01);
+                    l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                begin
+                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+                    end if;
+                    delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
+                    if sql%rowcount = 0 then
+                        raise_application_error(-20211, 'Die Position gehört nicht zu dieser Rechnung.');
+                    end if;
+                    FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);
+                    apex_json.open_object;
+                    apex_json.write('ok', true);
+                    apex_json.close_object;
+                exception
+                    when others then
+                        rollback;
+                        apex_json.open_object;
+                        apex_json.write('fehler', regexp_replace(sqlerrm, '^ORA-\\d+: '));
+                        apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 50
             point: ajaxCallback
         }
     )
@@ -1176,14 +1781,15 @@ def seite_11():
         source {
             plsqlCode:
                 ```plsql
-                -- Positionen nur im Entwurf aenderbar; leere Felder werden vom Artikel uebernommen
+                -- Unterpositionen der gewaehlten Hauptposition (P11_HAUPT_ID); nur im Entwurf bzw. nach
+                -- "Rechnung bearbeiten" aenderbar; leere Felder werden vom Artikel uebernommen
                 declare
                     l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
                     a        ARTI_ARTIKEL%rowtype;
                     l_mwst   ALLG_MWST_SAETZE.MWST_PROZENT%type;
                     l_einh   ALLG_EINHEITEN.EINH_CODE%type;
                     l_pos    number := to_number(:RPOS_POSITION);
-                    l_kap    FAKT_RECHNUNGSPOSITIONEN.RPOS_KAPITEL%type := trim(:RPOS_KAPITEL);
+                    l_haupt  number := to_number(:P11_HAUPT_ID);
                     l_preis  number;
                     -- Betraege kommen im Format der Spalte (z.B. EUR 1.250,00) oder als einfache Zahl
                     function betrag(p_wert in varchar2) return number is
@@ -1197,7 +1803,7 @@ def seite_11():
                         raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
                     if :APEX$ROW_STATUS = 'D' then
-                        delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = :RPOS_ID;
+                        delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = :RPOS_ID and RPOS_RECH_ID = :P11_RECH_ID;
                         FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);   -- auch beim Speichern nur ueber das Grid
                         return;
                     end if;
@@ -1207,15 +1813,18 @@ def seite_11():
                         select MWST_PROZENT into l_mwst from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
                         select max(EINH_CODE) into l_einh from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
                     end if;
-                    if l_pos is null then   -- je Kapitel 10, 20, 30 …
-                        l_pos := FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_kap, to_number(:RPOS_ID));
+                    if l_haupt is null then
+                        raise_application_error(-20215, 'Bitte zuerst eine Hauptposition wählen.');
+                    end if;
+                    if l_pos is null then   -- je Hauptposition 10, 20, 30 …
+                        l_pos := FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt, to_number(:RPOS_ID));
                     end if;
                     if :APEX$ROW_STATUS = 'C' then
                         insert into FAKT_RECHNUNGSPOSITIONEN
-                              (RPOS_RECH_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_KAPITEL, RPOS_UNTERKAPITEL, RPOS_ARTIKELNUMMER,
+                              (RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_ARTIKELNUMMER,
                                RPOS_NAME, RPOS_BESCHREIBUNG, RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT,
                                RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO)
-                        values (:P11_RECH_ID, to_number(:RPOS_ARTI_ID), l_pos, l_kap, :RPOS_UNTERKAPITEL, a.ARTI_NUMMER,
+                        values (:P11_RECH_ID, l_haupt, to_number(:RPOS_ARTI_ID), l_pos, a.ARTI_NUMMER,
                                 coalesce(:RPOS_NAME, a.ARTI_NAME), coalesce(to_clob(:RPOS_BESCHREIBUNG), a.ARTI_BESCHREIBUNG),
                                 nvl(to_number(:RPOS_MENGE), 1), coalesce(:RPOS_EINHEIT, l_einh), coalesce(l_preis, a.ARTI_VK_PREIS, 0),
                                 to_number(:RPOS_RABATT_PROZENT), coalesce(to_number(:RPOS_MWST_PROZENT), l_mwst, 20), nvl(:RPOS_IST_OPTIONAL, 'N'),
@@ -1225,8 +1834,6 @@ def seite_11():
                         update FAKT_RECHNUNGSPOSITIONEN
                            set RPOS_ARTI_ID        = to_number(:RPOS_ARTI_ID),
                                RPOS_POSITION       = l_pos,
-                               RPOS_KAPITEL        = l_kap,
-                               RPOS_UNTERKAPITEL   = :RPOS_UNTERKAPITEL,
                                RPOS_ARTIKELNUMMER  = coalesce(a.ARTI_NUMMER, RPOS_ARTIKELNUMMER),
                                RPOS_NAME           = coalesce(:RPOS_NAME, a.ARTI_NAME, RPOS_NAME),
                                RPOS_BESCHREIBUNG   = coalesce(to_clob(:RPOS_BESCHREIBUNG), a.ARTI_BESCHREIBUNG),
@@ -1236,14 +1843,12 @@ def seite_11():
                                RPOS_RABATT_PROZENT = to_number(:RPOS_RABATT_PROZENT),
                                RPOS_MWST_PROZENT   = coalesce(to_number(:RPOS_MWST_PROZENT), l_mwst, 20),
                                RPOS_IST_OPTIONAL   = nvl(:RPOS_IST_OPTIONAL, 'N')
-                         where RPOS_ID = :RPOS_ID;
+                         where RPOS_ID = :RPOS_ID and RPOS_RECH_ID = :P11_RECH_ID;
                     end if;
-                    FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);   -- Rechnungssummen auch beim Speichern nur ueber das Grid
+                    FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);   -- Zwischensumme der Hauptposition und Rechnungssummen
                 exception
                     when dup_val_on_index then
-                        raise_application_error(-20212, 'Position ' || l_pos || ' ist '
-                            || case when l_kap is null then 'ohne Kapitel' else 'im Kapitel „' || l_kap || '“' end
-                            || ' bereits vergeben.');
+                        raise_application_error(-20212, 'Position ' || l_pos || ' ist in dieser Hauptposition bereits vergeben.');
                 end;
                 ```
         }
@@ -1340,516 +1945,6 @@ def seite_11():
                 }
             }
         }
-    )
-
-)
-"""
-    return s
-
-
-# --------------------------------------------------------------------------- Seite 14 Position (Dialog)
-def seite_14():
-    """Dialog "Position": eine Rechnungsposition mit allen Feldern erfassen/aendern (Button "Zeile Detail" bzw.
-    Zeilenmenue "Detail bearbeiten"/"Detail anzeigen" auf Seite 11). Anordnung wie im Artikelstamm, dazu Kapitel, Pos,
-    Menge, Rabatt. Der Dialog laesst sich immer oeffnen; aenderbar ist er wie Seite 11 nur im Entwurf oder nach
-    "Rechnung bearbeiten" (P14_NUR_LESEN, gesetzt vor der Anzeige), sonst nur Anzeige ohne Speichern."""
-    s = """page 14 (
-    name: Position
-    alias: POSITION
-    title: Position
-    appearance {
-        pageMode: modalDialog
-        dialogTemplate: @/modal-dialog
-        templateOptions: #DEFAULT#
-    }
-    dialog {
-        width: 1000
-        chained: false
-        resizable: true
-    }
-    navigation {
-        cursorFocus: doNotFocusCursor
-    }
-    security {
-        pageAccessProtection: argumentsMustHaveChecksum
-        formAutoComplete: false
-    }
-
-    region buttons (
-        name: Buttons
-        type: staticContent
-        layout {
-            sequence: 20
-            slot: dialogFooter
-        }
-        appearance {
-            template: @/buttons-container
-            templateOptions: #DEFAULT#
-        }
-        settings {
-            outputAs: text
-        }
-    )
-
-    region position (
-        name: Position
-        type: form
-        readOnly {
-            type: expression
-            language: plsql
-            plsqlExpression: :P14_NUR_LESEN = 'Y'
-        }
-        source {
-            location: localDatabase
-            tableName: FAKT_RECHNUNGSPOSITIONEN
-        }
-        layout {
-            sequence: 10
-            slot: contentBody
-        }
-        appearance {
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }
-        edit {
-            enabled: true
-            allowedOperations: [
-                add
-                update
-            ]
-        }
-    )
-
-"""
-    # P14_RECH_ID: Rechnung aus der URL – die Formular-Initialisierung leert bei einer neuen Position alle
-    # Formularfelder (auch RPOS_RECH_ID), daher eigenes Element und Vorbelegung von RPOS_RECH_ID daraus
-    s += """    pageItem P14_RECH_ID (
-        type: hidden
-        layout {
-            sequence: 3
-            region: @position
-            slot: regionBody
-        }
-        security {
-            sessionStateProtection: checksumRequiredSessionLevel
-        }
-    )
-
-    pageItem P14_NUR_LESEN (
-        type: hidden
-        layout {
-            sequence: 4
-            region: @position
-            slot: regionBody
-        }
-    )
-
-"""
-    for nr, (name, col) in enumerate((("P14_RPOS_ID", "RPOS_ID"), ("P14_RPOS_RECH_ID", "RPOS_RECH_ID")), 1):
-        s += f"""    pageItem {name} (
-        type: hidden
-        layout {{
-            sequence: {nr}
-            region: @position
-            slot: regionBody
-        }}
-        source {{
-            formRegion: @position
-            column: {col}
-            dataType: number
-""" + ("            primaryKey: true\n" if nr == 1 else "") + "        }\n" + ("" if nr == 1 else """        default {
-            type: item
-            item: P14_RECH_ID
-        }
-""") + """        security {
-            sessionStateProtection: checksumRequiredSessionLevel
-        }
-    )
-
-"""
-    f = dict(form="position")
-    r = "position"
-    maske = lambda it, m: it.replace("            templateOptions: #DEFAULT#\n        }\n",
-                                     f"            templateOptions: #DEFAULT#\n            formatMask: {m}\n        }}\n", 1)
-    # Zeile 1: Artikel (Suche nach Gruppe, Artikelnummer, Name) | Kapitel | Pos
-    s += item("P14_RPOS_ARTI_ID", "popupLov", "Artikel (Suche nach Gruppe, Artikelnummer, Name)", 10, r,
-              col="RPOS_ARTI_ID", dtype="number", spalten=6, extra="""        lov {
-            type: sharedComponent
-            lov: @lov-artikel
-            displayNullValue: true
-            nullDisplayValue: - ohne Artikel -
-        }
-""", **f)
-    s += item("P14_RPOS_KAPITEL", "textField", "Kapitel (gruppiert die Positionen)", 20, r, col="RPOS_KAPITEL",
-              maxlen=200, neue_zeile=False, spalten=4, **f)
-    s += item("P14_RPOS_POSITION", "numberField", "Pos", 30, r, col="RPOS_POSITION", dtype="number",
-              neue_zeile=False, spalten=2, **f)
-    # Zeile 2 (wie Artikelstamm): Name | Einzelpreis | Einheit
-    s += item("P14_RPOS_NAME", "textField", "Name", 40, r, col="RPOS_NAME", req=True, maxlen=200, spalten=6, **f)
-    s += maske(item("P14_RPOS_EINZELPREIS", "numberField", "Einzelpreis", 50, r, col="RPOS_EINZELPREIS", dtype="number",
-                    req=True, neue_zeile=False, spalten=3, extra="""        default {
-            type: static
-            staticValue: 0
-        }
-""", **f), "999G999G990D00")
-    s += item("P14_RPOS_EINHEIT", "selectList", "Einheit", 60, r, col="RPOS_EINHEIT", neue_zeile=False, spalten=3,
-              extra=lov("lov-einheiten-code", "-"), **f)
-    # Zeile 3: Artikelnummer und Gruppe (Anzeige vom Artikel) | MwSt. | Optional
-    # Anzeigefelder werden per Dynamic Action gesetzt: nicht absenden (sonst "Session state protection violation")
-    nur_anzeige = "        settings {\n            sendOnPageSubmit: false\n        }\n"
-    s += item("P14_ARTIKELNUMMER", "displayOnly", "Artikelnummer", 70, r, spalten=3, extra=nur_anzeige, **f)
-    s += item("P14_GRUPPE", "displayOnly", "Gruppe", 80, r, neue_zeile=False, spalten=3, extra=nur_anzeige, **f)
-    s += item("P14_RPOS_MWST_PROZENT", "selectList", "MwSt. in %", 90, r, col="RPOS_MWST_PROZENT", dtype="number",
-              req=True, neue_zeile=False, spalten=3, extra=lov("lov-mwst-prozent") + default_sql(
-                  "select MWST_PROZENT from ALLG_MWST_SAETZE where MWST_IST_STANDARD = 'Y'"), **f)
-    s += item("P14_RPOS_IST_OPTIONAL", "switch", "Optional (nicht in der Summe)", 100, r, col="RPOS_IST_OPTIONAL",
-              neue_zeile=False, spalten=3, extra=SWITCH("N"), **f)
-    # Zeile 4: Menge | Rabatt | Summe (Anzeige, berechnet)
-    s += item("P14_RPOS_MENGE", "numberField", "Menge", 110, r, col="RPOS_MENGE", dtype="number", req=True, spalten=3,
-              extra="""        default {
-            type: static
-            staticValue: 1
-        }
-""", **f)
-    s += item("P14_RPOS_RABATT_PROZENT", "numberField", "Rabatt %", 120, r, col="RPOS_RABATT_PROZENT", dtype="number",
-              neue_zeile=False, spalten=3, **f)
-    s += hervorheben(item("P14_SUMME", "displayOnly", "Summe", 130, r, neue_zeile=False, spalten=3, extra=nur_anzeige, **f))
-    s += item("P14_RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, r, col="RPOS_BESCHREIBUNG", dtype="clob",
-              spalten=12, **f)
-
-    # ------------------------------------------------ Buttons (Speichern/Anlegen nur, wenn die Rechnung aenderbar ist)
-    aenderbar = lambda rpos_id: f"""        serverSideCondition {{
-            type: expression
-            language: plsql
-            plsqlExpression: :P14_RPOS_ID {rpos_id} and nvl(:P14_NUR_LESEN, 'N') <> 'Y'
-        }}
-"""
-    s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close",
-                verhalten="            action: definedByDynamicAction\n")
-    s += button("save", "SAVE", "Speichern", 20, "buttons", "next", hot=True,
-                verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
-                bedingung=aenderbar("is not null"))
-    s += button("create", "CREATE", "Position anlegen", 30, "buttons", "next", hot=True,
-                verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: insert\n",
-                bedingung=aenderbar("is null"))
-
-    # ------------------------------------------------ Dynamic Actions
-    artikel_items = "P14_RPOS_NAME,P14_RPOS_EINHEIT,P14_RPOS_EINZELPREIS,P14_RPOS_MWST_PROZENT,P14_RPOS_BESCHREIBUNG,P14_RPOS_MENGE"
-    s += f"""    dynamicAction cancel-dialog (
-        name: Dialog abbrechen
-        execution {{
-            sequence: 10
-        }}
-        when {{
-            event: click
-            selectionType: button
-            button: @cancel
-        }}
-
-        action native-dialog-cancel (
-            action: cancelDialog
-            execution {{
-                sequence: 10
-                fireOnInit: false
-            }}
-        )
-
-    )
-
-    dynamicAction artikel-gewaehlt (
-        name: Artikel gewählt: Daten aus dem Artikelstamm übernehmen
-        execution {{
-            sequence: 20
-        }}
-        when {{
-            event: change
-            selectionType: items
-            items: P14_RPOS_ARTI_ID
-        }}
-
-        action artikel-laden (
-            action: executeServerSideCode
-            settings {{
-                plsqlCode:
-                    ```plsql
-                    -- Name, Einheit, Einzelpreis, MwSt., Beschreibung vom Artikel (danach aenderbar); alle Felder werden
-                    -- mitgeschickt, damit ohne Artikel die bisherigen Eingaben erhalten bleiben
-                    declare
-                        a ARTI_ARTIKEL%rowtype;
-                    begin
-                        if :P14_RPOS_ARTI_ID is null then
-                            :P14_ARTIKELNUMMER := null;
-                            :P14_GRUPPE := null;
-                            return;
-                        end if;
-                        select * into a from ARTI_ARTIKEL where ARTI_ID = to_number(:P14_RPOS_ARTI_ID);
-                        :P14_RPOS_NAME         := a.ARTI_NAME;
-                        :P14_RPOS_EINZELPREIS  := to_char(a.ARTI_VK_PREIS, 'FM999G999G990D00');
-                        :P14_RPOS_BESCHREIBUNG := a.ARTI_BESCHREIBUNG;
-                        :P14_ARTIKELNUMMER     := a.ARTI_NUMMER;
-                        select max(EINH_CODE) into :P14_RPOS_EINHEIT from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
-                        select to_char(max(MWST_PROZENT)) into :P14_RPOS_MWST_PROZENT from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
-                        select max(AGRP_BEZEICHNUNG) into :P14_GRUPPE from ARTI_ARTIKELGRUPPEN where AGRP_ID = a.ARTI_AGRP_ID;
-                        if :P14_RPOS_MENGE is null then
-                            :P14_RPOS_MENGE := '1';
-                        end if;
-                    end;
-                    ```
-                itemsToSubmit: P14_RPOS_ARTI_ID,{artikel_items}
-                itemsToReturn: {artikel_items},P14_ARTIKELNUMMER,P14_GRUPPE
-            }}
-            execution {{
-                sequence: 10
-                fireOnInit: false
-            }}
-        )
-
-    )
-
-    dynamicAction kapitel-geaendert (
-        name: Kapitel geändert: nächste Positionsnummer des Kapitels
-        execution {{
-            sequence: 30
-        }}
-        when {{
-            event: change
-            selectionType: items
-            items: P14_RPOS_KAPITEL
-        }}
-
-        action position-vorschlagen (
-            action: executeServerSideCode
-            settings {{
-                plsqlCode:
-                    ```plsql
-                    -- je Kapitel 10, 20, 30 … (ohne Kapitel: Positionen am Anfang der Rechnung)
-                    -- P14_RECH_ID kommt aus der URL und steht im Sitzungsstatus; Formularfelder (auch der Primaerschluessel
-                    -- P14_RPOS_ID) stehen dort nicht und werden mitgeschickt
-                    :P14_RPOS_POSITION := to_char(FAKT_RECHNUNG.naechste_position(:P14_RECH_ID, :P14_RPOS_KAPITEL,
-                                                                                    to_number(:P14_RPOS_ID)));
-                    ```
-                itemsToSubmit: P14_RPOS_KAPITEL,P14_RPOS_ID
-                itemsToReturn: P14_RPOS_POSITION
-            }}
-            execution {{
-                sequence: 10
-                fireOnInit: false
-            }}
-        )
-
-    )
-
-    dynamicAction summe-anzeigen (
-        name: Summe der Position sofort berechnen
-        execution {{
-            sequence: 40
-        }}
-        when {{
-            event: change
-            selectionType: items
-            items: P14_RPOS_MENGE,P14_RPOS_EINZELPREIS,P14_RPOS_RABATT_PROZENT
-        }}
-
-        action summe-berechnen (
-            action: executeJsCode
-            settings {{
-                jsCode:
-                    ```javascript
-                    // Menge x Einzelpreis abzgl. Rabatt (wie Trigger RPOS_BIU), Anzeige im Format der Betraege
-                    // nur lesen: Felder sind reine Anzeige (kein Zahlenwert), die Summe kommt aus der Datenbank
-                    if ($v("P14_NUR_LESEN") === "Y") {{
-                        return;
-                    }}
-                    var n = function (name) {{
-                        var w = apex.item(name).getNativeValue();
-                        return (typeof w === "number" && !isNaN(w)) ? w : 0;
-                    }};
-                    var summe = n("P14_RPOS_MENGE") * n("P14_RPOS_EINZELPREIS") * (1 - n("P14_RPOS_RABATT_PROZENT") / 100);
-                    apex.item("P14_SUMME").setValue(apex.locale.formatNumber(Math.round(summe * 100) / 100, "FML999G999G990D00"));
-                    ```
-            }}
-            execution {{
-                sequence: 10
-                fireOnInit: true
-            }}
-        )
-
-    )
-
-"""
-    # ------------------------------------------------ Prozesse
-    # beim Oeffnen: nicht aenderbare Rechnung -> Dialog nur lesen (P14_NUR_LESEN); beim Speichern: Fehler
-    nur_lesen = "                        :P14_NUR_LESEN := 'Y';"
-    fehler = ("                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach "
-              "„Rechnung bearbeiten“ geändert werden.');")
-    pruefen = lambda rech, gesperrt, vorher="": f"""                -- Rechnung des Mandanten der Sitzung; Positionen nur im Entwurf oder nach "Rechnung bearbeiten" (Seite 11)
-                declare
-                    l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
-                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
-                begin
-                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status
-                      from FAKT_RECHNUNGEN where RECH_ID = {rech};
-                    if l_mand <> :MANDANT_ID then
-                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
-                    end if;
-{vorher}                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
-{gesperrt}
-                    end if;
-                end;"""
-    s += f"""    process initialize-form-position (
-        name: Formular Position initialisieren
-        type: formInitialization
-        formRegion: @position
-        execution {{
-            sequence: 10
-            point: beforeHeader
-        }}
-    )
-
-    process rechnung-pruefen (
-        name: Rechnung prüfen (Mandant), nur lesen wenn nicht änderbar
-        type: executeCode
-        source {{
-            plsqlCode:
-                ```plsql
-{pruefen('nvl(:P14_RPOS_RECH_ID, :P14_RECH_ID)', nur_lesen, vorher="                    :P14_NUR_LESEN := 'N';\n")}
-                ```
-        }}
-        execution {{
-            sequence: 20
-            point: beforeHeader
-        }}
-    )
-
-    process anzeige-vorbelegen (
-        name: Positionsnummer vorschlagen, Artikelnummer, Gruppe und Summe anzeigen
-        type: executeCode
-        source {{
-            plsqlCode:
-                ```plsql
-                -- neue Position: naechste Nummer der Positionen ohne Kapitel (Kapitel eingegeben -> Dynamic Action)
-                if :P14_RPOS_ID is null then
-                    :P14_RPOS_POSITION := to_char(FAKT_RECHNUNG.naechste_position(:P14_RECH_ID, null));
-                end if;
-                select max(a.ARTI_NUMMER), max(g.AGRP_BEZEICHNUNG) into :P14_ARTIKELNUMMER, :P14_GRUPPE
-                  from ARTI_ARTIKEL a
-                  left join ARTI_ARTIKELGRUPPEN g on g.AGRP_ID = a.ARTI_AGRP_ID
-                 where a.ARTI_ID = to_number(:P14_RPOS_ARTI_ID);
-                -- gespeicherte Summe (Trigger RPOS_BIU); bei aenderbarer Position rechnet die Dynamic Action sofort neu
-                select max(to_char(RPOS_SUMME, 'FML999G999G990D00')) into :P14_SUMME
-                  from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = to_number(:P14_RPOS_ID);
-                ```
-        }}
-        execution {{
-            sequence: 30
-            point: beforeHeader
-        }}
-    )
-
-    validation position-eindeutig (
-        name: Position im Kapitel noch nicht vergeben
-        execution {{
-            sequence: 10
-        }}
-        validation {{
-            type: noRowsReturned
-            sqlQuery:
-                ```sql
-                select 1
-                  from FAKT_RECHNUNGSPOSITIONEN
-                 where RPOS_RECH_ID = :P14_RPOS_RECH_ID
-                   and (RPOS_KAPITEL = trim(:P14_RPOS_KAPITEL) or (RPOS_KAPITEL is null and trim(:P14_RPOS_KAPITEL) is null))
-                   and RPOS_POSITION = to_number(:P14_RPOS_POSITION default null on conversion error)
-                   and (:P14_RPOS_ID is null or RPOS_ID <> to_number(:P14_RPOS_ID))
-                ```
-        }}
-        error {{
-            errorMessage: Diese Positionsnummer ist im Kapitel bereits vergeben.
-            associatedItem: @P14_RPOS_POSITION
-        }}
-    )
-
-    process rechnung-pruefen-speichern (
-        name: Rechnung prüfen (Mandant, änderbar) vor dem Speichern
-        type: executeCode
-        source {{
-            plsqlCode:
-                ```plsql
-{pruefen(':P14_RPOS_RECH_ID', fehler)}
-                ```
-        }}
-        execution {{
-            sequence: 10
-        }}
-    )
-
-    process position-vorbelegen (
-        name: Kapitel ohne Leerzeichen, fehlende Positionsnummer vergeben
-        type: executeCode
-        source {{
-            plsqlCode:
-                ```plsql
-                :P14_RPOS_KAPITEL := trim(:P14_RPOS_KAPITEL);
-                if :P14_RPOS_POSITION is null then
-                    :P14_RPOS_POSITION := to_char(FAKT_RECHNUNG.naechste_position(:P14_RPOS_RECH_ID, :P14_RPOS_KAPITEL,
-                                                                                    to_number(:P14_RPOS_ID)));
-                end if;
-                ```
-        }}
-        execution {{
-            sequence: 20
-        }}
-    )
-
-    process process-form-position (
-        name: Formular Position verarbeiten
-        type: formAutoRowProcessing
-        formRegion: @position
-        execution {{
-            sequence: 30
-        }}
-        serverSideCondition {{
-            type: requestIsContainedInValue
-            value: CREATE,SAVE
-        }}
-        successMessage {{
-            successMessage: Position gespeichert.
-        }}
-    )
-
-    process artikel-kopien (
-        name: Artikelnummer und Erlöskonto vom Artikel, Rechnungssummen
-        type: executeCode
-        source {{
-            plsqlCode:
-                ```plsql
-                update FAKT_RECHNUNGSPOSITIONEN p
-                   set (RPOS_ARTIKELNUMMER, RPOS_ERLOESKONTO) =
-                       (select a.ARTI_NUMMER, a.ARTI_ERLOESKONTO from ARTI_ARTIKEL a where a.ARTI_ID = p.RPOS_ARTI_ID)
-                 where p.RPOS_ID = to_number(:P14_RPOS_ID)
-                   and p.RPOS_ARTI_ID is not null;
-                FAKT_RECHNUNG.summen_berechnen(:P14_RPOS_RECH_ID);
-                ```
-        }}
-        execution {{
-            sequence: 40
-        }}
-        serverSideCondition {{
-            type: requestIsContainedInValue
-            value: CREATE,SAVE
-        }}
-    )
-
-    process close-dialog (
-        name: Dialog schließen
-        type: closeDialog
-        execution {{
-            sequence: 50
-        }}
-        serverSideCondition {{
-            type: requestIsContainedInValue
-            value: CREATE,SAVE
-        }}
     )
 
 )
@@ -2090,7 +2185,7 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00001-home.apx").write_text(startseite(), encoding="utf-8")
     (FIN / "pages" / "p00010-rechnungen.apx").write_text(seite_10(), encoding="utf-8")
     (FIN / "pages" / "p00011-rechnung.apx").write_text(seite_11(), encoding="utf-8")
-    (FIN / "pages" / "p00014-position.apx").write_text(seite_14(), encoding="utf-8")
+    (FIN / "pages" / "p00014-position.apx").unlink(missing_ok=True)   # Dialog "Position" entfaellt (Felder auf Seite 11)
     pdf_seiten()
     (FIN / "pages" / "p00100-wertelisten.apx").write_text(
         wl.uebersicht("wertelisten-finanz", "Wertelisten Finanz"), encoding="utf-8")

@@ -1,7 +1,7 @@
 -- =====================================================================
 -- ThGERP (Gruppe FAKT) – App THG-FINANZ (20050)
 -- 21 – Logik und Sichten der Fakturierung:
---      Package FAKT_RECHNUNG (Empfaenger uebernehmen, Summen, Positionsnummer je Kapitel, Abschliessen mit
+--      Package FAKT_RECHNUNG (Empfaenger uebernehmen, Summen der Haupt-/Unterpositionen, Positionsnummer, Abschliessen mit
 --      Nummernkreis, Zahlungsstatus, Loeschen nur Entwurf bzw. letzte Rechnung)
 --      Views FAKT_RECHNUNGEN_V (Liste mit offenem Betrag), FAKT_RECHNUNG_MWST_V (Summen je Steuersatz)
 --      Grunddaten: Mitarbeiter Thomas Gesslbauer (Login ADMIN_THG), Textvorlagen aus Kingbill, Portal-Kachel
@@ -14,19 +14,35 @@ set define off
 set serveroutput on size unlimited
 
 -- Summen je Steuersatz (Grundlage fuer Rechnungsfuss und FAKT_RECHNUNG.summen_berechnen)
+-- In die Rechnungssumme zaehlen die nicht optionalen Hauptpositionen mit ihrer Summe (RPOS_SUMME):
+--   * Hauptposition ohne Unterpositionen: ihre Summe mit ihrem Steuersatz
+--   * Hauptposition mit Unterpositionen: Rabatt bzw. Pauschalsumme der Hauptposition werden anteilig auf die
+--     Steuersaetze der nicht optionalen Unterpositionen verteilt (Faktor = Summe Hauptposition / Summe Unterpositionen);
+--     ergeben die Unterpositionen 0, zaehlt die Summe (Pauschale) mit dem Steuersatz der Hauptposition
 create or replace view FAKT_RECHNUNG_MWST_V as
 select r.RECH_ID,
-       case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.RPOS_MWST_PROZENT end as MWST_PROZENT,
+       case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.MWST_PROZENT end as MWST_PROZENT,
        round(sum(case r.RECH_IST_BRUTTO
-                     when 'Y' then p.RPOS_SUMME / (1 + case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.RPOS_MWST_PROZENT end / 100)
-                     else p.RPOS_SUMME end), 2) as NETTO,
+                     when 'Y' then p.BETRAG / (1 + case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.MWST_PROZENT end / 100)
+                     else p.BETRAG end), 2) as NETTO,
        round(sum(case r.RECH_IST_BRUTTO
-                     when 'Y' then p.RPOS_SUMME / (1 + case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.RPOS_MWST_PROZENT end / 100)
-                     else p.RPOS_SUMME end)
-             * case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.RPOS_MWST_PROZENT end / 100, 2) as MWST
+                     when 'Y' then p.BETRAG / (1 + case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.MWST_PROZENT end / 100)
+                     else p.BETRAG end)
+             * case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.MWST_PROZENT end / 100, 2) as MWST
   from FAKT_RECHNUNGEN r
-  join FAKT_RECHNUNGSPOSITIONEN p on p.RPOS_RECH_ID = r.RECH_ID and p.RPOS_IST_OPTIONAL = 'N'
- group by r.RECH_ID, case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.RPOS_MWST_PROZENT end, r.RECH_IST_BRUTTO, r.RECH_IST_OHNE_MWST;
+  join (select h.RPOS_RECH_ID, h.RPOS_MWST_PROZENT as MWST_PROZENT, h.RPOS_SUMME as BETRAG
+          from FAKT_RECHNUNGSPOSITIONEN h
+         where h.RPOS_HAUPT_RPOS_ID is null
+           and h.RPOS_IST_OPTIONAL = 'N'
+           and nvl(h.RPOS_SUMME_UNTERPOS, 0) = 0
+        union all
+        select u.RPOS_RECH_ID, u.RPOS_MWST_PROZENT, u.RPOS_SUMME * h.RPOS_SUMME / h.RPOS_SUMME_UNTERPOS
+          from FAKT_RECHNUNGSPOSITIONEN u
+          join FAKT_RECHNUNGSPOSITIONEN h on h.RPOS_ID = u.RPOS_HAUPT_RPOS_ID
+         where u.RPOS_IST_OPTIONAL = 'N'
+           and h.RPOS_IST_OPTIONAL = 'N'
+           and h.RPOS_SUMME_UNTERPOS <> 0) p on p.RPOS_RECH_ID = r.RECH_ID
+ group by r.RECH_ID, case r.RECH_IST_OHNE_MWST when 'Y' then 0 else p.MWST_PROZENT end, r.RECH_IST_BRUTTO, r.RECH_IST_OHNE_MWST;
 
 -- Rechnungsliste mit Kunde, Mandant, bezahltem und offenem Betrag
 create or replace view FAKT_RECHNUNGEN_V as
@@ -57,7 +73,7 @@ select r.RECH_ID,
   left join (select ZAHL_RECH_ID, sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)) as BEZAHLT
                from FAKT_ZAHLUNGEN group by ZAHL_RECH_ID) z on z.ZAHL_RECH_ID = r.RECH_ID;
 
-comment on table FAKT_RECHNUNG_MWST_V is 'Rechnungssummen je Steuersatz (netto, MwSt.), ohne optionale Positionen';
+comment on table FAKT_RECHNUNG_MWST_V is 'Rechnungssummen je Steuersatz (netto, MwSt.) aus den Hauptpositionen, Rabatt/Pauschale anteilig je Steuersatz, ohne optionale Positionen';
 comment on table FAKT_RECHNUNGEN_V is 'Rechnungen mit Kunde, Mandant, bezahltem und offenem Betrag, ueberfaellig';
 
 create or replace package FAKT_RECHNUNG as
@@ -80,11 +96,14 @@ create or replace package FAKT_RECHNUNG as
     -- Empfaengerdaten vom Kunden in die Rechnung kopieren (Zahlungsbedingung nur, wenn leer);
     -- p_nur_verweise: nur Standort und Ansprechpartner setzen (Texte wurden in der Maske schon uebernommen/geaendert)
     procedure empfaenger_uebernehmen(p_rech_id in number, p_nur_verweise in boolean default false);
-    -- Summen netto / MwSt. / brutto aus den Positionen (ohne optionale) neu berechnen
+    -- Summen neu berechnen: je Hauptposition die Summe ihrer nicht optionalen Unterpositionen (daraus im Trigger
+    -- RPOS_BIU die Zwischensumme abzgl. Rabatt bzw. die Pauschalsumme), dann netto / MwSt. / brutto der Rechnung
+    -- (ohne optionale Positionen). Nach jeder Aenderung an Positionen aufrufen.
     procedure summen_berechnen(p_rech_id in number);
-    -- naechste Positionsnummer innerhalb eines Kapitels (10, 20, 30 …; Kapitel leer = Positionen am Anfang der
-    -- Rechnung); p_rpos_id: diese Position nicht mitzaehlen (Kapitelwechsel einer bestehenden Position)
-    function naechste_position(p_rech_id in number, p_kapitel in varchar2, p_rpos_id in number default null) return number;
+    -- naechste Positionsnummer: Hauptpositionen (p_haupt_rpos_id leer) 1, 2, 3 …; Unterpositionen einer
+    -- Hauptposition 10, 20, 30 …; p_rpos_id: diese Position nicht mitzaehlen (bestehende Position wird verschoben)
+    function naechste_position(p_rech_id in number, p_haupt_rpos_id in number default null,
+                               p_rpos_id in number default null) return number;
     -- naechste Belegnummer aus FAKT_NUMMERNKREISE (legt den Nummernkreis des Jahres bei Bedarf an)
     function naechste_nummer(p_mand_id in number, p_belegart in varchar2, p_jahr in number) return varchar2;
     -- Entwurf abschliessen: Rechnungsdatum = heute, Nummer vergeben (Jahr des Rechnungsdatums), Status OFFEN,
@@ -169,7 +188,31 @@ create or replace package body FAKT_RECHNUNG as
     end empfaenger_uebernehmen;
 
     procedure summen_berechnen(p_rech_id in number) is
+        l_anz pls_integer;
     begin
+        -- nur zwei Ebenen: Unterpositionen haengen an einer Hauptposition derselben Rechnung
+        select count(*) into l_anz
+          from FAKT_RECHNUNGSPOSITIONEN u
+          join FAKT_RECHNUNGSPOSITIONEN h on h.RPOS_ID = u.RPOS_HAUPT_RPOS_ID
+         where u.RPOS_RECH_ID = p_rech_id
+           and (h.RPOS_RECH_ID <> u.RPOS_RECH_ID or h.RPOS_HAUPT_RPOS_ID is not null);
+        if l_anz > 0 then
+            raise_application_error(-20213, 'Unterpositionen können nur einer Hauptposition derselben Rechnung zugeordnet werden.');
+        end if;
+        -- Summe der Unterpositionen je Hauptposition (leer = keine Unterpositionen); nur geaenderte Zeilen,
+        -- der Trigger RPOS_BIU rechnet daraus RPOS_SUMME der Hauptposition
+        update FAKT_RECHNUNGSPOSITIONEN h
+           set RPOS_SUMME_UNTERPOS = (select case when count(*) > 0
+                                                  then nvl(sum(case u.RPOS_IST_OPTIONAL when 'N' then u.RPOS_SUMME end), 0) end
+                                        from FAKT_RECHNUNGSPOSITIONEN u
+                                       where u.RPOS_HAUPT_RPOS_ID = h.RPOS_ID)
+         where h.RPOS_RECH_ID = p_rech_id
+           and h.RPOS_HAUPT_RPOS_ID is null
+           and decode(h.RPOS_SUMME_UNTERPOS,
+                      (select case when count(*) > 0
+                                   then nvl(sum(case u.RPOS_IST_OPTIONAL when 'N' then u.RPOS_SUMME end), 0) end
+                         from FAKT_RECHNUNGSPOSITIONEN u
+                        where u.RPOS_HAUPT_RPOS_ID = h.RPOS_ID), 1, 0) = 0;
         update FAKT_RECHNUNGEN rech
            set (RECH_SUMME_NETTO, RECH_SUMME_MWST) =
                (select nvl(sum(m.NETTO), 0), nvl(sum(m.MWST), 0)
@@ -181,15 +224,16 @@ create or replace package body FAKT_RECHNUNG as
          where RECH_ID = p_rech_id;
     end summen_berechnen;
 
-    function naechste_position(p_rech_id in number, p_kapitel in varchar2, p_rpos_id in number default null) return number is
-        l_pos FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION%type;
+    function naechste_position(p_rech_id in number, p_haupt_rpos_id in number default null,
+                               p_rpos_id in number default null) return number is
+        l_max FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION%type;
     begin
-        select trunc(nvl(max(RPOS_POSITION), 0) / 10) * 10 + 10 into l_pos
+        select nvl(max(RPOS_POSITION), 0) into l_max
           from FAKT_RECHNUNGSPOSITIONEN
          where RPOS_RECH_ID = p_rech_id
-           and (RPOS_KAPITEL = trim(p_kapitel) or (RPOS_KAPITEL is null and trim(p_kapitel) is null))
+           and (RPOS_HAUPT_RPOS_ID = p_haupt_rpos_id or (RPOS_HAUPT_RPOS_ID is null and p_haupt_rpos_id is null))
            and (p_rpos_id is null or RPOS_ID <> p_rpos_id);
-        return l_pos;
+        return case when p_haupt_rpos_id is null then l_max + 1 else trunc(l_max / 10) * 10 + 10 end;
     end naechste_position;
 
     function naechste_nummer(p_mand_id in number, p_belegart in varchar2, p_jahr in number) return varchar2 is
@@ -223,7 +267,7 @@ create or replace package body FAKT_RECHNUNG as
             raise_application_error(-20200, 'Nur Entwürfe können abgeschlossen werden.');
         end if;
         select count(*) into l_anz from FAKT_RECHNUNGSPOSITIONEN
-         where RPOS_RECH_ID = p_rech_id and RPOS_IST_OPTIONAL = 'N';
+         where RPOS_RECH_ID = p_rech_id and RPOS_HAUPT_RPOS_ID is null and RPOS_IST_OPTIONAL = 'N';
         if l_anz = 0 then
             raise_application_error(-20201, 'Die Rechnung hat keine Positionen.');
         end if;

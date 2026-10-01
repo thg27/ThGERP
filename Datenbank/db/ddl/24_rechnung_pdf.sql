@@ -5,7 +5,8 @@
 --      FAKT_RECHNUNG_PDF.dateiname(p_rech_id) -> z.B. "Rechnung 2026 - 12.pdf"
 --      Kopf: Mandantenlogo (Workspace-Datei MAND_LOGO_DATEI), Firmenname, Anschrift, E-Mail/Telefon
 --      Absenderzeile, Empfaenger (Kopie in der Rechnung), Nummer/Datum/Bearbeiter, Vortext,
---      Positionen (Beschreibung als Rich Text -> Zeilen, Aufzaehlungen), Summen je Steuersatz,
+--      Haupt-/Unterpositionen (Zwischensumme, Rabatt, Pauschale; Beschreibung als Rich Text -> Zeilen,
+--      Aufzaehlungen), Summen je Steuersatz,
 --      Zahlungsbedingungen, Schlusstext; Fuss auf jeder Seite: Firmendaten, Banken, Firmenbuch, Seite x von y
 -- Erzeugt: 2026-09-30
 -- Wiederholbar (create or replace).
@@ -331,39 +332,26 @@ as
         g_y := g_y - 6;
     end kopf;
 
+    -- Positionen: Hauptpositionen 1, 2, 3 …; Unterpositionen darunter als 1.10, 1.20 …
+    --   * Hauptposition ohne Unterpositionen: eine Zeile mit Einzelpreis, Menge, Summe
+    --   * Hauptposition mit Unterpositionen: Ueberschrift, Unterpositionen, danach Zwischensumme (mit Rabatt:
+    --     Summe der Unterpositionen und Rabatt davor)
+    --   * Hauptposition mit Pauschalsumme: Unterpositionen ohne Preise (nur Menge), danach die Pauschalsumme
     procedure positionen(p_r FAKT_RECHNUNGEN%rowtype)
     is
-        l_z      t_zeilen;
-        l_kapitel FAKT_RECHNUNGSPOSITIONEN.RPOS_KAPITEL%type;
-        l_y_zeile number;
-    begin
-        platz(40);
-        tabellenkopf;
-        for p in (select * from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = p_r.RECH_ID
-                   order by RPOS_KAPITEL nulls first, RPOS_POSITION)   -- ohne Kapitel zuerst, je Kapitel 10, 20, 30 …
-        loop
-            -- Kapitel als Zwischenueberschrift, wenn es wechselt
-            if p.RPOS_KAPITEL is not null and (l_kapitel is null or p.RPOS_KAPITEL <> l_kapitel) then
-                platz(30, true);
-                txt(c_x_text, p.RPOS_KAPITEL || case when p.RPOS_UNTERKAPITEL is not null then ' – ' || p.RPOS_UNTERKAPITEL end,
-                    g_fett, 10);
-                g_y := g_y - 16;
-            end if;
-            l_kapitel := p.RPOS_KAPITEL;
-            l_z := zeilen(p.RPOS_BESCHREIBUNG);
-            platz(26 + least(l_z.count, 3) * 10, true);
-            l_y_zeile := g_y;
-            txt(c_x_pos + 2, to_char(p.RPOS_POSITION), g_normal, 9);
-            txt_r(c_x_preis, betrag(p.RPOS_EINZELPREIS), g_normal, 9);
-            txt_r(c_x_menge, menge(p.RPOS_MENGE), g_normal, 9);
-            txt(c_x_menge + 5, p.RPOS_EINHEIT, g_normal, 8.5);
-            txt_r(c_x_summe, case when p.RPOS_IST_OPTIONAL = 'Y' then '(' || betrag(p.RPOS_SUMME) || ' €)'
-                                  else betrag(p.RPOS_SUMME) || ' €' end, g_normal, 9);
-            block(c_x_text, c_b_text, p.RPOS_NAME || case when p.RPOS_IST_OPTIONAL = 'Y' then ' (optional)' end, g_fett, 9);
-            if p.RPOS_RABATT_PROZENT is not null and p.RPOS_RABATT_PROZENT <> 0 then
-                txt(c_x_text, 'abzüglich ' || menge(p.RPOS_RABATT_PROZENT) || ' % Rabatt', g_normal, 8.5);
-                g_y := g_y - 10.5;
-            end if;
+        c_x_zw   constant number := c_x_menge + 30;   -- Beschriftung der Zwischensummen, rechtsbuendig
+        l_unter  pls_integer;
+
+        function summe_txt(p_wert number, p_optional varchar2) return varchar2
+        is
+        begin
+            return case when p_optional = 'Y' then '(' || betrag(p_wert) || ' €)' else betrag(p_wert) || ' €' end;
+        end summe_txt;
+
+        procedure beschreibung(p_text clob)
+        is
+            l_z t_zeilen := zeilen(p_text);
+        begin
             for i in 1 .. l_z.count loop
                 platz(12, true);
                 if l_z(i).punkt then
@@ -373,7 +361,73 @@ as
                     block(c_x_text, c_b_text, l_z(i).txt, case when l_z(i).fett then g_fett end, 8.5);
                 end if;
             end loop;
+        end beschreibung;
+
+        -- eine Positionszeile: Nummer, Name, Menge, optional Einzelpreis und Summe, Rabatt, Beschreibung
+        procedure zeile(p FAKT_RECHNUNGSPOSITIONEN%rowtype, p_nr varchar2, p_mit_preis boolean)
+        is
+        begin
+            platz(26 + least(regexp_count(dbms_lob.substr(p.RPOS_BESCHREIBUNG, 2000, 1), '<(p|li|br)') + 1, 3) * 10, true);
+            txt(c_x_pos + 2, p_nr, g_normal, 9);
+            txt_r(c_x_menge, menge(p.RPOS_MENGE), g_normal, 9);
+            txt(c_x_menge + 5, p.RPOS_EINHEIT, g_normal, 8.5);
+            if p_mit_preis then
+                txt_r(c_x_preis, betrag(p.RPOS_EINZELPREIS), g_normal, 9);
+                txt_r(c_x_summe, summe_txt(p.RPOS_SUMME, p.RPOS_IST_OPTIONAL), g_normal, 9);
+            end if;
+            block(c_x_text, c_b_text, p.RPOS_NAME || case when p.RPOS_IST_OPTIONAL = 'Y' then ' (optional)' end, g_fett, 9);
+            if p_mit_preis and p.RPOS_RABATT_PROZENT is not null and p.RPOS_RABATT_PROZENT <> 0 then
+                txt(c_x_text, 'abzüglich ' || menge(p.RPOS_RABATT_PROZENT) || ' % Rabatt', g_normal, 8.5);
+                g_y := g_y - 10.5;
+            end if;
+            beschreibung(p.RPOS_BESCHREIBUNG);
             g_y := g_y - 12;
+        end zeile;
+
+        procedure zwischenzeile(p_label varchar2, p_wert varchar2, p_font pls_integer)
+        is
+        begin
+            platz(14, true);
+            txt_r(c_x_zw, p_label, p_font, 9);
+            txt_r(c_x_summe, p_wert, p_font, 9);
+            g_y := g_y - 12;
+        end zwischenzeile;
+    begin
+        platz(40);
+        tabellenkopf;
+        for h in (select * from FAKT_RECHNUNGSPOSITIONEN
+                   where RPOS_RECH_ID = p_r.RECH_ID and RPOS_HAUPT_RPOS_ID is null
+                   order by RPOS_POSITION)
+        loop
+            select count(*) into l_unter from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = h.RPOS_ID;
+            if l_unter = 0 then
+                zeile(h, to_char(h.RPOS_POSITION), true);
+                continue;
+            end if;
+            -- Hauptposition als Ueberschrift
+            platz(44, true);
+            txt(c_x_pos + 2, to_char(h.RPOS_POSITION), g_fett, 10);
+            block(c_x_text, c_rechts - c_x_text, h.RPOS_NAME || case when h.RPOS_IST_OPTIONAL = 'Y' then ' (optional)' end,
+                  g_fett, 10);
+            beschreibung(h.RPOS_BESCHREIBUNG);
+            g_y := g_y - 6;
+            for u in (select * from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = h.RPOS_ID order by RPOS_POSITION) loop
+                zeile(u, h.RPOS_POSITION || '.' || u.RPOS_POSITION, h.RPOS_PAUSCHALSUMME is null);
+            end loop;
+            -- Zwischensumme der Hauptposition
+            g_y := g_y + 4;
+            as_pdf.horizontal_line(c_x_preis - 60, g_y + 9, c_rechts - c_x_preis + 60, 0.4, c_grau);
+            if h.RPOS_PAUSCHALSUMME is not null then
+                zwischenzeile('Pauschale Position ' || h.RPOS_POSITION, summe_txt(h.RPOS_SUMME, h.RPOS_IST_OPTIONAL), g_fett);
+            else
+                if nvl(h.RPOS_RABATT_PROZENT, 0) <> 0 then
+                    zwischenzeile('Summe', betrag(h.RPOS_SUMME_UNTERPOS) || ' €', g_normal);
+                    zwischenzeile('abzüglich ' || menge(h.RPOS_RABATT_PROZENT) || ' % Rabatt',
+                                  '-' || betrag(h.RPOS_SUMME_UNTERPOS - h.RPOS_SUMME) || ' €', g_normal);
+                end if;
+                zwischenzeile('Zwischensumme Position ' || h.RPOS_POSITION, summe_txt(h.RPOS_SUMME, h.RPOS_IST_OPTIONAL), g_fett);
+            end if;
+            g_y := g_y - 8;
         end loop;
     end positionen;
 

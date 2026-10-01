@@ -147,15 +147,14 @@ begin
 end;
 /
 
--- FAKT_RECHNUNGSPOSITIONEN (RPOS): Positionen der Ausgangsrechnungen
+-- FAKT_RECHNUNGSPOSITIONEN (RPOS): Positionen der Ausgangsrechnungen (Haupt- und Unterpositionen)
 begin
     DDL_UTIL.tabelle('FAKT_RECHNUNGSPOSITIONEN', q'~create table FAKT_RECHNUNGSPOSITIONEN (
   RPOS_ID number not null,
   RPOS_RECH_ID number not null,
+  RPOS_HAUPT_RPOS_ID number,
   RPOS_ARTI_ID number,
   RPOS_POSITION number(5) not null,
-  RPOS_KAPITEL varchar2(200 char),
-  RPOS_UNTERKAPITEL varchar2(200 char),
   RPOS_ARTIKELNUMMER varchar2(30 char),
   RPOS_NAME varchar2(200 char) not null,
   RPOS_BESCHREIBUNG clob,
@@ -164,6 +163,8 @@ begin
   RPOS_EINZELPREIS number(12,2) default 0 not null,
   RPOS_RABATT_PROZENT number(5,2),
   RPOS_MWST_PROZENT number(5,2) not null,
+  RPOS_SUMME_UNTERPOS number(12,2),
+  RPOS_PAUSCHALSUMME number(12,2),
   RPOS_SUMME number(12,2) default 0 not null,
   RPOS_IST_OPTIONAL varchar2(1 char) default 'N' not null,
   RPOS_ERLOESKONTO varchar2(20 char),
@@ -176,10 +177,9 @@ begin
 )~');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ID', 'number', 'N');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_RECH_ID', 'number', 'N');
+    DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_HAUPT_RPOS_ID', 'number', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ARTI_ID', 'number', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_POSITION', 'number(5)', 'N');
-    DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_KAPITEL', 'varchar2(200 char)', 'Y');
-    DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_UNTERKAPITEL', 'varchar2(200 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ARTIKELNUMMER', 'varchar2(30 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_NAME', 'varchar2(200 char)', 'N');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_BESCHREIBUNG', 'clob', 'Y');
@@ -188,6 +188,8 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_EINZELPREIS', 'number(12,2)', 'N', q'~0~');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_RABATT_PROZENT', 'number(5,2)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_MWST_PROZENT', 'number(5,2)', 'N');
+    DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_SUMME_UNTERPOS', 'number(12,2)', 'Y');
+    DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_PAUSCHALSUMME', 'number(12,2)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_SUMME', 'number(12,2)', 'N', q'~0~');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_IST_OPTIONAL', 'varchar2(1 char)', 'N', q'~'N'~');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ERLOESKONTO', 'varchar2(20 char)', 'Y');
@@ -197,7 +199,9 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_UPDATED_BY', 'varchar2(255 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ROW_VERSION', 'number', 'N');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_PK', 'P', 'RPOS_ID');
-    DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_UK', 'U', q'~RPOS_RECH_ID, RPOS_KAPITEL, RPOS_POSITION~');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_UK', 'U', q'~RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_POSITION~');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_HAUPT_CK', 'C', q'~RPOS_HAUPT_RPOS_ID <> RPOS_ID~');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_PAUSCHAL_CK', 'C', q'~RPOS_HAUPT_RPOS_ID is null or (RPOS_PAUSCHALSUMME is null and RPOS_SUMME_UNTERPOS is null)~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_RABATT_CK', 'C', q'~RPOS_RABATT_PROZENT between 0 and 100~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_MWST_CK', 'C', q'~RPOS_MWST_PROZENT between 0 and 100~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_IST_OPTIONAL_CK', 'C', q'~RPOS_IST_OPTIONAL in ('Y', 'N')~');
@@ -260,7 +264,9 @@ begin
     DDL_UTIL.index_('FAKT_RECHNUNGEN', 'RECH_EMPF_LAND_I', q'~RECH_EMPF_LAND_CODE~');
     DDL_UTIL.index_('FAKT_RECHNUNGEN', 'RECH_DATUM_I', q'~RECH_DATUM~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_RECH_FK', 'R', 'RPOS_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_HAUPT_RPOS_FK', 'R', 'RPOS_HAUPT_RPOS_ID references FAKT_RECHNUNGSPOSITIONEN (RPOS_ID) on delete cascade');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ARTI_FK', 'R', 'RPOS_ARTI_ID references ARTI_ARTIKEL (ARTI_ID)');
+    DDL_UTIL.index_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_HAUPT_RPOS_I', q'~RPOS_HAUPT_RPOS_ID~');
     DDL_UTIL.index_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ARTI_I', q'~RPOS_ARTI_ID~');
     DDL_UTIL.constraint_('FAKT_ZAHLUNGEN', 'ZAHL_RECH_FK', 'R', 'ZAHL_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)');
     DDL_UTIL.index_('FAKT_ZAHLUNGEN', 'ZAHL_RECH_I', q'~ZAHL_RECH_ID~');
@@ -345,7 +351,10 @@ begin
     :new.RPOS_UPDATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
     :new.RPOS_ROW_VERSION := nvl(:old.RPOS_ROW_VERSION, 0) + 1;
   end if;
-  :new.RPOS_SUMME := round(:new.RPOS_MENGE * :new.RPOS_EINZELPREIS * (1 - nvl(:new.RPOS_RABATT_PROZENT, 0) / 100), 2);
+  -- Summe: Pauschalsumme, sonst Summe der Unterpositionen bzw. Menge x Einzelpreis, jeweils abzgl. Rabatt
+  :new.RPOS_SUMME := coalesce(:new.RPOS_PAUSCHALSUMME,
+                              round(coalesce(:new.RPOS_SUMME_UNTERPOS, :new.RPOS_MENGE * :new.RPOS_EINZELPREIS)
+                                    * (1 - nvl(:new.RPOS_RABATT_PROZENT, 0) / 100), 2));
 end RPOS_BIU;
 /
 
@@ -433,13 +442,12 @@ comment on column FAKT_RECHNUNGEN.RECH_UPDATED_ON is 'Audit: zuletzt geaendert a
 comment on column FAKT_RECHNUNGEN.RECH_UPDATED_BY is 'Audit: zuletzt geaendert von';
 comment on column FAKT_RECHNUNGEN.RECH_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
 
-comment on table FAKT_RECHNUNGSPOSITIONEN is 'Positionen der Ausgangsrechnungen [Alias RPOS]';
+comment on table FAKT_RECHNUNGSPOSITIONEN is 'Positionen der Ausgangsrechnungen (Haupt- und Unterpositionen) [Alias RPOS]';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_ID is 'Primaerschluessel (SYS_GUID)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_RECH_ID is 'FK: Rechnung';
+comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_HAUPT_RPOS_ID is 'FK: Hauptposition (leer = diese Zeile ist selbst Hauptposition)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_ARTI_ID is 'FK: Artikel (optional; Texte werden kopiert)';
-comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION is 'Positionsnummer innerhalb des Kapitels (10er-Schritte)';
-comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_KAPITEL is 'Kapitel (Gruppierung auf der Rechnung; leer = am Anfang der Rechnung)';
-comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_UNTERKAPITEL is 'Unterkapitel';
+comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION is 'Positionsnummer: Hauptpositionen 1, 2, 3 …; Unterpositionen je Hauptposition 10, 20, 30 …';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_ARTIKELNUMMER is 'Artikelnummer (Kopie)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_NAME is 'Positionstext (Kopie des Artikelnamens)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_BESCHREIBUNG is 'Beschreibung (Kopie, HTML)';
@@ -448,7 +456,9 @@ comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_EINHEIT is 'Einheit (Kopie), z.B
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_EINZELPREIS is 'Einzelpreis (netto bzw. brutto lt. RECH_IST_BRUTTO)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_RABATT_PROZENT is 'Rabatt in Prozent';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_MWST_PROZENT is 'Umsatzsteuersatz (Kopie)';
-comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_SUMME is 'Positionssumme = Menge x Einzelpreis abzgl. Rabatt (berechnet im Trigger)';
+comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_SUMME_UNTERPOS is 'Hauptposition: Summe der nicht optionalen Unterpositionen (leer = keine Unterpositionen; FAKT_RECHNUNG.summen_berechnen)';
+comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_PAUSCHALSUMME is 'Hauptposition: Pauschalsumme, gilt statt der berechneten Zwischensumme';
+comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_SUMME is 'Summe (berechnet im Trigger): Menge x Einzelpreis bzw. Summe der Unterpositionen, abzgl. Rabatt; Hauptposition mit Pauschalsumme: die Pauschalsumme';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_IST_OPTIONAL is 'Y = Alternativposition, nicht in der Rechnungssumme';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_ERLOESKONTO is 'Erloeskonto (Kopie)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_CREATED_ON is 'Audit: angelegt am';

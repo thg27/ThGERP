@@ -32,6 +32,7 @@ whenever sqlerror exit failure rollback
 @@22_finanz_nummernschutz.sql
 @@23_mitarbeiter_theme.sql
 @@24_rechnung_pdf.sql
-@@25_positionen_kapitel.sql
+-- 25_positionen_kapitel.sql entfaellt bei einer Neuinstallation (Kapitel durch Haupt-/Unterpositionen ersetzt, Skript 26)
+@@26_haupt_unterpositionen.sql
 
 prompt Installation abgeschlossen.

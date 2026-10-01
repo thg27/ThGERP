@@ -214,13 +214,14 @@ FAKT = [
    ('RECH_ANSP_I', 'RECH_ANSP_ID'), ('RECH_MITA_I', 'RECH_MITA_ID'), ('RECH_ZBED_I', 'RECH_ZBED_ID'),
    ('RECH_EMPF_LAND_I', 'RECH_EMPF_LAND_CODE'), ('RECH_DATUM_I', 'RECH_DATUM')], ''),
 
- ('FAKT_RECHNUNGSPOSITIONEN', 'RPOS', 'Positionen der Ausgangsrechnungen', [
+ # Haupt- und Unterpositionen (Skript 26): Hauptposition = RPOS_HAUPT_RPOS_ID leer; mit Unterpositionen ist ihre Summe
+ # die Summe der Unterpositionen abzgl. Rabatt bzw. die Pauschalsumme, ohne Unterpositionen Menge x Einzelpreis
+ ('FAKT_RECHNUNGSPOSITIONEN', 'RPOS', 'Positionen der Ausgangsrechnungen (Haupt- und Unterpositionen)', [
     PK('RPOS'),
     ('RPOS_RECH_ID', 'number', 'N', None, 'FK: Rechnung'),
+    ('RPOS_HAUPT_RPOS_ID', 'number', 'Y', None, 'FK: Hauptposition (leer = diese Zeile ist selbst Hauptposition)'),
     ('RPOS_ARTI_ID', 'number', 'Y', None, 'FK: Artikel (optional; Texte werden kopiert)'),
-    ('RPOS_POSITION', 'number(5)', 'N', None, 'Positionsnummer innerhalb des Kapitels (10er-Schritte)'),
-    ('RPOS_KAPITEL', 'varchar2(200 char)', 'Y', None, 'Kapitel (Gruppierung auf der Rechnung; leer = am Anfang der Rechnung)'),
-    ('RPOS_UNTERKAPITEL', 'varchar2(200 char)', 'Y', None, 'Unterkapitel'),
+    ('RPOS_POSITION', 'number(5)', 'N', None, 'Positionsnummer: Hauptpositionen 1, 2, 3 …; Unterpositionen je Hauptposition 10, 20, 30 …'),
     ('RPOS_ARTIKELNUMMER', 'varchar2(30 char)', 'Y', None, 'Artikelnummer (Kopie)'),
     ('RPOS_NAME', 'varchar2(200 char)', 'N', None, 'Positionstext (Kopie des Artikelnamens)'),
     ('RPOS_BESCHREIBUNG', 'clob', 'Y', None, 'Beschreibung (Kopie, HTML)'),
@@ -229,17 +230,25 @@ FAKT = [
     ('RPOS_EINZELPREIS', BETRAG, 'N', '0', 'Einzelpreis (netto bzw. brutto lt. RECH_IST_BRUTTO)'),
     ('RPOS_RABATT_PROZENT', PROZENT, 'Y', None, 'Rabatt in Prozent'),
     ('RPOS_MWST_PROZENT', PROZENT, 'N', None, 'Umsatzsteuersatz (Kopie)'),
-    ('RPOS_SUMME', BETRAG, 'N', '0', 'Positionssumme = Menge x Einzelpreis abzgl. Rabatt (berechnet im Trigger)'),
+    ('RPOS_SUMME_UNTERPOS', BETRAG, 'Y', None, 'Hauptposition: Summe der nicht optionalen Unterpositionen (leer = keine Unterpositionen; FAKT_RECHNUNG.summen_berechnen)'),
+    ('RPOS_PAUSCHALSUMME', BETRAG, 'Y', None, 'Hauptposition: Pauschalsumme, gilt statt der berechneten Zwischensumme'),
+    ('RPOS_SUMME', BETRAG, 'N', '0', 'Summe (berechnet im Trigger): Menge x Einzelpreis bzw. Summe der Unterpositionen, abzgl. Rabatt; Hauptposition mit Pauschalsumme: die Pauschalsumme'),
     flag('RPOS', 'IST_OPTIONAL', 'N', 'Y = Alternativposition, nicht in der Rechnungssumme'),
     ('RPOS_ERLOESKONTO', 'varchar2(20 char)', 'Y', None, 'Erloeskonto (Kopie)'),
-  ], [('RPOS_UK', 'U', 'RPOS_RECH_ID, RPOS_KAPITEL, RPOS_POSITION'),   # je Kapitel 10, 20, 30 … (Skript 25)
+  ], [('RPOS_UK', 'U', 'RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_POSITION'),   # je Rechnung bzw. je Hauptposition eindeutig (Skript 26)
+      ('RPOS_HAUPT_CK', 'C', 'RPOS_HAUPT_RPOS_ID <> RPOS_ID'),
+      ('RPOS_PAUSCHAL_CK', 'C', 'RPOS_HAUPT_RPOS_ID is null or (RPOS_PAUSCHALSUMME is null and RPOS_SUMME_UNTERPOS is null)'),
       ('RPOS_RABATT_CK', 'C', 'RPOS_RABATT_PROZENT between 0 and 100'),
       ('RPOS_MWST_CK', 'C', 'RPOS_MWST_PROZENT between 0 and 100'),
       flag_ck('RPOS', 'IST_OPTIONAL'),
       ('RPOS_RECH_FK', 'R', 'RPOS_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)'),
+      ('RPOS_HAUPT_RPOS_FK', 'R', 'RPOS_HAUPT_RPOS_ID references FAKT_RECHNUNGSPOSITIONEN (RPOS_ID) on delete cascade'),
       ('RPOS_ARTI_FK', 'R', 'RPOS_ARTI_ID references ARTI_ARTIKEL (ARTI_ID)')],
-  [('RPOS_ARTI_I', 'RPOS_ARTI_ID')],
-  '\n  :new.RPOS_SUMME := round(:new.RPOS_MENGE * :new.RPOS_EINZELPREIS * (1 - nvl(:new.RPOS_RABATT_PROZENT, 0) / 100), 2);'),
+  [('RPOS_HAUPT_RPOS_I', 'RPOS_HAUPT_RPOS_ID'), ('RPOS_ARTI_I', 'RPOS_ARTI_ID')],
+  '\n  -- Summe: Pauschalsumme, sonst Summe der Unterpositionen bzw. Menge x Einzelpreis, jeweils abzgl. Rabatt'
+  '\n  :new.RPOS_SUMME := coalesce(:new.RPOS_PAUSCHALSUMME,'
+  '\n                              round(coalesce(:new.RPOS_SUMME_UNTERPOS, :new.RPOS_MENGE * :new.RPOS_EINZELPREIS)'
+  '\n                                    * (1 - nvl(:new.RPOS_RABATT_PROZENT, 0) / 100), 2));'),
 
  ('FAKT_ZAHLUNGEN', 'ZAHL', 'Zahlungseingaenge zu Ausgangsrechnungen', [
     PK('ZAHL'),

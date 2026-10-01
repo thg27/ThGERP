@@ -91,3 +91,32 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
 - **Region neu laden verwirft ungespeicherte Rasteränderungen** ohne Rückfrage → vor dem Öffnen eines Dialogs, der
   das Raster neu lädt, auf Änderungen prüfen (`getRecordMetadata(...).updated/inserted/deleted`).
 
+## Felder per AJAX neben einem Formular, Baum + Raster (ergänzt 2026-10-01, THG-FINANZ Seite 11 Positionen)
+Seite 11 hat das Formular „Rechnung“ und daneben Felder einer Position (`P11_POS_*`) ohne Formularquelle, die per
+`apex.server.process` geladen/gespeichert werden; links ein selbst gerenderter Baum (zwei Ebenen, einfache `div`-Liste).
+- **Seitenelemente ohne Quelle auf einer Formularseite:** `advanced { warnOnUnsavedChanges: ignore }` (sonst „Seite
+  verlassen?“), **kein** `valueRequired` (würde das Speichern des Formulars blockieren – Pflicht im AJAX-Prozess prüfen,
+  Optik über `@/required-floating`), Anzeigefelder mit `sendOnPageSubmit: false`.
+- **Schwebende Beschriftung (floating label):** Wird ein Wert mit `setValue(w, null, true)` (change unterdrückt) gesetzt,
+  bleibt die Beschriftung über dem Wert liegen. Mit change-Ereignis setzen und die eigenen Handler währenddessen über
+  ein Kennzeichen ignorieren.
+- **Nur lesen:** nicht die Region `readOnly` setzen (Elemente werden zu Anzeige-Spans, `setValue` aktualisiert sie nicht
+  zuverlässig), sondern `apex.item(name).disable()` und die Buttons ausblenden; der Server prüft ohnehin.
+- **Ausblenden einzelner Felder:** `apex.item(name).hide()` lässt die Rasterspalte leer stehen → ein-/ausblendbare
+  Felder in eigene Zeilen bzw. ans Zeilenende legen.
+- **IDs aus SYS_GUID** sind für JavaScript-Zahlen zu groß: im JSON als Text (`to_char`), im DOM mit `attr("data-id")`
+  lesen (nicht `.data("id")`).
+- **Lokale PL/SQL-Funktion in SQL** (`insert … values (zahl(:X))`) → `PLS-00231`, im AJAX-Prozess erscheint nur
+  „… is not valid JSON“ (Antwort beginnt mit `sqlerrm:`). Werte vorher in Variablen legen; Rohantwort mit
+  `apex.server.process(…, { dataType: "text" })` ansehen.
+- **Fachliche Fehler aus AJAX-Prozessen:** im `exception`-Teil `rollback` und `{"fehler": …}` zurückgeben, im Browser
+  `apex.message.showErrors`.
+- **Interactive Grid mit wechselndem Elternsatz:** Abfrage auf `:P11_HAUPT_ID`, das der Lade-Prozess per Bind im
+  Sitzungsstatus setzt (kein clientseitig gesetztes Hidden-Element nötig), danach `region.refresh()`.
+  - Ein Modell **mit Änderungen wird nicht neu geladen** – dazu zählt schon die vom Raster selbst angelegte leere Zeile,
+    wenn ihr per `setValue` ein Wert gesetzt wurde → vorher `modell.clearChanges()` (echte Eingaben vorher abfragen).
+  - Dieselbe Zeile macht die **Seite „geändert“** (`apex.page.isChanged()`, „Seite verlassen?“). Beim `insert`-Ereignis
+    ist `autoInserted` noch nicht gesetzt → Vorgabewerte erst beim ersten `set` eines anderen Feldes schreiben.
+  - Neue Zeilen haben `inserted` **und** `updated` → „ungespeichert?“ für neue Zeilen am Inhalt (Name/Artikel) festmachen.
+  - War die Region ausgeblendet: nach dem Einblenden `ansicht.view$.grid("resize")`.
+  - Nach dem Speichern feuert `interactivegridsave` auf der Region → Baum und Summen neu laden.
