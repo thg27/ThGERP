@@ -227,7 +227,7 @@ page 11 (
                     zustand.hauptId = null;
                     zustand.offen = false;
                     zustand.geaendert = false;
-                    $("#pos-titel").text("Keine Position gewählt");
+                    $("#pos-detail_heading").text("Keine Position gewählt");
                     $(".thg-pos-speichern").hide();
                     apex.item("P11_HAUPT_ID").setValue("", null, true);
                     $("#pos-felder, #positionen").hide();
@@ -261,7 +261,7 @@ page 11 (
                         zustand.laedt = false;
                     }
                     var haupt = !zustand.hauptId, mitUnter = haupt && zustand.unter > 0;
-                    $("#pos-titel").text(d.titel);
+                    $("#pos-detail_heading").text(d.titel);
                     $("#pos-felder").show();
                     NUR_ARTIKEL.forEach(function (name) {
                         apex.item(name)[mitUnter ? "hide" : "show"]();
@@ -561,6 +561,8 @@ page 11 (
                 // Zahlungen gespeichert: Bezahlt/Offen in den Summen
                 $("#zahlungen").on("interactivegridsave", laden);
 
+                // Button "Position speichern" in den Kopf der Region (wie "Schnelleingabe" bei den Unterpositionen)
+                $("#pos-detail > .t-Region-header .t-Region-headerItems--buttons").prepend($(".thg-pos-speichern"));
                 // Start: erste Hauptposition anzeigen
                 leeren();
                 laden().then(function () {
@@ -600,8 +602,6 @@ page 11 (
             .thg-pos-knoten.thg-drop-nach { box-shadow: inset 0 -3px 0 var(--thg-primaer, #0572ce); }
             .thg-pos-knoten.thg-drop-in { background: rgba(0, 0, 0, .1); outline: 2px dashed var(--thg-primaer, #0572ce); outline-offset: -2px; }
             .thg-pos-ende { height: 1.25rem; }
-            .thg-pos-kopf { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 .75rem; }
-            .thg-pos-titel { margin: 0; font-size: 1.125rem; font-weight: 600; }
             ```
     }
     security {
@@ -1629,7 +1629,7 @@ page 11 (
     )
 
     region pos-baum-region (
-        name: Positionen
+        name: Rechnungsübersicht
         type: staticContent
         source {
             htmlCode:
@@ -1690,16 +1690,16 @@ page 11 (
         }
     )
 
-    region pos-kopf (
-        name: Position (Titel)
+    region pos-detail (
+        name: Position
         type: staticContent
+        advanced {
+            htmlDomId: pos-detail
+        }
         source {
             htmlCode:
                 ```html
-                <div class="thg-pos-kopf">
-                    <h3 id="pos-titel" class="thg-pos-titel"></h3>
-                    <button type="button" class="t-Button t-Button--hot t-Button--small thg-pos-speichern"><span class="t-Button-label">Position speichern</span></button>
-                </div>
+                <button type="button" class="t-Button t-Button--hot thg-pos-speichern"><span class="t-Button-label">Position speichern</span></button>
                 ```
         }
         layout {
@@ -1708,7 +1708,7 @@ page 11 (
             slot: subRegions
         }
         appearance {
-            template: @/blank-with-attributes
+            template: @/standard
             templateOptions: #DEFAULT#
         }
     )
@@ -1721,7 +1721,7 @@ page 11 (
         }
         layout {
             sequence: 20
-            parentRegion: @pos-rechts
+            parentRegion: @pos-detail
             slot: subRegions
         }
         appearance {

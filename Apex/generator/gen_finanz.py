@@ -510,7 +510,7 @@ POS_JS = """    javaScript {
                     zustand.hauptId = null;
                     zustand.offen = false;
                     zustand.geaendert = false;
-                    $("#pos-titel").text("Keine Position gewählt");
+                    $("#pos-detail_heading").text("Keine Position gewählt");
                     $(".thg-pos-speichern").hide();
                     apex.item("P11_HAUPT_ID").setValue("", null, true);
                     $("#pos-felder, #positionen").hide();
@@ -544,7 +544,7 @@ POS_JS = """    javaScript {
                         zustand.laedt = false;
                     }
                     var haupt = !zustand.hauptId, mitUnter = haupt && zustand.unter > 0;
-                    $("#pos-titel").text(d.titel);
+                    $("#pos-detail_heading").text(d.titel);
                     $("#pos-felder").show();
                     NUR_ARTIKEL.forEach(function (name) {
                         apex.item(name)[mitUnter ? "hide" : "show"]();
@@ -844,6 +844,8 @@ POS_JS = """    javaScript {
                 // Zahlungen gespeichert: Bezahlt/Offen in den Summen
                 $("#zahlungen").on("interactivegridsave", laden);
 
+                // Button "Position speichern" in den Kopf der Region (wie "Schnelleingabe" bei den Unterpositionen)
+                $("#pos-detail > .t-Region-header .t-Region-headerItems--buttons").prepend($(".thg-pos-speichern"));
                 // Start: erste Hauptposition anzeigen
                 leeren();
                 laden().then(function () {
@@ -883,8 +885,6 @@ POS_JS = """    javaScript {
             .thg-pos-knoten.thg-drop-nach { box-shadow: inset 0 -3px 0 var(--thg-primaer, #0572ce); }
             .thg-pos-knoten.thg-drop-in { background: rgba(0, 0, 0, .1); outline: 2px dashed var(--thg-primaer, #0572ce); outline-offset: -2px; }
             .thg-pos-ende { height: 1.25rem; }
-            .thg-pos-kopf { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 .75rem; }
-            .thg-pos-titel { margin: 0; font-size: 1.125rem; font-weight: 600; }
             ```
     }
 """
@@ -1081,7 +1081,7 @@ def seite_11():
         f"<span class=\"t-Button-label\">{label}</span></button>\n")
     blank = "@/blank-with-attributes"
     s += spalte(region("pos-links", "Positionen (links)", 10, template=blank, parent="positionen-bereich"), 4, True)
-    s += region("pos-baum-region", "Positionen", 5, parent="pos-links",
+    s += region("pos-baum-region", "Rechnungsübersicht", 5, parent="pos-links",
                        extra=html("                <div class=\"thg-pos-leiste\">\n"
                                   + knopf("pos-neu-haupt", "Hauptposition", "fa-plus")
                                   + knopf("pos-neu-unter", "Unterposition", "fa-plus")
@@ -1092,13 +1092,13 @@ def seite_11():
     s += region("summen", "Summen", 10, parent="pos-links",
                 extra=html("                <div id=\"summen-inhalt\" class=\"thg-summen\"></div>\n"))
     s += spalte(region("pos-rechts", "Position", 20, template=blank, parent="positionen-bereich"), 8, False)
-    s += region("pos-kopf", "Position (Titel)", 10, template=blank, parent="pos-rechts",
-                extra=html("                <div class=\"thg-pos-kopf\">\n"
-                           "                    <h3 id=\"pos-titel\" class=\"thg-pos-titel\"></h3>\n"
-                           "                    <button type=\"button\" class=\"t-Button t-Button--hot t-Button--small thg-pos-speichern\">"
-                           "<span class=\"t-Button-label\">Position speichern</span></button>\n"
-                           "                </div>\n"))
-    s += region("pos-felder", "Position (Felder)", 20, template=blank, parent="pos-rechts", extra=dom_id("pos-felder"))
+    # Felder der Position in einer Region im Stil von "Unterpositionen": der Titel (z.B. "Hauptposition 1: …") wird per
+    # JavaScript gesetzt, der Button "Position speichern" beim Laden in den Kopf der Region verschoben
+    s += region("pos-detail", "Position", 10, parent="pos-rechts",
+                extra=dom_id("pos-detail")
+                + html("                <button type=\"button\" class=\"t-Button t-Button--hot thg-pos-speichern\">"
+                       "<span class=\"t-Button-label\">Position speichern</span></button>\n"))
+    s += region("pos-felder", "Position (Felder)", 20, template=blank, parent="pos-detail", extra=dom_id("pos-felder"))
     # Felder der gewaehlten Position: ohne Formularquelle, per AJAX geladen (POS_LADEN) und gespeichert (POS_SPEICHERN).
     # Keine Pflichtfeld-Pruefung am Element (wuerde das Speichern der Rechnung blockieren) – geprueft wird im Prozess.
     p = "pos-felder"
