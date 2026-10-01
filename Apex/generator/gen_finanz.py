@@ -453,7 +453,6 @@ POS_JS = """    javaScript {
                         });
                     });
                     baum$.html(html || "<div class='thg-pos-leer'>Noch keine Positionen.</div>");
-                    $("#pos-hinweis").toggle(zustand.aenderbar && zustand.daten.positionen.length > 0);
                     $("#pos-neu-haupt").prop("disabled", !zustand.aenderbar);
                     markieren();
                 };
@@ -852,10 +851,8 @@ POS_JS = """    javaScript {
             .thg-pos-knoten.thg-drop-nach { box-shadow: inset 0 -3px 0 var(--thg-primaer, #0572ce); }
             .thg-pos-knoten.thg-drop-in { background: rgba(0, 0, 0, .1); outline: 2px dashed var(--thg-primaer, #0572ce); outline-offset: -2px; }
             .thg-pos-ende { height: 1.25rem; }
-            .thg-pos-hinweistext { font-size: .75rem; opacity: .7; margin: 0; }
             .thg-pos-kopf { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 .75rem; }
             .thg-pos-titel { margin: 0; font-size: 1.125rem; font-weight: 600; }
-            .thg-pos-summen-titel { margin: 1.25rem 0 .5rem; font-size: 1rem; font-weight: 600; }
             ```
     }
 """
@@ -1058,14 +1055,10 @@ def seite_11():
                                   + knopf("pos-loeschen", "Löschen", "fa-trash-o", "t-Button--danger t-Button--simple")
                                   + "                </div>\n"
                                   + "                <div id=\"pos-baum\" class=\"thg-pos-baum\" role=\"tree\" aria-label=\"Positionen\"></div>\n"
-                                  + "                <div id=\"pos-ende\" class=\"thg-pos-ende\"></div>\n"
-                                  + "                <p id=\"pos-hinweis\" class=\"thg-pos-hinweistext\">Reihenfolge mit der Maus ziehen. "
-                                    "Auf eine Hauptposition gezogen wird die Position ihre Unterposition, "
-                                    "zwischen zwei Hauptpositionen wird sie selbst Hauptposition.</p>\n"
-                                  # Summen je Steuersatz unter dem Baum (gefuellt aus POSITIONEN)
-                                  + "                <h4 class=\"thg-pos-summen-titel\">Summen</h4>\n"
-                                  + "                <div id=\"summen-inhalt\" class=\"thg-summen\"></div>\n")),
+                                  + "                <div id=\"pos-ende\" class=\"thg-pos-ende\"></div>\n")),
                 4, True)
+    s += region("summen", "Summen", 10, parent="pos-links",
+                extra=html("                <div id=\"summen-inhalt\" class=\"thg-summen\"></div>\n"))
     s += spalte(region("pos-rechts", "Position", 20, template=blank, parent="positionen-bereich"), 8, False)
     s += region("pos-kopf", "Position (Titel)", 10, template=blank, parent="pos-rechts",
                 extra=html("                <div class=\"thg-pos-kopf\">\n"
