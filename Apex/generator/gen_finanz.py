@@ -320,7 +320,8 @@ POS_JS = """    javaScript {
                 var NUR_UNTER = ["P11_POS_EINZELPREIS", "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST"];
                 // Pauschalsumme: nur bei Hauptpositionen
                 var NUR_HAUPT = ["P11_POS_PAUSCHAL"];
-                var zustand = { daten: null, aenderbar: false, id: null, hauptId: null, unter: 0, summeUnter: 0,
+                // zu: eingeklappte Hauptpositionen (ID -> true), gilt bis zum Neuladen der Seite
+                var zustand = { daten: null, aenderbar: false, id: null, hauptId: null, unter: 0, summeUnter: 0, zu: {},
                                 offen: false, geaendert: false, laedt: false };
                 var baum$ = $("#pos-baum");
 
@@ -427,14 +428,23 @@ POS_JS = """    javaScript {
                 };
 
                 // ---------------------------------------------------------------- Baum und Summen
-                var knoten = function (p, klasse) {
+                // Hauptposition mit Unterpositionen: Schalter +/- zum Ein- und Ausklappen; sonst gleich breiter Platzhalter
+                var knoten = function (p, klasse, versteckt) {
+                    var unter = p.unter ? p.unter.length : 0, zu = !!zustand.zu[p.id];
+                    var schalter = unter
+                        ? "<span class='thg-pos-schalter fa " + (zu ? "fa-plus-square-o" : "fa-minus-square-o") + "' role='button' title='" +
+                          (zu ? "Unterpositionen einblenden" : "Unterpositionen ausblenden") + "'></span>"
+                        : "<span class='thg-pos-schalter'></span>";
                     return "<div class='thg-pos-knoten " + klasse + (p.optional ? " thg-pos-optional" : "") +
-                           "' role='treeitem' tabindex='0' data-id='" + p.id + "' data-unter='" + (p.unter ? p.unter.length : 0) +
-                           "' draggable='" + (zustand.aenderbar ? "true" : "false") + "'>" +
+                           (versteckt ? " thg-pos-versteckt" : "") +
+                           "' role='treeitem' tabindex='0' data-id='" + p.id + "' data-unter='" + unter + "'" +
+                           (unter ? " aria-expanded='" + (zu ? "false" : "true") + "'" : "") +
+                           " draggable='" + (zustand.aenderbar ? "true" : "false") + "'>" +
+                           schalter +
                            "<span class='thg-pos-nr'>" + p.pos + "</span>" +
                            "<span class='thg-pos-name'>" + apex.util.escapeHTML(p.name) +
-                           (p.pauschal ? " <span class='thg-pos-hinweis'>pauschal</span>" : "") +
-                           (p.optional ? " <span class='thg-pos-hinweis'>optional</span>" : "") + "</span>" +
+                           (p.pauschal ? " <span class='thg-pos-hinweis thg-pos-hinweis-pauschal'>pauschal</span>" : "") +
+                           (p.optional ? " <span class='thg-pos-hinweis thg-pos-hinweis-optional'>optional</span>" : "") + "</span>" +
                            "<span class='thg-pos-summe'>" + apex.util.escapeHTML(p.summe) + "</span></div>";
                 };
                 var markieren = function () {
@@ -449,7 +459,7 @@ POS_JS = """    javaScript {
                     zustand.daten.positionen.forEach(function (h) {
                         html += knoten(h, "thg-pos-haupt");
                         h.unter.forEach(function (u) {
-                            html += knoten(u, "thg-pos-unter");
+                            html += knoten(u, "thg-pos-unter", !!zustand.zu[h.id]);
                         });
                     });
                     baum$.html(html || "<div class='thg-pos-leer'>Noch keine Positionen.</div>");
@@ -513,6 +523,11 @@ POS_JS = """    javaScript {
                     zustand.unter = d.unter;
                     zustand.summeUnter = d.summe_unterpos || 0;
                     zustand.offen = true;
+                    // gewaehlte Unterposition: ihre Hauptposition aufklappen
+                    if (zustand.hauptId && zustand.zu[zustand.hauptId]) {
+                        delete zustand.zu[zustand.hauptId];
+                        baumZeigen();
+                    }
                     // mit change-Ereignis (schwebende Beschriftungen richten sich danach); die eigenen Handler
                     // ignorieren es waehrend des Ladens (zustand.laedt)
                     zustand.laedt = true;
@@ -735,6 +750,17 @@ POS_JS = """    javaScript {
                 });
 
                 // ---------------------------------------------------------------- Bedienung
+                // Schalter +/-: Unterpositionen der Hauptposition ein- bzw. ausblenden (waehlt die Position nicht)
+                baum$.on("click", ".thg-pos-schalter.fa", function (e) {
+                    var id = $(this).closest(".thg-pos-knoten").attr("data-id");
+                    e.stopPropagation();
+                    if (zustand.zu[id]) {
+                        delete zustand.zu[id];
+                    } else {
+                        zustand.zu[id] = true;
+                    }
+                    baumZeigen();
+                });
                 baum$.on("click keydown", ".thg-pos-knoten", function (e) {
                     if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") {
                         return;
@@ -839,11 +865,17 @@ POS_JS = """    javaScript {
             .thg-pos-knoten.is-selected { background: rgba(0, 0, 0, .07); box-shadow: inset 4px 0 0 var(--thg-primaer, #0572ce); }
             .thg-pos-haupt { font-weight: 600; }
             .thg-pos-unter { padding-left: 2rem; }
+            .thg-pos-versteckt { display: none; }
+            .thg-pos-schalter { flex: 0 0 1rem; width: 1rem; align-self: center; text-align: center; opacity: .7; }
+            .thg-pos-schalter.fa { cursor: pointer; }
+            .thg-pos-schalter.fa:hover { opacity: 1; }
             .thg-pos-nr { min-width: 1.75rem; text-align: end; opacity: .7; font-variant-numeric: tabular-nums; }
             .thg-pos-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .thg-pos-summe { white-space: nowrap; font-variant-numeric: tabular-nums; }
             .thg-pos-optional .thg-pos-name, .thg-pos-optional .thg-pos-summe { font-style: italic; opacity: .7; }
-            .thg-pos-hinweis { font-size: .75rem; font-weight: 400; opacity: .7; border: 1px solid currentColor; border-radius: .75rem; padding: 0 .4rem; margin-left: .25rem; }
+            .thg-pos-hinweis { font-size: .75rem; font-weight: 400; font-style: normal; border: 1px solid transparent; border-radius: .75rem; padding: 0 .45rem; margin-left: .25rem; }
+            .thg-pos-hinweis-optional { background: #fdf3c7; border-color: #ead98a; color: #6a5300; }
+            .thg-pos-hinweis-pauschal { background: #fbe1df; border-color: #efb5b0; color: #8a221a; }
             .thg-pos-leer { padding: .75rem; opacity: .7; }
             .thg-pos-knoten[draggable="true"] { cursor: grab; }
             .thg-pos-knoten.is-gezogen { opacity: .4; }
@@ -1048,15 +1080,15 @@ def seite_11():
         f"<span class=\"t-Icon t-Icon--left fa {icon}\" aria-hidden=\"true\"></span>"
         f"<span class=\"t-Button-label\">{label}</span></button>\n")
     blank = "@/blank-with-attributes"
-    s += spalte(region("pos-links", "Positionen (Baum)", 10, template=blank, parent="positionen-bereich",
+    s += spalte(region("pos-links", "Positionen (links)", 10, template=blank, parent="positionen-bereich"), 4, True)
+    s += region("pos-baum-region", "Positionen", 5, parent="pos-links",
                        extra=html("                <div class=\"thg-pos-leiste\">\n"
                                   + knopf("pos-neu-haupt", "Hauptposition", "fa-plus")
                                   + knopf("pos-neu-unter", "Unterposition", "fa-plus")
                                   + knopf("pos-loeschen", "Löschen", "fa-trash-o", "t-Button--danger t-Button--simple")
                                   + "                </div>\n"
                                   + "                <div id=\"pos-baum\" class=\"thg-pos-baum\" role=\"tree\" aria-label=\"Positionen\"></div>\n"
-                                  + "                <div id=\"pos-ende\" class=\"thg-pos-ende\"></div>\n")),
-                4, True)
+                                  + "                <div id=\"pos-ende\" class=\"thg-pos-ende\"></div>\n"))
     s += region("summen", "Summen", 10, parent="pos-links",
                 extra=html("                <div id=\"summen-inhalt\" class=\"thg-summen\"></div>\n"))
     s += spalte(region("pos-rechts", "Position", 20, template=blank, parent="positionen-bereich"), 8, False)
