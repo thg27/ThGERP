@@ -38,11 +38,12 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Hauptpositionen 1, 2, 3 …, Unterpositionen je Hauptposition 10, 20, 30 …; `RPOS_UK` = Rechnung + Hauptposition + Position).
   Die Positionsnummern werden nicht eingegeben: sie ergeben sich aus der Reihenfolge im Baum (Drag & Drop, AJAX `POS_VERSCHIEBEN`) und werden
   nach Verschieben/Löschen lückenlos neu vergeben; dabei kann eine Position auch Unter- bzw. Hauptposition werden.
-  Summe der Hauptposition: Summe der nicht optionalen Unterpositionen abzgl. Rabatt bzw. die Pauschalsumme (`RPOS_PAUSCHALSUMME`), ohne
-  Unterpositionen Menge × Einzelpreis; nach jeder Änderung `FAKT_RECHNUNG.summen_berechnen`. Rabatt/Pauschale werden anteilig auf die
+  Summe der Hauptposition: Summe der nicht optionalen Unterpositionen abzgl. Rabatt bzw. die Pauschalsumme (`RPOS_PAUSCHALSUMME`).
+  Eine Hauptposition hat in der Maske und am Ausdruck keinen eigenen Einzelpreis/Menge/Einheit/MwSt. (gespeichert: Menge 1, Einzelpreis 0);
+  ohne Unterpositionen zählt nur ihre Pauschalsumme. Nach jeder Änderung `FAKT_RECHNUNG.summen_berechnen`. Rabatt/Pauschale werden anteilig auf die
   Steuersätze der Unterpositionen verteilt (`FAKT_RECHNUNG_MWST_V`).
   Maske: links Baum der Positionen (Hauptposition/Unterposition anlegen, löschen, verschieben), rechts die Felder der gewählten Position (`P11_POS_*`,
-  per AJAX `POS_LADEN`/`POS_SPEICHERN`/`POS_LOESCHEN`; bei Hauptpositionen mit Unterpositionen: Rabatt, Summe, Pauschalsumme), darunter bei einer
+  per AJAX `POS_LADEN`/`POS_SPEICHERN`/`POS_LOESCHEN`; Hauptposition: Name, Rabatt, Summe, Pauschalsumme; Unterposition: alle Felder), darunter bei einer
   Hauptposition das Raster ihrer Unterpositionen („Schnelleingabe“, gewählte Hauptposition in `P11_HAUPT_ID`, vom Browser mitgeschickt);
   Artikel-Auswahl als Popup LOV mit Gruppe/Artikelnummer/Name (`LOV_ARTIKEL`). Änderbar nur im Entwurf oder nach „Rechnung bearbeiten“, sonst nur Anzeige.
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung

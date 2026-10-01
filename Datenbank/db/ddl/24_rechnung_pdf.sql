@@ -333,7 +333,7 @@ as
     end kopf;
 
     -- Positionen: Hauptpositionen 1, 2, 3 …; Unterpositionen darunter als 1.10, 1.20 …
-    --   * Hauptposition ohne Unterpositionen: eine Zeile mit Einzelpreis, Menge, Summe
+    --   * Hauptposition ohne Unterpositionen: eine Zeile mit Name und Summe (kein Einzelpreis, keine Menge/Einheit)
     --   * Hauptposition mit Unterpositionen: Ueberschrift, Unterpositionen, danach Zwischensumme (mit Rabatt:
     --     Summe der Unterpositionen und Rabatt davor)
     --   * Hauptposition mit Pauschalsumme: Unterpositionen ohne Preise (nur Menge), danach die Pauschalsumme
@@ -363,20 +363,25 @@ as
             end loop;
         end beschreibung;
 
-        -- eine Positionszeile: Nummer, Name, Menge, optional Einzelpreis und Summe, Rabatt, Beschreibung
-        procedure zeile(p FAKT_RECHNUNGSPOSITIONEN%rowtype, p_nr varchar2, p_mit_preis boolean)
+        -- eine Positionszeile: Nummer, Name, Menge, optional Einzelpreis und Summe, Rabatt, Beschreibung;
+        -- p_nur_summe: Hauptposition ohne Unterpositionen – nur Name und Summe (kein Einzelpreis, keine Menge/Einheit)
+        procedure zeile(p FAKT_RECHNUNGSPOSITIONEN%rowtype, p_nr varchar2, p_mit_preis boolean, p_nur_summe boolean default false)
         is
         begin
             platz(26 + least(regexp_count(dbms_lob.substr(p.RPOS_BESCHREIBUNG, 2000, 1), '<(p|li|br)') + 1, 3) * 10, true);
             txt(c_x_pos + 2, p_nr, g_normal, 9);
-            txt_r(c_x_menge, menge(p.RPOS_MENGE), g_normal, 9);
-            txt(c_x_menge + 5, p.RPOS_EINHEIT, g_normal, 8.5);
+            if not p_nur_summe then
+                txt_r(c_x_menge, menge(p.RPOS_MENGE), g_normal, 9);
+                txt(c_x_menge + 5, p.RPOS_EINHEIT, g_normal, 8.5);
+            end if;
             if p_mit_preis then
-                txt_r(c_x_preis, betrag(p.RPOS_EINZELPREIS), g_normal, 9);
+                if not p_nur_summe then
+                    txt_r(c_x_preis, betrag(p.RPOS_EINZELPREIS), g_normal, 9);
+                end if;
                 txt_r(c_x_summe, summe_txt(p.RPOS_SUMME, p.RPOS_IST_OPTIONAL), g_normal, 9);
             end if;
             block(c_x_text, c_b_text, p.RPOS_NAME || case when p.RPOS_IST_OPTIONAL = 'Y' then ' (optional)' end, g_fett, 9);
-            if p_mit_preis and p.RPOS_RABATT_PROZENT is not null and p.RPOS_RABATT_PROZENT <> 0 then
+            if p_mit_preis and not p_nur_summe and p.RPOS_RABATT_PROZENT is not null and p.RPOS_RABATT_PROZENT <> 0 then
                 txt(c_x_text, 'abzüglich ' || menge(p.RPOS_RABATT_PROZENT) || ' % Rabatt', g_normal, 8.5);
                 g_y := g_y - 10.5;
             end if;
@@ -401,7 +406,7 @@ as
         loop
             select count(*) into l_unter from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = h.RPOS_ID;
             if l_unter = 0 then
-                zeile(h, to_char(h.RPOS_POSITION), true);
+                zeile(h, to_char(h.RPOS_POSITION), true, true);
                 continue;
             end if;
             -- Hauptposition als Ueberschrift

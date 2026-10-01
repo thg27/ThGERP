@@ -300,7 +300,7 @@ POS_JS = """    javaScript {
             //    und der Summe je Zeile; Buttons Hauptposition / Unterposition / Löschen
             //  * rechts die Felder der gewaehlten Position (P11_POS_*), gespeichert per AJAX (POS_SPEICHERN)
             //  * bei einer Hauptposition darunter das Raster ihrer Unterpositionen (Schnelleingabe)
-            //  * Hauptposition mit Unterpositionen: Rabatt, Summe (Unterpositionen abzgl. Rabatt), Pauschalsumme
+            //  * Hauptposition: kein eigener Preis – Rabatt, Summe (Unterpositionen abzgl. Rabatt), Pauschalsumme
             //  * Reihenfolge per Drag & Drop im Baum (POS_VERSCHIEBEN); die Positionsnummern vergibt der Server:
             //    Hauptpositionen 1, 2, 3 …, Unterpositionen 10, 20, 30 …
             //  * ob geaendert werden darf, liefert der Server (Status der Rechnung bzw. "Rechnung bearbeiten")
@@ -313,11 +313,13 @@ POS_JS = """    javaScript {
                 var EINGABE = ["P11_POS_ARTI_ID", "P11_POS_NAME", "P11_POS_OPTIONAL", "P11_POS_EINZELPREIS",
                                "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST", "P11_POS_RABATT", "P11_POS_PAUSCHAL",
                                "P11_POS_BESCHREIBUNG"];
-                // nur bei Positionen ohne Unterpositionen (Unterposition bzw. Hauptposition, die selbst rechnet)
-                var NUR_EINZELN = ["P11_POS_ARTI_ID", "P11_POS_ARTIKELNUMMER", "P11_POS_GRUPPE", "P11_POS_EINZELPREIS",
-                                   "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST"];
-                // nur bei Hauptpositionen mit Unterpositionen
-                var NUR_SUMME = ["P11_POS_PAUSCHAL"];
+                // Artikel: nicht bei Hauptpositionen mit Unterpositionen
+                var NUR_ARTIKEL = ["P11_POS_ARTI_ID", "P11_POS_ARTIKELNUMMER", "P11_POS_GRUPPE"];
+                // Einzelpreis, Einheit, Menge, MwSt.: nur bei Unterpositionen – eine Hauptposition hat keinen eigenen Preis,
+                // ihr Betrag ist die Summe der Unterpositionen (abzgl. Rabatt) bzw. die Pauschalsumme
+                var NUR_UNTER = ["P11_POS_EINZELPREIS", "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST"];
+                // Pauschalsumme: nur bei Hauptpositionen
+                var NUR_HAUPT = ["P11_POS_PAUSCHAL"];
                 var zustand = { daten: null, aenderbar: false, id: null, hauptId: null, unter: 0, summeUnter: 0,
                                 offen: false, geaendert: false, laedt: false };
                 var baum$ = $("#pos-baum");
@@ -488,10 +490,9 @@ POS_JS = """    javaScript {
                         var w = apex.item(name).getNativeValue();
                         return (typeof w === "number" && !isNaN(w)) ? w : 0;
                     };
-                    var mitUnter = !zustand.hauptId && zustand.unter > 0;
-                    // Hauptposition mit Unterpositionen: deren Summe abzgl. Rabatt (eine Pauschalsumme ersetzt sie in der
-                    // Rechnung, steht aber im eigenen Feld und im Baum)
-                    var summe = (mitUnter ? zustand.summeUnter : n("P11_POS_MENGE") * n("P11_POS_EINZELPREIS"))
+                    // Hauptposition: Summe der Unterpositionen abzgl. Rabatt (eine Pauschalsumme ersetzt sie in der
+                    // Rechnung, steht aber im eigenen Feld und im Baum); Unterposition: Menge x Einzelpreis abzgl. Rabatt
+                    var summe = (!zustand.hauptId ? zustand.summeUnter : n("P11_POS_MENGE") * n("P11_POS_EINZELPREIS"))
                                 * (1 - n("P11_POS_RABATT") / 100);
                     apex.item("P11_POS_SUMME").setValue(apex.locale.formatNumber(runden(summe), BETRAG));
                 };
@@ -530,11 +531,14 @@ POS_JS = """    javaScript {
                     var haupt = !zustand.hauptId, mitUnter = haupt && zustand.unter > 0;
                     $("#pos-titel").text(d.titel);
                     $("#pos-felder, #pos-aktionen").show();
-                    NUR_EINZELN.forEach(function (name) {
+                    NUR_ARTIKEL.forEach(function (name) {
                         apex.item(name)[mitUnter ? "hide" : "show"]();
                     });
-                    NUR_SUMME.forEach(function (name) {
-                        apex.item(name)[mitUnter ? "show" : "hide"]();
+                    NUR_UNTER.forEach(function (name) {
+                        apex.item(name)[haupt ? "hide" : "show"]();
+                    });
+                    NUR_HAUPT.forEach(function (name) {
+                        apex.item(name)[haupt ? "show" : "hide"]();
                     });
                     EINGABE.forEach(function (name) {
                         apex.item(name)[zustand.aenderbar ? "enable" : "disable"]();
@@ -1068,7 +1072,7 @@ def seite_11():
               tmpl="@/required-floating", extra=ignorieren, **ohne)
     s += item("P11_POS_OPTIONAL", "switch", "Optional (nicht in der Summe)", 60, p, neue_zeile=False, spalten=3,
               extra=SWITCH("N") + ignorieren, **ohne)
-    # Zeile 3: Einzelpreis | Einheit | Menge | MwSt. (nur Positionen ohne Unterpositionen)
+    # Zeile 3: Einzelpreis | Einheit | Menge | MwSt. (nur Unterpositionen)
     s += maske(item("P11_POS_EINZELPREIS", "numberField", "Einzelpreis", 70, p, spalten=3, extra=ignorieren, **ohne),
                "999G999G990D00")
     s += item("P11_POS_EINHEIT", "selectList", "Einheit", 80, p, neue_zeile=False, spalten=3,
@@ -1076,8 +1080,8 @@ def seite_11():
     s += item("P11_POS_MENGE", "numberField", "Menge", 90, p, neue_zeile=False, spalten=3, extra=ignorieren, **ohne)
     s += item("P11_POS_MWST", "selectList", "MwSt. in %", 100, p, neue_zeile=False, spalten=3,
               extra=lov("lov-mwst-prozent") + ignorieren, **ohne)
-    # Zeile 4: Rabatt | Summe (Position bzw. Unterpositionen abzgl. Rabatt) | Pauschalsumme (nur Hauptposition mit
-    # Unterpositionen; gilt in der Rechnung statt der Summe)
+    # Zeile 4: Rabatt | Summe (Unterposition bzw. Unterpositionen der Hauptposition, abzgl. Rabatt) | Pauschalsumme
+    # (nur Hauptposition; gilt in der Rechnung statt der Summe)
     s += item("P11_POS_RABATT", "numberField", "Rabatt %", 120, p, spalten=3, extra=ignorieren, **ohne)
     s += hervorheben(item("P11_POS_SUMME", "displayOnly", "Summe", 130, p, neue_zeile=False, spalten=3,
                           extra=nur_anzeige, **ohne))
@@ -1628,10 +1632,16 @@ def seite_11():
                     apex_json.write('P11_POS_MENGE', zahl(p.RPOS_MENGE), true);
                     apex_json.write('P11_POS_MWST', to_char(p.RPOS_MWST_PROZENT), true);
                     apex_json.write('P11_POS_RABATT', zahl(p.RPOS_RABATT_PROZENT), true);
-                    apex_json.write('P11_POS_PAUSCHAL', preis(p.RPOS_PAUSCHALSUMME), true);
-                    -- Summe ohne Pauschale: Unterpositionen bzw. Menge x Einzelpreis, abzgl. Rabatt
+                    -- Hauptposition ohne Unterpositionen, die noch mit Menge x Einzelpreis rechnet (aus einer Unterposition
+                    -- entstanden bzw. Altbestand): ihr Betrag wird als Pauschalsumme angeboten und beim Speichern so uebernommen
+                    apex_json.write('P11_POS_PAUSCHAL',
+                                    preis(coalesce(p.RPOS_PAUSCHALSUMME,
+                                                   case when p.RPOS_HAUPT_RPOS_ID is null and l_unter = 0 and l_id is not null
+                                                        then nullif(p.RPOS_SUMME, 0) end)), true);
+                    -- Summe ohne Pauschale: Hauptposition = Unterpositionen, Unterposition = Menge x Einzelpreis; abzgl. Rabatt
                     apex_json.write('P11_POS_SUMME',
-                                    to_char(round(coalesce(p.RPOS_SUMME_UNTERPOS, p.RPOS_MENGE * p.RPOS_EINZELPREIS)
+                                    to_char(round(case when p.RPOS_HAUPT_RPOS_ID is null then nvl(p.RPOS_SUMME_UNTERPOS, 0)
+                                                       else p.RPOS_MENGE * p.RPOS_EINZELPREIS end
                                                   * (1 - nvl(p.RPOS_RABATT_PROZENT, 0) / 100), 2), 'FML999G999G990D00'), true);
                     apex_json.write('P11_POS_BESCHREIBUNG', p.RPOS_BESCHREIBUNG, true);
                     apex_json.close_object;
@@ -1688,17 +1698,29 @@ def seite_11():
                     l_preis  := nvl(zahl(:P11_POS_EINZELPREIS), 0);
                     l_rabatt := zahl(:P11_POS_RABATT);
                     l_pausch := zahl(:P11_POS_PAUSCHAL);
+                    -- Hauptposition (neu: x02 leer; bestehend: ohne Hauptverweis) hat keinen eigenen Preis: Menge 1,
+                    -- Einzelpreis 0, Betrag = Unterpositionen bzw. Pauschalsumme; Unterposition ohne Pauschalsumme
+                    if l_id is not null then
+                        select RPOS_HAUPT_RPOS_ID into l_haupt from FAKT_RECHNUNGSPOSITIONEN
+                         where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
+                    end if;
+                    if l_haupt is null then
+                        l_menge := 1;
+                        l_preis := 0;
+                    else
+                        l_pausch := null;
+                    end if;
                     select coalesce(to_number(:P11_POS_MWST), max(MWST_PROZENT)) into l_mwst
                       from ALLG_MWST_SAETZE where MWST_IST_STANDARD = 'Y';
                     if l_id is null then
                         insert into FAKT_RECHNUNGSPOSITIONEN
                               (RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_NAME, RPOS_BESCHREIBUNG,
                                RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
-                               RPOS_IST_OPTIONAL)
+                               RPOS_IST_OPTIONAL, RPOS_PAUSCHALSUMME)
                         values (:P11_RECH_ID, l_haupt, to_number(:P11_POS_ARTI_ID),
                                 l_pos, l_name, :P11_POS_BESCHREIBUNG,
                                 l_menge, :P11_POS_EINHEIT, l_preis,
-                                l_rabatt, nvl(l_mwst, 20), nvl(:P11_POS_OPTIONAL, 'N'))
+                                l_rabatt, nvl(l_mwst, 20), nvl(:P11_POS_OPTIONAL, 'N'), l_pausch)
                         returning RPOS_ID into l_id;
                     else
                         update FAKT_RECHNUNGSPOSITIONEN
@@ -1711,7 +1733,7 @@ def seite_11():
                                RPOS_RABATT_PROZENT = l_rabatt,
                                RPOS_MWST_PROZENT   = nvl(l_mwst, RPOS_MWST_PROZENT),
                                RPOS_IST_OPTIONAL   = nvl(:P11_POS_OPTIONAL, 'N'),
-                               RPOS_PAUSCHALSUMME  = case when RPOS_HAUPT_RPOS_ID is null then l_pausch end
+                               RPOS_PAUSCHALSUMME  = l_pausch
                          where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
                         if sql%rowcount = 0 then
                             raise_application_error(-20211, 'Die Position gehört nicht zu dieser Rechnung.');
@@ -1873,10 +1895,16 @@ def seite_11():
                     if l_neu is not null and l_unter > 0 then
                         raise_application_error(-20217, 'Eine Hauptposition mit Unterpositionen kann nicht selbst Unterposition werden.');
                     end if;
-                    -- umhaengen (Platzhalter-Nummer -1, RPOS_UK); als Unterposition ohne Pauschalsumme (RPOS_PAUSCHAL_CK)
+                    -- umhaengen (Platzhalter-Nummer -1, RPOS_UK); als Unterposition ohne Pauschalsumme (RPOS_PAUSCHAL_CK):
+                    -- wird eine Hauptposition mit Pauschalsumme zur Unterposition, geht der Betrag in Menge 1 x Einzelpreis
                     update FAKT_RECHNUNGSPOSITIONEN
                        set RPOS_HAUPT_RPOS_ID  = l_neu,
                            RPOS_POSITION       = -1,
+                           RPOS_MENGE          = case when l_neu is not null and RPOS_PAUSCHALSUMME is not null then 1 else RPOS_MENGE end,
+                           RPOS_EINZELPREIS    = case when l_neu is not null and RPOS_PAUSCHALSUMME is not null then RPOS_PAUSCHALSUMME
+                                                      else RPOS_EINZELPREIS end,
+                           RPOS_RABATT_PROZENT = case when l_neu is not null and RPOS_PAUSCHALSUMME is not null then null
+                                                      else RPOS_RABATT_PROZENT end,
                            RPOS_PAUSCHALSUMME  = case when l_neu is null then RPOS_PAUSCHALSUMME end,
                            RPOS_SUMME_UNTERPOS = case when l_neu is null then RPOS_SUMME_UNTERPOS end
                      where RPOS_ID = l_id;

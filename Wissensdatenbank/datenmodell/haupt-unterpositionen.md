@@ -26,6 +26,17 @@ Eine Tabelle (`FAKT_RECHNUNGSPOSITIONEN`), weil Haupt- und Unterposition gleich 
 - Ausdruck: Hauptposition als Überschrift, Unterpositionen als `1.10`, `1.20`, danach Zwischensumme; bei Pauschale
   Unterpositionen ohne Preise.
 
+## Hauptposition ohne eigenen Preis (ergänzt 2026-10-01)
+- In Maske und Ausdruck hat eine Hauptposition keinen Einzelpreis, keine Menge/Einheit und keinen Steuersatz: ihr Betrag
+  ist die Summe der Unterpositionen (abzgl. Rabatt) oder die Pauschalsumme. Die App speichert Hauptpositionen mit
+  Menge 1 und Einzelpreis 0; der Steuersatz bleibt in der Spalte (Standardsatz) und gilt nur, wenn eine Pauschale ohne
+  verteilbare Unterpositionen steht.
+- Tabelle und Trigger sind unverändert (`RPOS_SUMME` fällt ohne Unterpositionen weiter auf Menge × Einzelpreis zurück).
+  Das nutzt der Übergang: Eine Hauptposition, die noch so rechnet (Altbestand, oder eine Unterposition wurde per
+  Drag & Drop zur Hauptposition), bekommt ihren Betrag beim Laden als Pauschalsumme **angeboten** und beim Speichern so
+  übernommen. Umgekehrt nimmt eine Hauptposition mit Pauschale den Betrag als Menge 1 × Einzelpreis mit, wenn sie zur
+  Unterposition wird (`POS_VERSCHIEBEN`) – beim Hin- und Herziehen geht kein Betrag verloren.
+
 ## Stolpersteine
 - Unique-Constraint mit NULL: `(Rechnung, NULL, 1)` zweimal gilt in Oracle als gleich, wenn die übrigen Spalten gleich
   sind – die Hauptpositionen sind also auch ohne Hauptverweis eindeutig nummeriert.
