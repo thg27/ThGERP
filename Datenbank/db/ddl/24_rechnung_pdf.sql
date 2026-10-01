@@ -334,13 +334,15 @@ as
 
     -- Positionen: Hauptpositionen 1, 2, 3 …; Unterpositionen darunter als 1.10, 1.20 …
     --   * Hauptposition ohne Unterpositionen: eine Zeile mit Name und Summe (kein Einzelpreis, keine Menge/Einheit)
-    --   * Hauptposition mit Unterpositionen: Ueberschrift, Unterpositionen, danach Zwischensumme (mit Rabatt:
-    --     Summe der Unterpositionen und Rabatt davor)
-    --   * Hauptposition mit Pauschalsumme: Unterpositionen ohne Preise (nur Menge), danach die Pauschalsumme
+    --   * Hauptposition mit Unterpositionen: Ueberschrift, Unterpositionen immer mit Einzelpreis, Menge, Rabatt und
+    --     Summe; danach "Summe Position n", mit Rabatt der Hauptposition zusaetzlich Rabatt und Zwischensumme, mit
+    --     Pauschalsumme zusaetzlich "Pauschalsumme Position n" – fett ist der Betrag, der in die Rechnung eingeht
     procedure positionen(p_r FAKT_RECHNUNGEN%rowtype)
     is
         c_x_zw   constant number := c_x_menge + 30;   -- Beschriftung der Zwischensummen, rechtsbuendig
         l_unter  pls_integer;
+        l_rabatt boolean;
+        l_netto  number;
 
         function summe_txt(p_wert number, p_optional varchar2) return varchar2
         is
@@ -417,20 +419,28 @@ as
             beschreibung(h.RPOS_BESCHREIBUNG);
             g_y := g_y - 6;
             for u in (select * from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = h.RPOS_ID order by RPOS_POSITION) loop
-                zeile(u, h.RPOS_POSITION || '.' || u.RPOS_POSITION, h.RPOS_PAUSCHALSUMME is null);
+                zeile(u, h.RPOS_POSITION || '.' || u.RPOS_POSITION, true);
             end loop;
-            -- Zwischensumme der Hauptposition
+            -- nach den Unterpositionen: ihre Summe, ggf. Rabatt der Hauptposition, ggf. Pauschalsumme; fett ist der
+            -- Betrag, der in die Rechnungssumme eingeht (RPOS_SUMME)
             g_y := g_y + 4;
             as_pdf.horizontal_line(c_x_preis - 60, g_y + 9, c_rechts - c_x_preis + 60, 0.4, c_grau);
+            l_rabatt := nvl(h.RPOS_RABATT_PROZENT, 0) <> 0;
+            zwischenzeile('Summe Position ' || h.RPOS_POSITION,
+                          case when l_rabatt or h.RPOS_PAUSCHALSUMME is not null then betrag(h.RPOS_SUMME_UNTERPOS) || ' €'
+                               else summe_txt(h.RPOS_SUMME, h.RPOS_IST_OPTIONAL) end,
+                          case when l_rabatt or h.RPOS_PAUSCHALSUMME is not null then g_normal else g_fett end);
+            if l_rabatt then
+                l_netto := round(h.RPOS_SUMME_UNTERPOS * (1 - h.RPOS_RABATT_PROZENT / 100), 2);
+                zwischenzeile('abzüglich ' || menge(h.RPOS_RABATT_PROZENT) || ' % Rabatt',
+                              '-' || betrag(h.RPOS_SUMME_UNTERPOS - l_netto) || ' €', g_normal);
+                zwischenzeile('Zwischensumme Position ' || h.RPOS_POSITION,
+                              case when h.RPOS_PAUSCHALSUMME is not null then betrag(l_netto) || ' €'
+                                   else summe_txt(h.RPOS_SUMME, h.RPOS_IST_OPTIONAL) end,
+                              case when h.RPOS_PAUSCHALSUMME is not null then g_normal else g_fett end);
+            end if;
             if h.RPOS_PAUSCHALSUMME is not null then
-                zwischenzeile('Pauschale Position ' || h.RPOS_POSITION, summe_txt(h.RPOS_SUMME, h.RPOS_IST_OPTIONAL), g_fett);
-            else
-                if nvl(h.RPOS_RABATT_PROZENT, 0) <> 0 then
-                    zwischenzeile('Summe', betrag(h.RPOS_SUMME_UNTERPOS) || ' €', g_normal);
-                    zwischenzeile('abzüglich ' || menge(h.RPOS_RABATT_PROZENT) || ' % Rabatt',
-                                  '-' || betrag(h.RPOS_SUMME_UNTERPOS - h.RPOS_SUMME) || ' €', g_normal);
-                end if;
-                zwischenzeile('Zwischensumme Position ' || h.RPOS_POSITION, summe_txt(h.RPOS_SUMME, h.RPOS_IST_OPTIONAL), g_fett);
+                zwischenzeile('Pauschalsumme Position ' || h.RPOS_POSITION, summe_txt(h.RPOS_SUMME, h.RPOS_IST_OPTIONAL), g_fett);
             end if;
             g_y := g_y - 8;
         end loop;

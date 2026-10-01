@@ -135,3 +135,11 @@ Seite 11 hat das Formular „Rechnung“ und daneben Felder einer Position (`P11
   `apex_session.attach(p_app_id, p_page_id, p_session_id)`, `apex_page.get_url(p_page, p_items, p_values)`,
   `apex_session.detach` (Host davor selbst ergänzen). Vor dem Neuladen eines Tabs des Anwenders auf ungespeicherte
   Eingaben prüfen.
+- **Mehrere „Speichern“ auf einer Seite:** Felder, die nur per AJAX gespeichert werden (`P11_POS_*`), gehen verloren, wenn
+  der Anwender stattdessen „Speichern“ des Formulars oder des Rasters drückt („lässt sich nicht speichern“). Abhilfe:
+  eigenen Button oben neben dem Titel der Position, und die anderen Wege speichern geänderte Felder mit –
+  `apex.page.submit`/`apex.submit` auf der Seite umhüllen (bei `SAVE`/`ABSCHLIESSEN` erst AJAX-Speichern, im Erfolg das
+  Original aufrufen) und im `interactivegridsave`-Handler ebenfalls speichern.
+- **Klicks im Browsertest:** Koordinaten aus dem Screenshot können danebenliegen (ein „nicht reproduzierbarer“ Fehler
+  war ein verfehlter Button). Buttons über `find` → `ref` anklicken und mit einem Ereignisprotokoll
+  (`document.addEventListener(…, true)`) prüfen, ob der Klick angekommen ist.

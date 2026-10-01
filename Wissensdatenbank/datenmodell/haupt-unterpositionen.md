@@ -23,8 +23,10 @@ Eine Tabelle (`FAKT_RECHNUNGSPOSITIONEN`), weil Haupt- und Unterposition gleich 
   Tabelle nicht lesen (mutating table), deshalb liegt die Summe der Unterpositionen als Spalte vor.
 - Rechnungssumme = Summe der nicht optionalen Hauptpositionen. `FAKT_RECHNUNG_MWST_V` verteilt Rabatt/Pauschale anteilig
   auf die Steuersätze der Unterpositionen (Faktor = Summe Hauptposition / Summe Unterpositionen).
-- Ausdruck: Hauptposition als Überschrift, Unterpositionen als `1.10`, `1.20`, danach Zwischensumme; bei Pauschale
-  Unterpositionen ohne Preise.
+- Ausdruck: Hauptposition als Überschrift, Unterpositionen als `1.10`, `1.20` immer mit Einzelpreis, Menge, Rabatt und
+  Summe; danach „Summe Position n“, bei Rabatt der Hauptposition zusätzlich Rabatt und „Zwischensumme“, bei Pauschale
+  zusätzlich „Pauschalsumme Position n“. Fett ist der Betrag, der in die Rechnungssumme eingeht. Hauptposition ohne
+  Unterpositionen: nur Name und Summe.
 
 ## Hauptposition ohne eigenen Preis (ergänzt 2026-10-01)
 - In Maske und Ausdruck hat eine Hauptposition keinen Einzelpreis, keine Menge/Einheit und keinen Steuersatz: ihr Betrag

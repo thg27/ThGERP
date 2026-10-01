@@ -502,6 +502,7 @@ POS_JS = """    javaScript {
                     zustand.offen = false;
                     zustand.geaendert = false;
                     $("#pos-titel").text("Keine Position gewählt");
+                    $(".thg-pos-speichern").hide();
                     apex.item("P11_HAUPT_ID").setValue("", null, true);
                     $("#pos-felder, #pos-aktionen, #positionen").hide();
                     markieren();
@@ -543,7 +544,7 @@ POS_JS = """    javaScript {
                     EINGABE.forEach(function (name) {
                         apex.item(name)[zustand.aenderbar ? "enable" : "disable"]();
                     });
-                    $("#pos-speichern").toggle(zustand.aenderbar);
+                    $(".thg-pos-speichern").toggle(zustand.aenderbar);
                     // Raster der Unterpositionen nur bei einer gespeicherten Hauptposition; P11_HAUPT_ID geht mit jeder
                     // Anfrage des Rasters mit (Abfrage und Speichern)
                     var raster = haupt && !!zustand.id;
@@ -581,19 +582,40 @@ POS_JS = """    javaScript {
                         zeigen(d, ohneRaster);
                     });
                 };
-                var speichern = function () {
+                // danach (optional): statt Baum und Felder neu zu laden, z.B. die Rechnung absenden
+                var speichern = function (danach) {
                     server("POS_SPEICHERN", { x01: zustand.id || "", x02: zustand.hauptId || "", pageItems: EINGABE }).then(function (d) {
                         if (d.fehler) {
                             fehler(d.fehler);
                             return;
                         }
                         apex.message.clearErrors();
-                        apex.message.showPageSuccess("Position gespeichert.");
                         zustand.geaendert = false;
+                        if (typeof danach === "function") {
+                            danach();
+                            return;
+                        }
+                        apex.message.showPageSuccess("Position gespeichert.");
                         laden().then(function () {
                             oeffnen(d.id);
                         });
                     });
+                };
+                var positionOffen = function () {
+                    return zustand.offen && zustand.geaendert && zustand.aenderbar;
+                };
+                // "Speichern" / "Rechnung abschließen" der Rechnung: geaenderte Felder der Position vorher mitspeichern
+                // (sie gehoeren nicht zum Formular der Rechnung und gingen sonst beim Neuladen verloren)
+                var absenden = apex.page.submit;
+                apex.page.submit = apex.submit = function (opt) {
+                    var anfrage = (opt && typeof opt === "object") ? opt.request : opt, das = this, werte = arguments;
+                    if (positionOffen() && ["SAVE", "ABSCHLIESSEN"].indexOf(anfrage) >= 0) {
+                        speichern(function () {
+                            absenden.apply(das, werte);
+                        });
+                        return;
+                    }
+                    return absenden.apply(this, arguments);
                 };
                 var loeschen = function () {
                     var haupt = !zustand.hauptId, name = $v("P11_POS_NAME");
@@ -740,7 +762,9 @@ POS_JS = """    javaScript {
                     });
                 });
                 $("#pos-loeschen").on("click", loeschen);
-                $("#pos-speichern").on("click", speichern);
+                $(".thg-pos-speichern").on("click", function () {
+                    speichern();
+                });
                 $("#pos-felder").on("change", ":input", function () {
                     if (!zustand.laedt) {
                         zustand.geaendert = true;
@@ -777,10 +801,15 @@ POS_JS = """    javaScript {
                     }
                 });
                 // Raster gespeichert: Baum, Summen und Felder der Hauptposition neu (das Raster hat sich selbst aktualisiert)
+                // Sind zugleich Felder der Hauptposition geaendert (Rabatt, Pauschalsumme …), werden sie mitgespeichert
                 $("#positionen").on("interactivegridsave", function () {
                     var id = zustand.id;
+                    if (positionOffen()) {
+                        speichern();
+                        return;
+                    }
                     laden().then(function () {
-                        if (id && !zustand.geaendert) {
+                        if (id) {
                             oeffnen(id, null, true);
                         }
                     });
@@ -822,7 +851,8 @@ POS_JS = """    javaScript {
             .thg-pos-knoten.thg-drop-in { background: rgba(0, 0, 0, .1); outline: 2px dashed var(--thg-primaer, #0572ce); outline-offset: -2px; }
             .thg-pos-ende { height: 1.25rem; }
             .thg-pos-hinweistext { font-size: .75rem; opacity: .7; margin: 0; }
-            .thg-pos-titel { margin: 0 0 .75rem; font-size: 1.125rem; font-weight: 600; }
+            .thg-pos-kopf { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 .75rem; }
+            .thg-pos-titel { margin: 0; font-size: 1.125rem; font-weight: 600; }
             .thg-pos-aktionen { display: flex; justify-content: flex-end; margin: .5rem 0 1rem; }
             ```
     }
@@ -1033,12 +1063,16 @@ def seite_11():
                 4, True)
     s += spalte(region("pos-rechts", "Position", 20, template=blank, parent="positionen-bereich"), 8, False)
     s += region("pos-kopf", "Position (Titel)", 10, template=blank, parent="pos-rechts",
-                extra=html("                <h3 id=\"pos-titel\" class=\"thg-pos-titel\"></h3>\n"))
+                extra=html("                <div class=\"thg-pos-kopf\">\n"
+                           "                    <h3 id=\"pos-titel\" class=\"thg-pos-titel\"></h3>\n"
+                           "                    <button type=\"button\" class=\"t-Button t-Button--hot t-Button--small thg-pos-speichern\">"
+                           "<span class=\"t-Button-label\">Position speichern</span></button>\n"
+                           "                </div>\n"))
     s += region("pos-felder", "Position (Felder)", 20, template=blank, parent="pos-rechts", extra=dom_id("pos-felder"))
     s += region("pos-aktionen", "Position (Speichern)", 30, template=blank, parent="pos-rechts",
                 extra=dom_id("pos-aktionen")
                 + html("                <div class=\"thg-pos-aktionen\">\n"
-                       "                    <button type=\"button\" id=\"pos-speichern\" class=\"t-Button t-Button--hot\">"
+                       "                    <button type=\"button\" id=\"pos-speichern\" class=\"t-Button t-Button--hot thg-pos-speichern\">"
                        "<span class=\"t-Button-label\">Position speichern</span></button>\n"
                        "                </div>\n"))
 
