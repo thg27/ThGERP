@@ -658,7 +658,7 @@ page 11 (
     )
 
     region allgemein (
-        name: 1. Allgemein
+        name: Allgemein
         type: staticContent
         readOnly {
             type: expression
@@ -677,7 +677,7 @@ page 11 (
     )
 
     region kunde (
-        name: 2. Kunde
+        name: Kunde
         type: staticContent
         readOnly {
             type: expression
@@ -726,8 +726,8 @@ page 11 (
         }
     )
 
-    region details (
-        name: Texte
+    region vortext (
+        name: Vortext
         type: staticContent
         readOnly {
             type: expression
@@ -740,60 +740,22 @@ page 11 (
             slot: subRegions
         }
         appearance {
-            template: @/tabs-container
-            templateOptions: #DEFAULT#
-        }
-    )
-
-    region tab-zahlungsbed (
-        name: Zahlungsbedingungen
-        type: staticContent
-        layout {
-            sequence: 10
-            parentRegion: @details
-            slot: tabs
-        }
-        appearance {
             template: @/standard
             templateOptions: #DEFAULT#
         }
     )
 
-    region tab-vortext (
-        name: Vortext
-        type: staticContent
-        layout {
-            sequence: 20
-            parentRegion: @details
-            slot: tabs
-        }
-        appearance {
-            template: @/standard
-            templateOptions: #DEFAULT#
-        }
-    )
-
-    region tab-schlusstext (
+    region schlusstext (
         name: Schlusstext
         type: staticContent
-        layout {
-            sequence: 30
-            parentRegion: @details
-            slot: tabs
+        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
         }
-        appearance {
-            template: @/standard
-            templateOptions: #DEFAULT#
-        }
-    )
-
-    region tab-lieferadresse (
-        name: Lieferadresse
-        type: staticContent
         layout {
-            sequence: 40
-            parentRegion: @details
-            slot: tabs
+            sequence: 45
+            slot: body
         }
         appearance {
             template: @/standard
@@ -1476,37 +1438,6 @@ page 11 (
         }
     )
 
-    pageItem P11_RECH_ZAHLUNGSBED_TEXT (
-        type: textarea
-        label {
-            label: Zahlungsbedingungen
-            alignment: left
-        }
-        layout {
-            sequence: 10
-            region: @tab-zahlungsbed
-            slot: regionBody
-            columnSpan: 12
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @rechnung
-            column: RECH_ZAHLUNGSBED_TEXT
-            dataType: clob
-        }
-        default {
-            type: sqlQuerySingleValue
-            sqlQuerySingleValue:
-                ```sql
-                select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = 'ZAHLUNGSBED' and TXVL_IST_STANDARD = 'Y'
-                ```
-        }
-    )
-
     pageItem P11_RECH_VORTEXT (
         type: textarea
         label {
@@ -1515,7 +1446,7 @@ page 11 (
         }
         layout {
             sequence: 10
-            region: @tab-vortext
+            region: @vortext
             slot: regionBody
             columnSpan: 12
             alignment: left
@@ -1546,7 +1477,7 @@ page 11 (
         }
         layout {
             sequence: 10
-            region: @tab-schlusstext
+            region: @schlusstext
             slot: regionBody
             columnSpan: 12
             alignment: left
@@ -1576,15 +1507,15 @@ page 11 (
             alignment: left
         }
         layout {
-            sequence: 10
-            region: @tab-lieferadresse
+            sequence: 20
+            region: @anschrift-vorschau
             slot: regionBody
-            columnSpan: 12
             alignment: left
         }
         appearance {
             template: @/optional-floating
             templateOptions: #DEFAULT#
+            cssClasses: thg-anschrift
         }
         source {
             formRegion: @rechnung
@@ -1597,7 +1528,7 @@ page 11 (
     )
 
     region positionen-bereich (
-        name: 3. Positionen
+        name: Positionen
         type: staticContent
         layout {
             sequence: 40

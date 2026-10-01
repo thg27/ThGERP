@@ -1,8 +1,9 @@
 #!/usr/bin/env python3.13
 """Erzeugt die App THG-FINANZ (20050): Ausgangsrechnungen (Fakturierung, Tabellen FAKT_*).
 
-Seiten: 1 Startseite, 10 Rechnungen (Liste), 11 Rechnung (Maske nach Kingbill: Allgemein, Kunde,
-Texte, Positionen als Baum aus Haupt- und Unterpositionen mit Detailfeldern, Summen je Steuersatz, Zahlungen),
+Seiten: 1 Startseite, 10 Rechnungen (Liste), 11 Rechnung (Allgemein, Kunde mit Anschrift und Lieferadresse,
+Vortext, Positionen als Baum aus Haupt- und Unterpositionen mit Detailfeldern und Summen je Steuersatz,
+Schlusstext, Zahlungen),
 12/13 Rechnung als PDF, 100 Wertelisten, 110/111 Nummernkreise.
 Logik in der Datenbank: Package FAKT_RECHNUNG (21_finanz.sql).
 Grundgeruest: Kopie von THG-ALLGEMEIN (beim ersten Lauf).
@@ -920,20 +921,19 @@ def seite_11():
     )
 
 """
-    s += region("allgemein", "1. Allgemein", 10, parent="rechnung", extra=NUR_LESEN)
-    s += region("kunde", "2. Kunde", 20, parent="rechnung", extra=NUR_LESEN)
-    # Unterregionen von "2. Kunde" nebeneinander (je halbe Breite, ohne eigenen Rahmen)
+    s += region("allgemein", "Allgemein", 10, parent="rechnung", extra=NUR_LESEN)
+    s += region("kunde", "Kunde", 20, parent="rechnung", extra=NUR_LESEN)
+    # Unterregionen von "Kunde" nebeneinander (je halbe Breite, ohne eigenen Rahmen)
     halb = lambda r, neue_zeile: r.replace("            slot: subRegions\n",
         "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n") +
         "            columnSpan: 6\n", 1)
     s += halb(region("empfaenger", "Empfänger", 10, template="@/blank-with-attributes", parent="kunde"), True)
     s += halb(region("anschrift-vorschau", "Anschrift-Vorschau", 20, template="@/blank-with-attributes",
                      parent="kunde"), False)
-    s += region("details", "Texte", 30, template="@/tabs-container", parent="rechnung", extra=NUR_LESEN)
-    s += region("tab-zahlungsbed", "Zahlungsbedingungen", 10, parent="details")
-    s += region("tab-vortext", "Vortext", 20, parent="details")
-    s += region("tab-schlusstext", "Schlusstext", 30, parent="details")
-    s += region("tab-lieferadresse", "Lieferadresse", 40, parent="details")
+    # Vortext vor den Positionen, Schlusstext danach (wie am Ausdruck); die Lieferadresse steht unter der
+    # Anschrift-Vorschau des Kunden. Ein eigener Text der Zahlungsbedingungen entfaellt (Auswahl beim Kunden).
+    s += region("vortext", "Vortext", 30, parent="rechnung", extra=NUR_LESEN)
+    s += region("schlusstext", "Schlusstext", 45, extra=NUR_LESEN)
 
     f = dict(form="rechnung")
     s += """    pageItem P11_RECH_ID (
@@ -1058,17 +1058,18 @@ def seite_11():
         "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
 
     txt = lambda art: default_sql(f"select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = '{art}' and TXVL_IST_STANDARD = 'Y'")
-    s += item("P11_RECH_ZAHLUNGSBED_TEXT", "textarea", "Zahlungsbedingungen", 10, "tab-zahlungsbed",
-              col="RECH_ZAHLUNGSBED_TEXT", dtype="clob", spalten=12, extra=txt("ZAHLUNGSBED"), **f)
-    s += item("P11_RECH_VORTEXT", "textarea", "Vortext", 10, "tab-vortext", col="RECH_VORTEXT", dtype="clob",
+    s += item("P11_RECH_VORTEXT", "textarea", "Vortext", 10, "vortext", col="RECH_VORTEXT", dtype="clob",
               spalten=12, extra=txt("VORTEXT"), **f)
-    s += item("P11_RECH_SCHLUSSTEXT", "textarea", "Schlusstext", 10, "tab-schlusstext", col="RECH_SCHLUSSTEXT",
+    s += item("P11_RECH_SCHLUSSTEXT", "textarea", "Schlusstext", 10, "schlusstext", col="RECH_SCHLUSSTEXT",
               dtype="clob", spalten=12, extra=txt("SCHLUSSTEXT"), **f)
-    s += item("P11_RECH_LIEFERADRESSE", "textarea", "Lieferadresse", 10, "tab-lieferadresse",
-              col="RECH_LIEFERADRESSE", maxlen=1000, spalten=12, **f)
+    # Lieferadresse als Textblock unter der Anschrift des Kunden (gleiche Darstellung, thg.css .thg-anschrift)
+    s += item("P11_RECH_LIEFERADRESSE", "textarea", "Lieferadresse", 20, v,
+              col="RECH_LIEFERADRESSE", maxlen=1000, **f).replace(
+        "            templateOptions: #DEFAULT#\n        }\n",
+        "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
 
-    # ------------------------------------------------ 3. Positionen: Baum (links) | Felder der Position und Raster (rechts)
-    s += region("positionen-bereich", "3. Positionen", 40, bedingung="P11_RECH_ID")
+    # ------------------------------------------------ Positionen: Baum (links) | Felder der Position und Raster (rechts)
+    s += region("positionen-bereich", "Positionen", 40, bedingung="P11_RECH_ID")
     spalte = lambda r, breite, neue_zeile: r.replace(
         "            slot: subRegions\n",
         "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n")
