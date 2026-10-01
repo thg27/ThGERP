@@ -150,12 +150,14 @@ page 11 (
                         detail(null);
                     }
                 };
-                // Zeilenmenue: gespeicherte Position im Dialog bearbeiten
+                // Zeilenmenue: gespeicherte Position im Dialog oeffnen – immer moeglich; ob der Dialog aenderbar ist,
+                // richtet sich wie auf dieser Seite nach dem Status der Rechnung (Seite 14, P14_NUR_LESEN)
                 if (ansicht.rowActionMenu$) {
+                    var aenderbar = modell.getOption("editable");
                     ansicht.rowActionMenu$.menu("option").items.unshift({
                         type: "action",
-                        label: "Detail bearbeiten",
-                        icon: "fa fa-pencil-square-o",
+                        label: aenderbar ? "Detail bearbeiten" : "Detail anzeigen",
+                        icon: aenderbar ? "fa fa-pencil-square-o" : "fa fa-search",
                         action: function (menue, element) {
                             var satz = ansicht.getContextRecord(element)[0],
                                 meta = modell.getRecordMetadata(modell.getRecordId(satz)) || {};

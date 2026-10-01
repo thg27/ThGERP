@@ -39,6 +39,11 @@ page 14 (
     region position (
         name: Position
         type: form
+        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P14_NUR_LESEN = 'Y'
+        }
         source {
             location: localDatabase
             tableName: FAKT_RECHNUNGSPOSITIONEN
@@ -69,6 +74,15 @@ page 14 (
         }
         security {
             sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P14_NUR_LESEN (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @position
+            slot: regionBody
         }
     )
 
@@ -548,8 +562,9 @@ page 14 (
             databaseAction: update
         }
         serverSideCondition {
-            type: itemIsNotNull
-            item: P14_RPOS_ID
+            type: expression
+            language: plsql
+            plsqlExpression: :P14_RPOS_ID is not null and nvl(:P14_NUR_LESEN, 'N') <> 'Y'
         }
     )
 
@@ -571,8 +586,9 @@ page 14 (
             databaseAction: insert
         }
         serverSideCondition {
-            type: itemIsNull
-            item: P14_RPOS_ID
+            type: expression
+            language: plsql
+            plsqlExpression: :P14_RPOS_ID is null and nvl(:P14_NUR_LESEN, 'N') <> 'Y'
         }
     )
 
@@ -697,6 +713,10 @@ page 14 (
                 jsCode:
                     ```javascript
                     // Menge x Einzelpreis abzgl. Rabatt (wie Trigger RPOS_BIU), Anzeige im Format der Betraege
+                    // nur lesen: Felder sind reine Anzeige (kein Zahlenwert), die Summe kommt aus der Datenbank
+                    if ($v("P14_NUR_LESEN") === "Y") {
+                        return;
+                    }
                     var n = function (name) {
                         var w = apex.item(name).getNativeValue();
                         return (typeof w === "number" && !isNaN(w)) ? w : 0;
@@ -724,7 +744,7 @@ page 14 (
     )
 
     process rechnung-pruefen (
-        name: Rechnung prüfen (Mandant, änderbar)
+        name: Rechnung prüfen (Mandant), nur lesen wenn nicht änderbar
         type: executeCode
         source {
             plsqlCode:
@@ -739,8 +759,9 @@ page 14 (
                     if l_mand <> :MANDANT_ID then
                         raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
+                    :P14_NUR_LESEN := 'N';
                     if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
-                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+                        :P14_NUR_LESEN := 'Y';
                     end if;
                 end;
                 ```
@@ -752,7 +773,7 @@ page 14 (
     )
 
     process anzeige-vorbelegen (
-        name: Positionsnummer vorschlagen, Artikelnummer und Gruppe anzeigen
+        name: Positionsnummer vorschlagen, Artikelnummer, Gruppe und Summe anzeigen
         type: executeCode
         source {
             plsqlCode:
@@ -765,6 +786,9 @@ page 14 (
                   from ARTI_ARTIKEL a
                   left join ARTI_ARTIKELGRUPPEN g on g.AGRP_ID = a.ARTI_AGRP_ID
                  where a.ARTI_ID = to_number(:P14_RPOS_ARTI_ID);
+                -- gespeicherte Summe (Trigger RPOS_BIU); bei aenderbarer Position rechnet die Dynamic Action sofort neu
+                select max(to_char(RPOS_SUMME, 'FML999G999G990D00')) into :P14_SUMME
+                  from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = to_number(:P14_RPOS_ID);
                 ```
         }
         execution {

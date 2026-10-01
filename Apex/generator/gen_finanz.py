@@ -426,12 +426,14 @@ POS_JS = """    javaScript {
                         detail(null);
                     }
                 };
-                // Zeilenmenue: gespeicherte Position im Dialog bearbeiten
+                // Zeilenmenue: gespeicherte Position im Dialog oeffnen – immer moeglich; ob der Dialog aenderbar ist,
+                // richtet sich wie auf dieser Seite nach dem Status der Rechnung (Seite 14, P14_NUR_LESEN)
                 if (ansicht.rowActionMenu$) {
+                    var aenderbar = modell.getOption("editable");
                     ansicht.rowActionMenu$.menu("option").items.unshift({
                         type: "action",
-                        label: "Detail bearbeiten",
-                        icon: "fa fa-pencil-square-o",
+                        label: aenderbar ? "Detail bearbeiten" : "Detail anzeigen",
+                        icon: aenderbar ? "fa fa-pencil-square-o" : "fa fa-search",
                         action: function (menue, element) {
                             var satz = ansicht.getContextRecord(element)[0],
                                 meta = modell.getRecordMetadata(modell.getRecordId(satz)) || {};
@@ -1348,7 +1350,9 @@ def seite_11():
 # --------------------------------------------------------------------------- Seite 14 Position (Dialog)
 def seite_14():
     """Dialog "Position": eine Rechnungsposition mit allen Feldern erfassen/aendern (Button "Zeile Detail" bzw.
-    Zeilenmenue "Detail bearbeiten" auf Seite 11). Anordnung wie im Artikelstamm, dazu Kapitel, Pos, Menge, Rabatt."""
+    Zeilenmenue "Detail bearbeiten"/"Detail anzeigen" auf Seite 11). Anordnung wie im Artikelstamm, dazu Kapitel, Pos,
+    Menge, Rabatt. Der Dialog laesst sich immer oeffnen; aenderbar ist er wie Seite 11 nur im Entwurf oder nach
+    "Rechnung bearbeiten" (P14_NUR_LESEN, gesetzt vor der Anzeige), sonst nur Anzeige ohne Speichern."""
     s = """page 14 (
     name: Position
     alias: POSITION
@@ -1390,6 +1394,11 @@ def seite_14():
     region position (
         name: Position
         type: form
+        readOnly {
+            type: expression
+            language: plsql
+            plsqlExpression: :P14_NUR_LESEN = 'Y'
+        }
         source {
             location: localDatabase
             tableName: FAKT_RECHNUNGSPOSITIONEN
@@ -1423,6 +1432,15 @@ def seite_14():
         }
         security {
             sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P14_NUR_LESEN (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @position
+            slot: regionBody
         }
     )
 
@@ -1499,15 +1517,21 @@ def seite_14():
     s += item("P14_RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, r, col="RPOS_BESCHREIBUNG", dtype="clob",
               spalten=12, **f)
 
-    # ------------------------------------------------ Buttons
+    # ------------------------------------------------ Buttons (Speichern/Anlegen nur, wenn die Rechnung aenderbar ist)
+    aenderbar = lambda rpos_id: f"""        serverSideCondition {{
+            type: expression
+            language: plsql
+            plsqlExpression: :P14_RPOS_ID {rpos_id} and nvl(:P14_NUR_LESEN, 'N') <> 'Y'
+        }}
+"""
     s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close",
                 verhalten="            action: definedByDynamicAction\n")
     s += button("save", "SAVE", "Speichern", 20, "buttons", "next", hot=True,
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
-                bedingung=NICHT_NULL("P14_RPOS_ID"))
+                bedingung=aenderbar("is not null"))
     s += button("create", "CREATE", "Position anlegen", 30, "buttons", "next", hot=True,
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: insert\n",
-                bedingung=NULL("P14_RPOS_ID"))
+                bedingung=aenderbar("is null"))
 
     # ------------------------------------------------ Dynamic Actions
     artikel_items = "P14_RPOS_NAME,P14_RPOS_EINHEIT,P14_RPOS_EINZELPREIS,P14_RPOS_MWST_PROZENT,P14_RPOS_BESCHREIBUNG,P14_RPOS_MENGE"
@@ -1632,6 +1656,10 @@ def seite_14():
                 jsCode:
                     ```javascript
                     // Menge x Einzelpreis abzgl. Rabatt (wie Trigger RPOS_BIU), Anzeige im Format der Betraege
+                    // nur lesen: Felder sind reine Anzeige (kein Zahlenwert), die Summe kommt aus der Datenbank
+                    if ($v("P14_NUR_LESEN") === "Y") {{
+                        return;
+                    }}
                     var n = function (name) {{
                         var w = apex.item(name).getNativeValue();
                         return (typeof w === "number" && !isNaN(w)) ? w : 0;
@@ -1650,7 +1678,11 @@ def seite_14():
 
 """
     # ------------------------------------------------ Prozesse
-    pruefen = lambda rech: f"""                -- Rechnung des Mandanten der Sitzung; Positionen nur im Entwurf oder nach "Rechnung bearbeiten" (Seite 11)
+    # beim Oeffnen: nicht aenderbare Rechnung -> Dialog nur lesen (P14_NUR_LESEN); beim Speichern: Fehler
+    nur_lesen = "                        :P14_NUR_LESEN := 'Y';"
+    fehler = ("                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach "
+              "„Rechnung bearbeiten“ geändert werden.');")
+    pruefen = lambda rech, gesperrt, vorher="": f"""                -- Rechnung des Mandanten der Sitzung; Positionen nur im Entwurf oder nach "Rechnung bearbeiten" (Seite 11)
                 declare
                     l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
                     l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
@@ -1660,8 +1692,8 @@ def seite_14():
                     if l_mand <> :MANDANT_ID then
                         raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
-                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
-                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+{vorher}                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+{gesperrt}
                     end if;
                 end;"""
     s += f"""    process initialize-form-position (
@@ -1675,12 +1707,12 @@ def seite_14():
     )
 
     process rechnung-pruefen (
-        name: Rechnung prüfen (Mandant, änderbar)
+        name: Rechnung prüfen (Mandant), nur lesen wenn nicht änderbar
         type: executeCode
         source {{
             plsqlCode:
                 ```plsql
-{pruefen('nvl(:P14_RPOS_RECH_ID, :P14_RECH_ID)')}
+{pruefen('nvl(:P14_RPOS_RECH_ID, :P14_RECH_ID)', nur_lesen, vorher="                    :P14_NUR_LESEN := 'N';\n")}
                 ```
         }}
         execution {{
@@ -1690,7 +1722,7 @@ def seite_14():
     )
 
     process anzeige-vorbelegen (
-        name: Positionsnummer vorschlagen, Artikelnummer und Gruppe anzeigen
+        name: Positionsnummer vorschlagen, Artikelnummer, Gruppe und Summe anzeigen
         type: executeCode
         source {{
             plsqlCode:
@@ -1703,6 +1735,9 @@ def seite_14():
                   from ARTI_ARTIKEL a
                   left join ARTI_ARTIKELGRUPPEN g on g.AGRP_ID = a.ARTI_AGRP_ID
                  where a.ARTI_ID = to_number(:P14_RPOS_ARTI_ID);
+                -- gespeicherte Summe (Trigger RPOS_BIU); bei aenderbarer Position rechnet die Dynamic Action sofort neu
+                select max(to_char(RPOS_SUMME, 'FML999G999G990D00')) into :P14_SUMME
+                  from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = to_number(:P14_RPOS_ID);
                 ```
         }}
         execution {{
@@ -1740,7 +1775,7 @@ def seite_14():
         source {{
             plsqlCode:
                 ```plsql
-{pruefen(':P14_RPOS_RECH_ID')}
+{pruefen(':P14_RPOS_RECH_ID', fehler)}
                 ```
         }}
         execution {{

@@ -75,7 +75,17 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
   p_triggering_element => 'apex.jQuery(''#region'')')` (Prüfsumme!), im Browser `apex.navigation.redirect(url)`;
   nach dem Schließen feuert `apexafterclosedialog` auf der Region → `apex.region("…").refresh()`.
 - **IG-Zeilenmenü erweitern:** `ansicht.rowActionMenu$.menu("option").items.unshift({ type: "action", label, icon,
-  action: function (m, el) { var satz = ansicht.getContextRecord(el)[0]; … } })` (nur wenn das Raster änderbar ist).
+  action: function (m, el) { var satz = ansicht.getContextRecord(el)[0]; … } })`. Das Zeilenmenü gibt es **auch im
+  nur lesbaren Raster** (Region `readOnly`) – der Eintrag ist dort ebenfalls sichtbar; ob das Raster änderbar ist,
+  liefert `modell.getOption("editable")` (z. B. Beschriftung „Detail anzeigen“ statt „Detail bearbeiten“).
+- **Dialog je nach Zustand der Hauptseite nur lesen statt Fehlermeldung:** Eine Prüfung mit `raise_application_error`
+  im Before-Header-Prozess des Dialogs verhindert das Öffnen (Fehlerseite im Dialog). Besser: der Prozess setzt ein
+  Hidden-Element (`P14_NUR_LESEN := 'Y'`), die Formularregion bekommt `readOnly { type: expression  language: plsql
+  plsqlExpression: :P14_NUR_LESEN = 'Y' }` (gilt für alle Elemente der Region), die Speichern-Buttons eine
+  Bedingung darauf; die harte Prüfung bleibt nur im Prozess beim Absenden. Die Regel selbst ist dieselbe wie auf der
+  Hauptseite (Status aus der Tabelle + `:P11_BEARBEITEN` aus dem Sitzungsstatus – `:P11_RECH_STATUS` steht als
+  Formularfeld nicht im Sitzungsstatus). Im nur lesbaren Formular sind Zahlenfelder reine Anzeige:
+  `apex.item(…).getNativeValue()` liefert keinen Zahlenwert → berechnete Anzeigen (Summe) serverseitig setzen.
 - **Zeile per Skript anfügen:** `modell.insertNewRecord(null, letzterSatz)`, danach
   `ansicht.view$.grid("gotoCell", id, "SPALTE")` und `grid("setEditMode", true)`.
 - **Region neu laden verwirft ungespeicherte Rasteränderungen** ohne Rückfrage → vor dem Öffnen eines Dialogs, der
