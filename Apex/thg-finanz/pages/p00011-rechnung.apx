@@ -22,6 +22,8 @@ page 11 (
             //    Hauptpositionen 1, 2, 3 …, Unterpositionen 10, 20, 30 …
             //  * ob geaendert werden darf, liefert der Server (Status der Rechnung bzw. "Rechnung bearbeiten")
             (function () {
+                // Tab-Leiste: erster Tab heisst "Alle anzeigen" (thg.js uebersetzt "Show All" allgemein mit "Alle")
+                $(".apex-rds li:first-child a span").text("Alle anzeigen");
                 if (!document.getElementById("pos-baum")) {
                     return;   // neue Rechnung: Positionen erst nach dem Anlegen
                 }
@@ -657,6 +659,23 @@ page 11 (
         }
     )
 
+    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: bySession
+        }
+    )
+
     region allgemein (
         name: Allgemein
         type: staticContent
@@ -664,6 +683,9 @@ page 11 (
             type: expression
             language: plsql
             plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
+        advanced {
+            regionDisplaySelector: true
         }
         layout {
             sequence: 10
@@ -683,6 +705,9 @@ page 11 (
             type: expression
             language: plsql
             plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
+        advanced {
+            regionDisplaySelector: true
         }
         layout {
             sequence: 20
@@ -734,6 +759,9 @@ page 11 (
             language: plsql
             plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
         }
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
             sequence: 30
             parentRegion: @rechnung
@@ -752,6 +780,9 @@ page 11 (
             type: expression
             language: plsql
             plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+        }
+        advanced {
+            regionDisplaySelector: true
         }
         layout {
             sequence: 45
@@ -1530,6 +1561,9 @@ page 11 (
     region positionen-bereich (
         name: Positionen
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
             sequence: 40
             slot: body
@@ -2340,6 +2374,7 @@ page 11 (
         type: interactiveGrid
         advanced {
             htmlDomId: zahlungen
+            regionDisplaySelector: true
         }
         source {
             location: localDatabase

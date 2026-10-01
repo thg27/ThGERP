@@ -34,6 +34,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Mandantencodes: `EDV` (ThG - edv GmbH, grün) und `HOLDING` (Thomas Geßlbauer GmbH, Eigentümerin der ThG - edv GmbH, blau). Die Bannerfarbe hängt in `thg.css` am Code (`data-mandant`) – bei Codeänderung CSS und Grunddatenskripte 17/18/20 mitziehen.
   Kunden und Artikel sind mandantenübergreifend; Finanz (FAKT_*) ist mandantenabhängig (`RECH_MAND_ID = :MANDANT_ID`).
 - Theme-Stil: Standard Redwood Light; Stilauswahl im Portal speichert den Stil beim Mitarbeiter (`MITA_THEME_STIL`) und setzt ihn per `apex_theme.set_session_style` für die Sitzung in allen Apps (App-Prozess „Theme-Stil“ in jeder App, einmal je Anmeldung). Bannerfarbe kommt in allen Stilen vom Mandanten (`thg.css`).
+- Rechnung (THG-FINANZ Seite 11): Regionen Allgemein, Kunde (mit Anschrift-Vorschau und Lieferadresse), Vortext, Positionen, Schlusstext, Zahlungen;
+  darüber eine Tab-Leiste (Region Display Selector, erster Tab „Alle anzeigen“).
 - Rechnungspositionen (THG-FINANZ Seite 11): Haupt- und Unterpositionen in `FAKT_RECHNUNGSPOSITIONEN` (`RPOS_HAUPT_RPOS_ID` leer = Hauptposition;
   Hauptpositionen 1, 2, 3 …, Unterpositionen je Hauptposition 10, 20, 30 …; `RPOS_UK` = Rechnung + Hauptposition + Position).
   Die Positionsnummern werden nicht eingegeben: sie ergeben sich aus der Reihenfolge im Baum (Drag & Drop, AJAX `POS_VERSCHIEBEN`) und werden

@@ -306,6 +306,8 @@ POS_JS = """    javaScript {
             //    Hauptpositionen 1, 2, 3 …, Unterpositionen 10, 20, 30 …
             //  * ob geaendert werden darf, liefert der Server (Status der Rechnung bzw. "Rechnung bearbeiten")
             (function () {
+                // Tab-Leiste: erster Tab heisst "Alle anzeigen" (thg.js uebersetzt "Show All" allgemein mit "Alle")
+                $(".apex-rds li:first-child a span").text("Alle anzeigen");
                 if (!document.getElementById("pos-baum")) {
                     return;   // neue Rechnung: Positionen erst nach dem Anlegen
                 }
@@ -921,8 +923,29 @@ def seite_11():
     )
 
 """
-    s += region("allgemein", "Allgemein", 10, parent="rechnung", extra=NUR_LESEN)
-    s += region("kunde", "Kunde", 20, parent="rechnung", extra=NUR_LESEN)
+    # Tab-Leiste (Region Display Selector): erster Tab "Alle anzeigen", danach je Region ein Tab –
+    # Allgemein, Kunde, Vortext, Positionen, Schlusstext, Zahlungen (Regionen mit regionDisplaySelector: true)
+    s += """    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: bySession
+        }
+    )
+
+"""
+    TAB = "        advanced {\n            regionDisplaySelector: true\n        }\n"
+    s += region("allgemein", "Allgemein", 10, parent="rechnung", extra=NUR_LESEN + TAB)
+    s += region("kunde", "Kunde", 20, parent="rechnung", extra=NUR_LESEN + TAB)
     # Unterregionen von "Kunde" nebeneinander (je halbe Breite, ohne eigenen Rahmen)
     halb = lambda r, neue_zeile: r.replace("            slot: subRegions\n",
         "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n") +
@@ -932,8 +955,8 @@ def seite_11():
                      parent="kunde"), False)
     # Vortext vor den Positionen, Schlusstext danach (wie am Ausdruck); die Lieferadresse steht unter der
     # Anschrift-Vorschau des Kunden. Ein eigener Text der Zahlungsbedingungen entfaellt (Auswahl beim Kunden).
-    s += region("vortext", "Vortext", 30, parent="rechnung", extra=NUR_LESEN)
-    s += region("schlusstext", "Schlusstext", 45, extra=NUR_LESEN)
+    s += region("vortext", "Vortext", 30, parent="rechnung", extra=NUR_LESEN + TAB)
+    s += region("schlusstext", "Schlusstext", 45, extra=NUR_LESEN + TAB)
 
     f = dict(form="rechnung")
     s += """    pageItem P11_RECH_ID (
@@ -1069,7 +1092,7 @@ def seite_11():
         "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
 
     # ------------------------------------------------ Positionen: Baum (links) | Felder der Position und Raster (rechts)
-    s += region("positionen-bereich", "Positionen", 40, bedingung="P11_RECH_ID")
+    s += region("positionen-bereich", "Positionen", 40, bedingung="P11_RECH_ID", extra=TAB)
     spalte = lambda r, breite, neue_zeile: r.replace(
         "            slot: subRegions\n",
         "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n")
@@ -1195,7 +1218,7 @@ def seite_11():
             language: plsql
             plsqlExpression: :P11_RECH_STATUS in ('OFFEN', 'BEZAHLT')
         }
-""")
+""").replace("            htmlDomId: zahlungen\n", "            htmlDomId: zahlungen\n            regionDisplaySelector: true\n", 1)
 
     # ------------------------------------------------ Buttons
     grau = "[\n                #DEFAULT#\n                t-Button--noUI\n            ]"
