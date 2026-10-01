@@ -56,3 +56,28 @@ App THG-ARTIKEL (20040) und THG-ADMIN (20030), 2026-09-26.
   „Set value not allowed for field“ – bei neuen Zeilen funktioniert es, daher leicht übersehen. Lösung: Spalte
   serverseitig nicht schreibgeschützt, im Browser `model.getOption("fields").SPALTE.readonly = true` setzen und beim
   Setzen kurz aufheben; den Wert serverseitig nicht übernehmen (Trigger/Prozess berechnet ihn).
+
+## Dialogseite mit Formular, Popup LOV, Interactive Grid (ergänzt 2026-10-01, THG-FINANZ Seite 11/14)
+- **Formularfelder stehen nicht im Sitzungsstatus:** Die Formular-Initialisierung hält die Werte nur für die
+  Seitenanzeige. In AJAX-Callbacks und „Execute Server-side Code“ sind `:P11_RECH_ID`, der Primärschlüssel
+  (`:P14_RPOS_ID`) usw. leer, wenn sie nicht mitgeschickt werden → `apex.server.process(…, { pageItems: "#P11_RECH_ID" })`
+  bzw. `itemsToSubmit`. Symptom: URL `…?p14_rpos_id&p14_rech_id` ohne Werte, `ORA-01403` auf der Zielseite.
+- **Neue Zeile im Formular:** Die Initialisierung leert alle Formularfelder – auch einen per URL übergebenen
+  Fremdschlüssel. Lösung: eigenes Hidden-Element ohne Formularquelle (`P14_RECH_ID`, bleibt im Sitzungsstatus) und im
+  Formularfeld `default { type: item  item: P14_RECH_ID }`.
+- **`displayOnly` per Dynamic Action gesetzt** → beim Absenden „Session state protection violation … protected page
+  item“. Lösung: `settings { sendOnPageSubmit: false }` und das Feld nicht in `itemsToSubmit` aufnehmen.
+- **Mehrspaltige Werteliste (Popup LOV):** in der LOV je Zusatzspalte `column NAME ( heading { … } layout { sequence }
+  source { dataType } )`, Anzeige-/Rückgabespalte mit `show: false` und `advanced { searchable: false }`. Element bzw.
+  IG-Spalte `type: popupLov` (kein `displayExtraValues`). Die Suche geht über alle sichtbaren Spalten. Das Inline-Popup
+  ist nur so breit wie das Feld/die Rasterspalte → Mindestbreite in `thg.css` (`.ui-dialog.ui-dialog-popuplov`).
+- **Dialog aus JavaScript öffnen:** URL serverseitig mit `apex_page.get_url(p_page, p_items, p_values,
+  p_triggering_element => 'apex.jQuery(''#region'')')` (Prüfsumme!), im Browser `apex.navigation.redirect(url)`;
+  nach dem Schließen feuert `apexafterclosedialog` auf der Region → `apex.region("…").refresh()`.
+- **IG-Zeilenmenü erweitern:** `ansicht.rowActionMenu$.menu("option").items.unshift({ type: "action", label, icon,
+  action: function (m, el) { var satz = ansicht.getContextRecord(el)[0]; … } })` (nur wenn das Raster änderbar ist).
+- **Zeile per Skript anfügen:** `modell.insertNewRecord(null, letzterSatz)`, danach
+  `ansicht.view$.grid("gotoCell", id, "SPALTE")` und `grid("setEditMode", true)`.
+- **Region neu laden verwirft ungespeicherte Rasteränderungen** ohne Rückfrage → vor dem Öffnen eines Dialogs, der
+  das Raster neu lädt, auf Änderungen prüfen (`getRecordMetadata(...).updated/inserted/deleted`).
+

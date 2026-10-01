@@ -336,17 +336,84 @@ lov lov-artikel (
         type: sqlQuery
         sqlQuery:
             ```sql
-            select ARTI_NUMMER || ' – ' || ARTI_NAME as d,
-                   ARTI_ID as r
-              from ARTI_ARTIKEL
-             where ARTI_IST_AKTIV = 'Y'
-             order by ARTI_NUMMER
+            select a.ARTI_NUMMER || ' – ' || a.ARTI_NAME as d,
+                   a.ARTI_ID as r,
+                   g.AGRP_BEZEICHNUNG as GRUPPE,
+                   a.ARTI_NUMMER as NUMMER,
+                   a.ARTI_NAME as NAME
+              from ARTI_ARTIKEL a
+              left join ARTI_ARTIKELGRUPPEN g on g.AGRP_ID = a.ARTI_AGRP_ID
+             where a.ARTI_IST_AKTIV = 'Y'
+             order by g.AGRP_SORTIERUNG nulls last, g.AGRP_BEZEICHNUNG, a.ARTI_NUMMER
             ```
     }
     columnMapping {
         return: R
         display: D
     }
+
+    column GRUPPE (
+        heading {
+            heading: Gruppe
+        }
+        layout {
+            sequence: 10
+        }
+        source {
+            dataType: varchar2
+        }
+    )
+
+    column NUMMER (
+        heading {
+            heading: Artikelnummer
+        }
+        layout {
+            sequence: 20
+        }
+        source {
+            dataType: varchar2
+        }
+    )
+
+    column NAME (
+        heading {
+            heading: Name
+        }
+        layout {
+            sequence: 30
+        }
+        source {
+            dataType: varchar2
+        }
+    )
+
+    column D (
+        show: false
+        layout {
+            sequence: 40
+        }
+        source {
+            dataType: varchar2
+        }
+        advanced {
+            searchable: false
+        }
+    )
+
+    column R (
+        show: false
+        layout {
+            sequence: 50
+        }
+        source {
+            dataType: number
+        }
+        advanced {
+            searchable: false
+        }
+    )
+
 )
 
 lov lov-mwst-prozent (

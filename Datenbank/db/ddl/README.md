@@ -28,10 +28,11 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 18_mandanten_firmendaten.sql | Firmendaten der Mandanten (Adresse, UID, Firmenbuch), ADMIN_MANDANT_BANKVERBINDUNGEN, ADMIN_MANDANT_KOMMUNIKATION; Daten aus den Ausgangsrechnungen; wiederholbar |
 | 19_artikelstamm.sql | Artikelstamm (ARTI): Artikel, Artikelgruppen, Zusatzfelder/-werte, Dateien; ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN; Grunddaten; wiederholbar (generiert: generator/gen_19_20_artikel_fakturierung.py) |
 | 20_fakturierung.sql | Fakturierung (FAKT): Nummernkreise, Rechnungen, Rechnungspositionen, Zahlungen; Nummernkreise 2026; wiederholbar (generiert) |
-| 21_finanz.sql | Package FAKT_RECHNUNG (Empfänger übernehmen, Summen, Abschließen mit Nummernkreis, Zahlungsstatus), Views FAKT_RECHNUNGEN_V, FAKT_RECHNUNG_MWST_V; Löschen (Entwurf bzw. letzte Rechnung); Mitarbeiter, Textvorlagen, Portal-Kachel THG-FINANZ; wiederholbar |
+| 21_finanz.sql | Package FAKT_RECHNUNG (Empfänger übernehmen, Summen, Positionsnummer je Kapitel, Abschließen mit Nummernkreis, Zahlungsstatus), Views FAKT_RECHNUNGEN_V, FAKT_RECHNUNG_MWST_V; Löschen (Entwurf bzw. letzte Rechnung); Mitarbeiter, Textvorlagen, Portal-Kachel THG-FINANZ; wiederholbar |
 | 22_finanz_nummernschutz.sql | Trigger RECH_NUMMER_BUD, NKRS_NUMMER_BU: Rechnungsnummer/Nummernkreis nur über das Package FAKT_RECHNUNG änderbar, abgeschlossene Rechnungen nur als letzte löschbar; wiederholbar |
 | 23_mitarbeiter_theme.sql | ALLG_MITARBEITER.MITA_THEME_STIL: Theme-Stil je Mitarbeiter (gilt nach dem Login in allen Apps); wiederholbar |
 | 24_rechnung_pdf.sql | Package FAKT_RECHNUNG_PDF: Rechnung als PDF (AS_PDF) im Layout der bisherigen Ausgangsrechnungen je Mandant (Logo, Anschrift, Positionen mit Rich-Text-Beschreibung, Summen je Steuersatz, Fuß mit Banken/Firmenbuch); wiederholbar |
+| 25_positionen_kapitel.sql | Rechnungspositionen je Kapitel nummerieren: RPOS_UK neu auf (Rechnung, Kapitel, Position) – je Kapitel 10, 20, 30 …, Positionen ohne Kapitel am Anfang; danach 21 und 24 erneut ausführen; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

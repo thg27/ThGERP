@@ -197,7 +197,7 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_UPDATED_BY', 'varchar2(255 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ROW_VERSION', 'number', 'N');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_PK', 'P', 'RPOS_ID');
-    DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_UK', 'U', q'~RPOS_RECH_ID, RPOS_POSITION~');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_UK', 'U', q'~RPOS_RECH_ID, RPOS_KAPITEL, RPOS_POSITION~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_RABATT_CK', 'C', q'~RPOS_RABATT_PROZENT between 0 and 100~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_MWST_CK', 'C', q'~RPOS_MWST_PROZENT between 0 and 100~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_IST_OPTIONAL_CK', 'C', q'~RPOS_IST_OPTIONAL in ('Y', 'N')~');
@@ -437,8 +437,8 @@ comment on table FAKT_RECHNUNGSPOSITIONEN is 'Positionen der Ausgangsrechnungen 
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_ID is 'Primaerschluessel (SYS_GUID)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_RECH_ID is 'FK: Rechnung';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_ARTI_ID is 'FK: Artikel (optional; Texte werden kopiert)';
-comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION is 'Positionsnummer';
-comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_KAPITEL is 'Kapitel (Gruppierung auf der Rechnung)';
+comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION is 'Positionsnummer innerhalb des Kapitels (10er-Schritte)';
+comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_KAPITEL is 'Kapitel (Gruppierung auf der Rechnung; leer = am Anfang der Rechnung)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_UNTERKAPITEL is 'Unterkapitel';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_ARTIKELNUMMER is 'Artikelnummer (Kopie)';
 comment on column FAKT_RECHNUNGSPOSITIONEN.RPOS_NAME is 'Positionstext (Kopie des Artikelnamens)';

@@ -226,6 +226,10 @@ body .t-Header .t-NavigationBar-item .t-Button {
   .thg-login-firma-name { font-size: 1rem; }
   .thg-login-firma img { height: 5rem; }
 }
+
+/* Popup LOV (Inline-Popup): Mindestbreite fuer mehrspaltige Wertelisten, z. B. Artikel mit Gruppe / Artikelnummer / Name
+   – ohne diese Regel ist das Popup nur so breit wie das Feld bzw. die Rasterspalte */
+.ui-dialog.ui-dialog-popuplov { min-width: min(640px, 95vw); }
 '));
     workspace_datei(p_file_name => 'thg.css', p_mime_type => 'text/css', p_inhalt => l_inhalt, p_base64 => false);
     dbms_lob.freetemporary(l_inhalt);

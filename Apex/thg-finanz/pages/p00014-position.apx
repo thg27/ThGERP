@@ -1,0 +1,895 @@
+page 14 (
+    name: Position
+    alias: POSITION
+    title: Position
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1000
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region position (
+        name: Position
+        type: form
+        source {
+            location: localDatabase
+            tableName: FAKT_RECHNUNGSPOSITIONEN
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+            ]
+        }
+    )
+
+    pageItem P14_RECH_ID (
+        type: hidden
+        layout {
+            sequence: 3
+            region: @position
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P14_RPOS_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @position
+            slot: regionBody
+        }
+        source {
+            formRegion: @position
+            column: RPOS_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P14_RPOS_RECH_ID (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @position
+            slot: regionBody
+        }
+        source {
+            formRegion: @position
+            column: RPOS_RECH_ID
+            dataType: number
+        }
+        default {
+            type: item
+            item: P14_RECH_ID
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P14_RPOS_ARTI_ID (
+        type: popupLov
+        label {
+            label: Artikel (Suche nach Gruppe, Artikelnummer, Name)
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @position
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_ARTI_ID
+            dataType: number
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-artikel
+            displayNullValue: true
+            nullDisplayValue: - ohne Artikel -
+        }
+    )
+
+    pageItem P14_RPOS_KAPITEL (
+        type: textField
+        label {
+            label: Kapitel (gruppiert die Positionen)
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_KAPITEL
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P14_RPOS_POSITION (
+        type: numberField
+        label {
+            label: Pos
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_POSITION
+            dataType: number
+        }
+    )
+
+    pageItem P14_RPOS_NAME (
+        type: textField
+        label {
+            label: Name
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @position
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_NAME
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 200
+        }
+    )
+
+    pageItem P14_RPOS_EINZELPREIS (
+        type: numberField
+        label {
+            label: Einzelpreis
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            formatMask: 999G999G990D00
+        }
+        source {
+            formRegion: @position
+            column: RPOS_EINZELPREIS
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: 0
+        }
+    )
+
+    pageItem P14_RPOS_EINHEIT (
+        type: selectList
+        label {
+            label: Einheit
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_EINHEIT
+            dataType: varchar2
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-einheiten-code
+            displayNullValue: true
+            nullDisplayValue: -
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P14_ARTIKELNUMMER (
+        type: displayOnly
+        label {
+            label: Artikelnummer
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @position
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
+    pageItem P14_GRUPPE (
+        type: displayOnly
+        label {
+            label: Gruppe
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
+    pageItem P14_RPOS_MWST_PROZENT (
+        type: selectList
+        label {
+            label: MwSt. in %
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_MWST_PROZENT
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-mwst-prozent
+            displayNullValue: false
+            displayExtraValues: false
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select MWST_PROZENT from ALLG_MWST_SAETZE where MWST_IST_STANDARD = 'Y'
+                ```
+        }
+    )
+
+    pageItem P14_RPOS_IST_OPTIONAL (
+        type: switch
+        label {
+            label: Optional (nicht in der Summe)
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_IST_OPTIONAL
+            dataType: varchar2
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P14_RPOS_MENGE (
+        type: numberField
+        label {
+            label: Menge
+            alignment: left
+        }
+        layout {
+            sequence: 110
+            region: @position
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_MENGE
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: 1
+        }
+    )
+
+    pageItem P14_RPOS_RABATT_PROZENT (
+        type: numberField
+        label {
+            label: Rabatt %
+            alignment: left
+        }
+        layout {
+            sequence: 120
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_RABATT_PROZENT
+            dataType: number
+        }
+    )
+
+    pageItem P14_SUMME (
+        type: displayOnly
+        label {
+            label: Summe
+            alignment: left
+        }
+        layout {
+            sequence: 130
+            region: @position
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            cssClasses: thg-hervorheben
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
+    pageItem P14_RPOS_BESCHREIBUNG (
+        type: richTextEditor
+        label {
+            label: Beschreibung
+            alignment: left
+        }
+        layout {
+            sequence: 140
+            region: @position
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @position
+            column: RPOS_BESCHREIBUNG
+            dataType: clob
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Abbrechen
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P14_RPOS_ID
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Position anlegen
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P14_RPOS_ID
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction artikel-gewaehlt (
+        name: Artikel gewählt: Daten aus dem Artikelstamm übernehmen
+        execution {
+            sequence: 20
+        }
+        when {
+            event: change
+            selectionType: items
+            items: P14_RPOS_ARTI_ID
+        }
+
+        action artikel-laden (
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    -- Name, Einheit, Einzelpreis, MwSt., Beschreibung vom Artikel (danach aenderbar); alle Felder werden
+                    -- mitgeschickt, damit ohne Artikel die bisherigen Eingaben erhalten bleiben
+                    declare
+                        a ARTI_ARTIKEL%rowtype;
+                    begin
+                        if :P14_RPOS_ARTI_ID is null then
+                            :P14_ARTIKELNUMMER := null;
+                            :P14_GRUPPE := null;
+                            return;
+                        end if;
+                        select * into a from ARTI_ARTIKEL where ARTI_ID = to_number(:P14_RPOS_ARTI_ID);
+                        :P14_RPOS_NAME         := a.ARTI_NAME;
+                        :P14_RPOS_EINZELPREIS  := to_char(a.ARTI_VK_PREIS, 'FM999G999G990D00');
+                        :P14_RPOS_BESCHREIBUNG := a.ARTI_BESCHREIBUNG;
+                        :P14_ARTIKELNUMMER     := a.ARTI_NUMMER;
+                        select max(EINH_CODE) into :P14_RPOS_EINHEIT from ALLG_EINHEITEN where EINH_ID = a.ARTI_EINH_ID;
+                        select to_char(max(MWST_PROZENT)) into :P14_RPOS_MWST_PROZENT from ALLG_MWST_SAETZE where MWST_ID = a.ARTI_MWST_ID;
+                        select max(AGRP_BEZEICHNUNG) into :P14_GRUPPE from ARTI_ARTIKELGRUPPEN where AGRP_ID = a.ARTI_AGRP_ID;
+                        if :P14_RPOS_MENGE is null then
+                            :P14_RPOS_MENGE := '1';
+                        end if;
+                    end;
+                    ```
+                itemsToSubmit: P14_RPOS_ARTI_ID,P14_RPOS_NAME,P14_RPOS_EINHEIT,P14_RPOS_EINZELPREIS,P14_RPOS_MWST_PROZENT,P14_RPOS_BESCHREIBUNG,P14_RPOS_MENGE
+                itemsToReturn: P14_RPOS_NAME,P14_RPOS_EINHEIT,P14_RPOS_EINZELPREIS,P14_RPOS_MWST_PROZENT,P14_RPOS_BESCHREIBUNG,P14_RPOS_MENGE,P14_ARTIKELNUMMER,P14_GRUPPE
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction kapitel-geaendert (
+        name: Kapitel geändert: nächste Positionsnummer des Kapitels
+        execution {
+            sequence: 30
+        }
+        when {
+            event: change
+            selectionType: items
+            items: P14_RPOS_KAPITEL
+        }
+
+        action position-vorschlagen (
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    -- je Kapitel 10, 20, 30 … (ohne Kapitel: Positionen am Anfang der Rechnung)
+                    -- P14_RECH_ID kommt aus der URL und steht im Sitzungsstatus; Formularfelder (auch der Primaerschluessel
+                    -- P14_RPOS_ID) stehen dort nicht und werden mitgeschickt
+                    :P14_RPOS_POSITION := to_char(FAKT_RECHNUNG.naechste_position(:P14_RECH_ID, :P14_RPOS_KAPITEL,
+                                                                                    to_number(:P14_RPOS_ID)));
+                    ```
+                itemsToSubmit: P14_RPOS_KAPITEL,P14_RPOS_ID
+                itemsToReturn: P14_RPOS_POSITION
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction summe-anzeigen (
+        name: Summe der Position sofort berechnen
+        execution {
+            sequence: 40
+        }
+        when {
+            event: change
+            selectionType: items
+            items: P14_RPOS_MENGE,P14_RPOS_EINZELPREIS,P14_RPOS_RABATT_PROZENT
+        }
+
+        action summe-berechnen (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript
+                    // Menge x Einzelpreis abzgl. Rabatt (wie Trigger RPOS_BIU), Anzeige im Format der Betraege
+                    var n = function (name) {
+                        var w = apex.item(name).getNativeValue();
+                        return (typeof w === "number" && !isNaN(w)) ? w : 0;
+                    };
+                    var summe = n("P14_RPOS_MENGE") * n("P14_RPOS_EINZELPREIS") * (1 - n("P14_RPOS_RABATT_PROZENT") / 100);
+                    apex.item("P14_SUMME").setValue(apex.locale.formatNumber(Math.round(summe * 100) / 100, "FML999G999G990D00"));
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: true
+            }
+        )
+
+    )
+
+    process initialize-form-position (
+        name: Formular Position initialisieren
+        type: formInitialization
+        formRegion: @position
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process rechnung-pruefen (
+        name: Rechnung prüfen (Mandant, änderbar)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Rechnung des Mandanten der Sitzung; Positionen nur im Entwurf oder nach "Rechnung bearbeiten" (Seite 11)
+                declare
+                    l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                begin
+                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status
+                      from FAKT_RECHNUNGEN where RECH_ID = nvl(:P14_RPOS_RECH_ID, :P14_RECH_ID);
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+                    end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: beforeHeader
+        }
+    )
+
+    process anzeige-vorbelegen (
+        name: Positionsnummer vorschlagen, Artikelnummer und Gruppe anzeigen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- neue Position: naechste Nummer der Positionen ohne Kapitel (Kapitel eingegeben -> Dynamic Action)
+                if :P14_RPOS_ID is null then
+                    :P14_RPOS_POSITION := to_char(FAKT_RECHNUNG.naechste_position(:P14_RECH_ID, null));
+                end if;
+                select max(a.ARTI_NUMMER), max(g.AGRP_BEZEICHNUNG) into :P14_ARTIKELNUMMER, :P14_GRUPPE
+                  from ARTI_ARTIKEL a
+                  left join ARTI_ARTIKELGRUPPEN g on g.AGRP_ID = a.ARTI_AGRP_ID
+                 where a.ARTI_ID = to_number(:P14_RPOS_ARTI_ID);
+                ```
+        }
+        execution {
+            sequence: 30
+            point: beforeHeader
+        }
+    )
+
+    validation position-eindeutig (
+        name: Position im Kapitel noch nicht vergeben
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: noRowsReturned
+            sqlQuery:
+                ```sql
+                select 1
+                  from FAKT_RECHNUNGSPOSITIONEN
+                 where RPOS_RECH_ID = :P14_RPOS_RECH_ID
+                   and (RPOS_KAPITEL = trim(:P14_RPOS_KAPITEL) or (RPOS_KAPITEL is null and trim(:P14_RPOS_KAPITEL) is null))
+                   and RPOS_POSITION = to_number(:P14_RPOS_POSITION default null on conversion error)
+                   and (:P14_RPOS_ID is null or RPOS_ID <> to_number(:P14_RPOS_ID))
+                ```
+        }
+        error {
+            errorMessage: Diese Positionsnummer ist im Kapitel bereits vergeben.
+            associatedItem: @P14_RPOS_POSITION
+        }
+    )
+
+    process rechnung-pruefen-speichern (
+        name: Rechnung prüfen (Mandant, änderbar) vor dem Speichern
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Rechnung des Mandanten der Sitzung; Positionen nur im Entwurf oder nach "Rechnung bearbeiten" (Seite 11)
+                declare
+                    l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                begin
+                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status
+                      from FAKT_RECHNUNGEN where RECH_ID = :P14_RPOS_RECH_ID;
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+                    end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+    )
+
+    process position-vorbelegen (
+        name: Kapitel ohne Leerzeichen, fehlende Positionsnummer vergeben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                :P14_RPOS_KAPITEL := trim(:P14_RPOS_KAPITEL);
+                if :P14_RPOS_POSITION is null then
+                    :P14_RPOS_POSITION := to_char(FAKT_RECHNUNG.naechste_position(:P14_RPOS_RECH_ID, :P14_RPOS_KAPITEL,
+                                                                                    to_number(:P14_RPOS_ID)));
+                end if;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+    )
+
+    process process-form-position (
+        name: Formular Position verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @position
+        execution {
+            sequence: 30
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+        successMessage {
+            successMessage: Position gespeichert.
+        }
+    )
+
+    process artikel-kopien (
+        name: Artikelnummer und Erlöskonto vom Artikel, Rechnungssummen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                update FAKT_RECHNUNGSPOSITIONEN p
+                   set (RPOS_ARTIKELNUMMER, RPOS_ERLOESKONTO) =
+                       (select a.ARTI_NUMMER, a.ARTI_ERLOESKONTO from ARTI_ARTIKEL a where a.ARTI_ID = p.RPOS_ARTI_ID)
+                 where p.RPOS_ID = to_number(:P14_RPOS_ID)
+                   and p.RPOS_ARTI_ID is not null;
+                FAKT_RECHNUNG.summen_berechnen(:P14_RPOS_RECH_ID);
+                ```
+        }
+        execution {
+            sequence: 40
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 50
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+)

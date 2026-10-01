@@ -1,8 +1,8 @@
 -- =====================================================================
 -- ThGERP (Gruppe FAKT) – App THG-FINANZ (20050)
 -- 21 – Logik und Sichten der Fakturierung:
---      Package FAKT_RECHNUNG (Empfaenger uebernehmen, Summen, Abschliessen mit Nummernkreis, Zahlungsstatus,
---      Loeschen nur Entwurf bzw. letzte Rechnung)
+--      Package FAKT_RECHNUNG (Empfaenger uebernehmen, Summen, Positionsnummer je Kapitel, Abschliessen mit
+--      Nummernkreis, Zahlungsstatus, Loeschen nur Entwurf bzw. letzte Rechnung)
 --      Views FAKT_RECHNUNGEN_V (Liste mit offenem Betrag), FAKT_RECHNUNG_MWST_V (Summen je Steuersatz)
 --      Grunddaten: Mitarbeiter Thomas Gesslbauer (Login ADMIN_THG), Textvorlagen aus Kingbill, Portal-Kachel
 -- Voraussetzung: 17–20
@@ -82,6 +82,9 @@ create or replace package FAKT_RECHNUNG as
     procedure empfaenger_uebernehmen(p_rech_id in number, p_nur_verweise in boolean default false);
     -- Summen netto / MwSt. / brutto aus den Positionen (ohne optionale) neu berechnen
     procedure summen_berechnen(p_rech_id in number);
+    -- naechste Positionsnummer innerhalb eines Kapitels (10, 20, 30 …; Kapitel leer = Positionen am Anfang der
+    -- Rechnung); p_rpos_id: diese Position nicht mitzaehlen (Kapitelwechsel einer bestehenden Position)
+    function naechste_position(p_rech_id in number, p_kapitel in varchar2, p_rpos_id in number default null) return number;
     -- naechste Belegnummer aus FAKT_NUMMERNKREISE (legt den Nummernkreis des Jahres bei Bedarf an)
     function naechste_nummer(p_mand_id in number, p_belegart in varchar2, p_jahr in number) return varchar2;
     -- Entwurf abschliessen: Rechnungsdatum = heute, Nummer vergeben (Jahr des Rechnungsdatums), Status OFFEN,
@@ -177,6 +180,17 @@ create or replace package body FAKT_RECHNUNG as
            set RECH_SUMME_BRUTTO = RECH_SUMME_NETTO + RECH_SUMME_MWST
          where RECH_ID = p_rech_id;
     end summen_berechnen;
+
+    function naechste_position(p_rech_id in number, p_kapitel in varchar2, p_rpos_id in number default null) return number is
+        l_pos FAKT_RECHNUNGSPOSITIONEN.RPOS_POSITION%type;
+    begin
+        select trunc(nvl(max(RPOS_POSITION), 0) / 10) * 10 + 10 into l_pos
+          from FAKT_RECHNUNGSPOSITIONEN
+         where RPOS_RECH_ID = p_rech_id
+           and (RPOS_KAPITEL = trim(p_kapitel) or (RPOS_KAPITEL is null and trim(p_kapitel) is null))
+           and (p_rpos_id is null or RPOS_ID <> p_rpos_id);
+        return l_pos;
+    end naechste_position;
 
     function naechste_nummer(p_mand_id in number, p_belegart in varchar2, p_jahr in number) return varchar2 is
         l_nkrs FAKT_NUMMERNKREISE%rowtype;

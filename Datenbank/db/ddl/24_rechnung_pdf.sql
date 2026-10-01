@@ -339,7 +339,9 @@ as
     begin
         platz(40);
         tabellenkopf;
-        for p in (select * from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = p_r.RECH_ID order by RPOS_POSITION) loop
+        for p in (select * from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = p_r.RECH_ID
+                   order by RPOS_KAPITEL nulls first, RPOS_POSITION)   -- ohne Kapitel zuerst, je Kapitel 10, 20, 30 …
+        loop
             -- Kapitel als Zwischenueberschrift, wenn es wechselt
             if p.RPOS_KAPITEL is not null and (l_kapitel is null or p.RPOS_KAPITEL <> l_kapitel) then
                 platz(30, true);

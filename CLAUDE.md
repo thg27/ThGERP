@@ -7,7 +7,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
 - Workspace `THGERP`, Schema `WKSP_THGERP`, SQLcl-Verbindung `wksp_thgerp@pdbthg` (Host dbthgprod, für ERP-Entwicklung freigegeben).
 - App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20040 THG-ARTIKEL, 20050 THG-FINANZ (Fakturierung, Tabellen FAKT_*).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-09-26): alle DDL-Skripte 01–23 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-01): alle DDL-Skripte 01–25 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -34,6 +34,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Mandantencodes: `EDV` (ThG - edv GmbH, grün) und `HOLDING` (Thomas Geßlbauer GmbH, Eigentümerin der ThG - edv GmbH, blau). Die Bannerfarbe hängt in `thg.css` am Code (`data-mandant`) – bei Codeänderung CSS und Grunddatenskripte 17/18/20 mitziehen.
   Kunden und Artikel sind mandantenübergreifend; Finanz (FAKT_*) ist mandantenabhängig (`RECH_MAND_ID = :MANDANT_ID`).
 - Theme-Stil: Standard Redwood Light; Stilauswahl im Portal speichert den Stil beim Mitarbeiter (`MITA_THEME_STIL`) und setzt ihn per `apex_theme.set_session_style` für die Sitzung in allen Apps (App-Prozess „Theme-Stil“ in jeder App, einmal je Anmeldung). Bannerfarbe kommt in allen Stilen vom Mandanten (`thg.css`).
+- Rechnungspositionen (THG-FINANZ Seite 11): Kapitel gruppiert die Positionen, je Kapitel Pos 10, 20, 30 … (`FAKT_RECHNUNG.naechste_position`,
+  `RPOS_UK` = Rechnung + Kapitel + Position); Positionen ohne Kapitel stehen am Anfang, Kapitel alphabetisch. Eingabe per „Schnelleingabe“ (Raster)
+  oder „Zeile Detail“ (Dialog Seite 14); Artikel-Auswahl als Popup LOV mit Gruppe/Artikelnummer/Name (`LOV_ARTIKEL`).
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).
 - `Apex/strategic-planner` ist Vorlage und wird nicht in Git eingecheckt.
