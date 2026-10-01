@@ -21,7 +21,7 @@ Reihenfolge: Portal (20000) → Sub-Apps → Subscriptions aktualisieren:
 begin
     apex_util.set_workspace(p_workspace => 'THGERP');
     for c in (select component_type, component_id from apex_subscribed_components
-               where application_id in (20010, 20020, 20030, 20040)
+               where application_id in (20010, 20020, 20030, 20040, 20050)
                  and subscription_status <> apex_shared_component.c_status_up_to_date) loop
         apex_shared_component.refresh(p_component_type => c.component_type, p_component_id => c.component_id);
     end loop;
