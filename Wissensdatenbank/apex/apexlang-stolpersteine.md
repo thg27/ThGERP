@@ -112,7 +112,11 @@ Seite 11 hat das Formular „Rechnung“ und daneben Felder einer Position (`P11
 - **Fachliche Fehler aus AJAX-Prozessen:** im `exception`-Teil `rollback` und `{"fehler": …}` zurückgeben, im Browser
   `apex.message.showErrors`.
 - **Interactive Grid mit wechselndem Elternsatz:** Abfrage auf `:P11_HAUPT_ID`, das der Lade-Prozess per Bind im
-  Sitzungsstatus setzt (kein clientseitig gesetztes Hidden-Element nötig), danach `region.refresh()`.
+  Sitzungsstatus setzt, danach `region.refresh()` – **nicht tab-sicher**: zwei Browser-Tabs derselben Sitzung teilen
+  den Wert, das Raster des einen Tabs speichert dann unter den Elternsatz des anderen. Besser: Element als `textField`
+  mit `appearance { cssClasses: u-hidden }` (ein `hidden`-Element ist wertgeschützt und lässt sich vom Browser nicht
+  setzen), per `apex.item(…).setValue(id, null, true)` setzen und in `pageItemsToSubmit` des Rasters aufnehmen – es
+  geht dann mit Abfrage **und** Speichern mit.
   - Ein Modell **mit Änderungen wird nicht neu geladen** – dazu zählt schon die vom Raster selbst angelegte leere Zeile,
     wenn ihr per `setValue` ein Wert gesetzt wurde → vorher `modell.clearChanges()` (echte Eingaben vorher abfragen).
   - Dieselbe Zeile macht die **Seite „geändert“** (`apex.page.isChanged()`, „Seite verlassen?“). Beim `insert`-Ereignis
@@ -120,3 +124,14 @@ Seite 11 hat das Formular „Rechnung“ und daneben Felder einer Position (`P11
   - Neue Zeilen haben `inserted` **und** `updated` → „ungespeichert?“ für neue Zeilen am Inhalt (Name/Artikel) festmachen.
   - War die Region ausgeblendet: nach dem Einblenden `ansicht.view$.grid("resize")`.
   - Nach dem Speichern feuert `interactivegridsave` auf der Region → Baum und Summen neu laden.
+- **Reihenfolge per Drag & Drop (HTML5):** Knoten mit `draggable='true'`; `dragstart` (`dataTransfer.setData` – sonst
+  zieht Firefox nicht), `dragover` mit `preventDefault()` nur dort, wo abgelegt werden darf, `drop`, `dragend`.
+  Position der Maus im Ziel (`e.originalEvent.clientY` relativ zu `getBoundingClientRect()`) entscheidet über
+  davor / danach / hinein. Der Server hängt um und nummeriert die Ebene in **einem** `update` mit `row_number()` neu
+  (ein Unique-Constraint wird erst am Ende der Anweisung geprüft); die verschobene Zeile bekommt vorher eine
+  Platzhalter-Nummer (−1) und im `order by` den Schlüssel „2 × Zielposition ∓ 1“.
+- **Browsertest in einem zweiten Tab ohne Cache-Löschen:** Der Link aus der Liste hat `clear=11` und setzt damit
+  Seitenzustand (`P11_BEARBEITEN`) der Sitzung zurück. URL mit Prüfsumme stattdessen aus SQLcl:
+  `apex_session.attach(p_app_id, p_page_id, p_session_id)`, `apex_page.get_url(p_page, p_items, p_values)`,
+  `apex_session.detach` (Host davor selbst ergänzen). Vor dem Neuladen eines Tabs des Anwenders auf ungespeicherte
+  Eingaben prüfen.

@@ -300,7 +300,9 @@ POS_JS = """    javaScript {
             //    und der Summe je Zeile; Buttons Hauptposition / Unterposition / Löschen
             //  * rechts die Felder der gewaehlten Position (P11_POS_*), gespeichert per AJAX (POS_SPEICHERN)
             //  * bei einer Hauptposition darunter das Raster ihrer Unterpositionen (Schnelleingabe)
-            //  * Hauptposition mit Unterpositionen: Summe der Unterpositionen, Rabatt, Pauschalsumme, Zwischensumme
+            //  * Hauptposition mit Unterpositionen: Rabatt, Summe (Unterpositionen abzgl. Rabatt), Pauschalsumme
+            //  * Reihenfolge per Drag & Drop im Baum (POS_VERSCHIEBEN); die Positionsnummern vergibt der Server:
+            //    Hauptpositionen 1, 2, 3 …, Unterpositionen 10, 20, 30 …
             //  * ob geaendert werden darf, liefert der Server (Status der Rechnung bzw. "Rechnung bearbeiten")
             (function () {
                 if (!document.getElementById("pos-baum")) {
@@ -308,14 +310,14 @@ POS_JS = """    javaScript {
                 }
                 var BETRAG = "FML999G999G990D00", PREIS = "999G999G990D00";
                 // Eingabefelder (werden beim Speichern mitgeschickt) und reine Anzeigen
-                var EINGABE = ["P11_POS_ARTI_ID", "P11_POS_POSITION", "P11_POS_NAME", "P11_POS_OPTIONAL", "P11_POS_EINZELPREIS",
+                var EINGABE = ["P11_POS_ARTI_ID", "P11_POS_NAME", "P11_POS_OPTIONAL", "P11_POS_EINZELPREIS",
                                "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST", "P11_POS_RABATT", "P11_POS_PAUSCHAL",
                                "P11_POS_BESCHREIBUNG"];
                 // nur bei Positionen ohne Unterpositionen (Unterposition bzw. Hauptposition, die selbst rechnet)
                 var NUR_EINZELN = ["P11_POS_ARTI_ID", "P11_POS_ARTIKELNUMMER", "P11_POS_GRUPPE", "P11_POS_EINZELPREIS",
                                    "P11_POS_EINHEIT", "P11_POS_MENGE", "P11_POS_MWST"];
                 // nur bei Hauptpositionen mit Unterpositionen
-                var NUR_SUMME = ["P11_POS_SUMME_UNTERPOS", "P11_POS_PAUSCHAL"];
+                var NUR_SUMME = ["P11_POS_PAUSCHAL"];
                 var zustand = { daten: null, aenderbar: false, id: null, hauptId: null, unter: 0, summeUnter: 0,
                                 offen: false, geaendert: false, laedt: false };
                 var baum$ = $("#pos-baum");
@@ -360,17 +362,6 @@ POS_JS = """    javaScript {
                         feld.readonly = schutz;
                     }
                 };
-                // naechste Nummer der Unterposition: 10, 20, 30 … (ohne die Zeile selbst und ohne geloeschte Zeilen)
-                var naechstePosition = function (zeile) {
-                    var max = 0, id = modell.getRecordId(zeile);
-                    modell.forEach(function (satz) {
-                        var meta = modell.getRecordMetadata(modell.getRecordId(satz));
-                        if (modell.getRecordId(satz) !== id && (!meta || !meta.deleted)) {
-                            max = Math.max(max, zahl(modell.getValue(satz, "RPOS_POSITION")));
-                        }
-                    });
-                    return String(Math.floor(max / 10) * 10 + 10);
-                };
                 // Spalten mit Werteliste speichern im Modell {v: Wert, d: Anzeige}, sonst einfache Werte
                 var wert = function (w) {
                     return (w && typeof w === "object") ? w.v : w;
@@ -394,14 +385,8 @@ POS_JS = """    javaScript {
                 };
                 modell.subscribe({
                     onChange: function (art, daten) {
-                        var meta = daten.record ? (modell.getRecordMetadata(modell.getRecordId(daten.record)) || {}) : {};
-                        // Positionsnummer neuer Zeilen erst bei der ersten Eingabe: beim Einfuegen gesetzt, gaelte auch die
-                        // vom Raster selbst angelegte leere Zeile als Aenderung ("Seite verlassen?"); ohne Nummer
-                        // vergibt sie der Prozess beim Speichern
+                        // die Positionsnummer vergibt der Prozess beim Speichern (neue Zeilen ans Ende)
                         if (art === "set" && daten.record) {
-                            if (daten.field !== "RPOS_POSITION" && meta.inserted && !modell.getValue(daten.record, "RPOS_POSITION")) {
-                                modell.setValue(daten.record, "RPOS_POSITION", naechstePosition(daten.record));
-                            }
                             if (daten.field === "RPOS_ARTI_ID") {
                                 artikelInsRaster(daten.record);
                             } else if (["RPOS_MENGE", "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT"].indexOf(daten.field) >= 0) {
@@ -418,7 +403,7 @@ POS_JS = """    javaScript {
                     }
                     modell.forEach(function (satz) {
                         var meta = modell.getRecordMetadata(modell.getRecordId(satz)) || {};
-                        // neue Zeilen gelten auch als "updated" (Positionsnummer wird gesetzt): nur mit Artikel oder Name zaehlen
+                        // neue Zeilen: nur mit Artikel oder Name zaehlen (die leere, vom Raster angelegte Zeile nicht)
                         if (meta.inserted ? (wert(modell.getValue(satz, "RPOS_ARTI_ID")) || modell.getValue(satz, "RPOS_NAME"))
                                           : (meta.deleted || meta.updated)) {
                             ja = true;
@@ -442,7 +427,8 @@ POS_JS = """    javaScript {
                 // ---------------------------------------------------------------- Baum und Summen
                 var knoten = function (p, klasse) {
                     return "<div class='thg-pos-knoten " + klasse + (p.optional ? " thg-pos-optional" : "") +
-                           "' role='treeitem' tabindex='0' data-id='" + p.id + "'>" +
+                           "' role='treeitem' tabindex='0' data-id='" + p.id + "' data-unter='" + (p.unter ? p.unter.length : 0) +
+                           "' draggable='" + (zustand.aenderbar ? "true" : "false") + "'>" +
                            "<span class='thg-pos-nr'>" + p.pos + "</span>" +
                            "<span class='thg-pos-name'>" + apex.util.escapeHTML(p.name) +
                            (p.pauschal ? " <span class='thg-pos-hinweis'>pauschal</span>" : "") +
@@ -465,6 +451,7 @@ POS_JS = """    javaScript {
                         });
                     });
                     baum$.html(html || "<div class='thg-pos-leer'>Noch keine Positionen.</div>");
+                    $("#pos-hinweis").toggle(zustand.aenderbar && zustand.daten.positionen.length > 0);
                     $("#pos-neu-haupt").prop("disabled", !zustand.aenderbar);
                     markieren();
                 };
@@ -502,11 +489,10 @@ POS_JS = """    javaScript {
                         return (typeof w === "number" && !isNaN(w)) ? w : 0;
                     };
                     var mitUnter = !zustand.hauptId && zustand.unter > 0;
+                    // Hauptposition mit Unterpositionen: deren Summe abzgl. Rabatt (eine Pauschalsumme ersetzt sie in der
+                    // Rechnung, steht aber im eigenen Feld und im Baum)
                     var summe = (mitUnter ? zustand.summeUnter : n("P11_POS_MENGE") * n("P11_POS_EINZELPREIS"))
                                 * (1 - n("P11_POS_RABATT") / 100);
-                    if (mitUnter && $v("P11_POS_PAUSCHAL") !== "") {
-                        summe = n("P11_POS_PAUSCHAL");
-                    }
                     apex.item("P11_POS_SUMME").setValue(apex.locale.formatNumber(runden(summe), BETRAG));
                 };
                 var leeren = function () {
@@ -515,6 +501,7 @@ POS_JS = """    javaScript {
                     zustand.offen = false;
                     zustand.geaendert = false;
                     $("#pos-titel").text("Keine Position gewählt");
+                    apex.item("P11_HAUPT_ID").setValue("", null, true);
                     $("#pos-felder, #pos-aktionen, #positionen").hide();
                     markieren();
                 };
@@ -549,13 +536,14 @@ POS_JS = """    javaScript {
                     NUR_SUMME.forEach(function (name) {
                         apex.item(name)[mitUnter ? "show" : "hide"]();
                     });
-                    $("#P11_POS_SUMME_LABEL").text(mitUnter ? "Zwischensumme" : "Summe");
                     EINGABE.forEach(function (name) {
                         apex.item(name)[zustand.aenderbar ? "enable" : "disable"]();
                     });
                     $("#pos-speichern").toggle(zustand.aenderbar);
-                    // Raster der Unterpositionen nur bei einer gespeicherten Hauptposition (P11_HAUPT_ID setzt POS_LADEN)
+                    // Raster der Unterpositionen nur bei einer gespeicherten Hauptposition; P11_HAUPT_ID geht mit jeder
+                    // Anfrage des Rasters mit (Abfrage und Speichern)
                     var raster = haupt && !!zustand.id;
+                    apex.item("P11_HAUPT_ID").setValue(raster ? zustand.id : "", null, true);
                     $("#positionen").toggle(raster);
                     if (raster) {
                         ansicht.view$.grid("resize");   // das Raster war ausgeblendet
@@ -628,6 +616,97 @@ POS_JS = """    javaScript {
                     });
                 };
 
+                // ---------------------------------------------------------------- Verschieben (Drag & Drop)
+                // art: "vor" / "nach" dem Ziel (auf dessen Ebene) oder "in" eine Hauptposition (als letzte Unterposition)
+                var verschieben = function (id, zielId, art) {
+                    sicher(function () {
+                        server("POS_VERSCHIEBEN", { x01: id, x02: zielId, x03: art }).then(function (d) {
+                            if (d.fehler) {
+                                fehler(d.fehler);
+                                return;
+                            }
+                            apex.message.clearErrors();
+                            laden().then(function () {
+                                if (zustand.id) {
+                                    oeffnen(zustand.id);   // Nummer, Ebene und Raster koennen sich geaendert haben
+                                }
+                            });
+                        });
+                    });
+                };
+                window.thgPositionen.verschieben = verschieben;
+                var gezogen = null;   // { id, unter }
+                var ablageLeeren = function () {
+                    baum$.find(".thg-drop-vor, .thg-drop-nach, .thg-drop-in").removeClass("thg-drop-vor thg-drop-nach thg-drop-in");
+                };
+                // wohin wuerde auf diesem Knoten abgelegt? Hauptposition: oberes Drittel = davor, unteres Drittel = danach
+                // (nur ohne Unterpositionen), sonst hinein; Unterposition: obere Haelfte = davor, untere = danach.
+                // Eine Hauptposition mit Unterpositionen kann nicht selbst Unterposition werden.
+                var ablageArt = function (e, ziel$) {
+                    if (!gezogen || ziel$.attr("data-id") === gezogen.id) {
+                        return null;
+                    }
+                    var r = ziel$[0].getBoundingClientRect(), y = (e.originalEvent.clientY - r.top) / r.height;
+                    if (ziel$.hasClass("thg-pos-haupt")) {
+                        if (y < 0.3) {
+                            return "vor";
+                        }
+                        if (y > 0.7 && ziel$.attr("data-unter") === "0") {
+                            return "nach";
+                        }
+                        return gezogen.unter > 0 ? null : "in";
+                    }
+                    return gezogen.unter > 0 ? null : (y < 0.5 ? "vor" : "nach");
+                };
+                baum$.on("dragstart", ".thg-pos-knoten", function (e) {
+                    if (!zustand.aenderbar) {
+                        e.preventDefault();
+                        return;
+                    }
+                    gezogen = { id: $(this).attr("data-id"), unter: parseInt($(this).attr("data-unter"), 10) || 0 };
+                    e.originalEvent.dataTransfer.effectAllowed = "move";
+                    e.originalEvent.dataTransfer.setData("text/plain", gezogen.id);
+                    $(this).addClass("is-gezogen");
+                });
+                baum$.on("dragover", ".thg-pos-knoten", function (e) {
+                    var art = ablageArt(e, $(this));
+                    ablageLeeren();
+                    if (art) {
+                        e.preventDefault();   // Ablegen erlauben
+                        e.originalEvent.dataTransfer.dropEffect = "move";
+                        $(this).addClass("thg-drop-" + art);
+                    }
+                });
+                baum$.on("drop", ".thg-pos-knoten", function (e) {
+                    var art = ablageArt(e, $(this)), quelle = gezogen;
+                    e.preventDefault();
+                    ablageLeeren();
+                    if (art && quelle) {
+                        verschieben(quelle.id, $(this).attr("data-id"), art);
+                    }
+                });
+                // unter dem Baum ablegen: ans Ende, als Hauptposition
+                $("#pos-ende").on("dragover", function (e) {
+                    var letzte = baum$.find(".thg-pos-haupt").last();
+                    if (gezogen && letzte.length && letzte.attr("data-id") !== gezogen.id) {
+                        e.preventDefault();
+                        $(this).addClass("thg-drop-vor");
+                    }
+                }).on("dragleave drop", function () {
+                    $(this).removeClass("thg-drop-vor");
+                }).on("drop", function (e) {
+                    var letzte = baum$.find(".thg-pos-haupt").last();
+                    e.preventDefault();
+                    if (gezogen && letzte.length && letzte.attr("data-id") !== gezogen.id) {
+                        verschieben(gezogen.id, letzte.attr("data-id"), "nach");
+                    }
+                });
+                baum$.on("dragend", ".thg-pos-knoten", function () {
+                    gezogen = null;
+                    ablageLeeren();
+                    baum$.find(".is-gezogen").removeClass("is-gezogen");
+                });
+
                 // ---------------------------------------------------------------- Bedienung
                 baum$.on("click keydown", ".thg-pos-knoten", function (e) {
                     if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") {
@@ -688,7 +767,7 @@ POS_JS = """    javaScript {
                         summeDetail();
                     });
                 });
-                $("#P11_POS_MENGE, #P11_POS_EINZELPREIS, #P11_POS_RABATT, #P11_POS_PAUSCHAL").on("change", function () {
+                $("#P11_POS_MENGE, #P11_POS_EINZELPREIS, #P11_POS_RABATT").on("change", function () {
                     if (!zustand.laedt) {
                         summeDetail();
                     }
@@ -732,6 +811,13 @@ POS_JS = """    javaScript {
             .thg-pos-optional .thg-pos-name, .thg-pos-optional .thg-pos-summe { font-style: italic; opacity: .7; }
             .thg-pos-hinweis { font-size: .75rem; font-weight: 400; opacity: .7; border: 1px solid currentColor; border-radius: .75rem; padding: 0 .4rem; margin-left: .25rem; }
             .thg-pos-leer { padding: .75rem; opacity: .7; }
+            .thg-pos-knoten[draggable="true"] { cursor: grab; }
+            .thg-pos-knoten.is-gezogen { opacity: .4; }
+            .thg-pos-knoten.thg-drop-vor, .thg-pos-ende.thg-drop-vor { box-shadow: inset 0 3px 0 var(--thg-primaer, #0572ce); }
+            .thg-pos-knoten.thg-drop-nach { box-shadow: inset 0 -3px 0 var(--thg-primaer, #0572ce); }
+            .thg-pos-knoten.thg-drop-in { background: rgba(0, 0, 0, .1); outline: 2px dashed var(--thg-primaer, #0572ce); outline-offset: -2px; }
+            .thg-pos-ende { height: 1.25rem; }
+            .thg-pos-hinweistext { font-size: .75rem; opacity: .7; margin: 0; }
             .thg-pos-titel { margin: 0 0 .75rem; font-size: 1.125rem; font-weight: 600; }
             .thg-pos-aktionen { display: flex; justify-content: flex-end; margin: .5rem 0 1rem; }
             ```
@@ -935,7 +1021,11 @@ def seite_11():
                                   + knopf("pos-neu-unter", "Unterposition", "fa-plus")
                                   + knopf("pos-loeschen", "Löschen", "fa-trash-o", "t-Button--danger t-Button--simple")
                                   + "                </div>\n"
-                                  + "                <div id=\"pos-baum\" class=\"thg-pos-baum\" role=\"tree\" aria-label=\"Positionen\"></div>\n")),
+                                  + "                <div id=\"pos-baum\" class=\"thg-pos-baum\" role=\"tree\" aria-label=\"Positionen\"></div>\n"
+                                  + "                <div id=\"pos-ende\" class=\"thg-pos-ende\"></div>\n"
+                                  + "                <p id=\"pos-hinweis\" class=\"thg-pos-hinweistext\">Reihenfolge mit der Maus ziehen. "
+                                    "Auf eine Hauptposition gezogen wird die Position ihre Unterposition, "
+                                    "zwischen zwei Hauptpositionen wird sie selbst Hauptposition.</p>\n")),
                 4, True)
     s += spalte(region("pos-rechts", "Position", 20, template=blank, parent="positionen-bereich"), 8, False)
     s += region("pos-kopf", "Position (Titel)", 10, template=blank, parent="pos-rechts",
@@ -955,16 +1045,12 @@ def seite_11():
     ignorieren = "        advanced {\n            warnOnUnsavedChanges: ignore\n        }\n"
     # Anzeigefelder werden per JavaScript gesetzt: nicht absenden (sonst "Session state protection violation")
     nur_anzeige = "        settings {\n            sendOnPageSubmit: false\n        }\n"
-    s += """    pageItem P11_HAUPT_ID (
-        type: hidden
-        layout {
-            sequence: 1
-            region: @pos-felder
-            slot: regionBody
-        }
-    )
-
-"""
+    # P11_HAUPT_ID: gewaehlte Hauptposition fuer das Raster der Unterpositionen. Vom Browser gesetzt und mit jeder
+    # Anfrage des Rasters mitgeschickt (pageItemsToSubmit) – nicht nur im Sitzungsstatus, damit zwei Browser-Tabs
+    # derselben Sitzung einander nicht die Hauptposition unterschieben. Textfeld (frei setzbar), per CSS ausgeblendet.
+    s += item("P11_HAUPT_ID", "textField", "Hauptposition (intern)", 1, p, extra=ignorieren, **ohne).replace(
+        "            templateOptions: #DEFAULT#\n        }\n",
+        "            templateOptions: #DEFAULT#\n            cssClasses: u-hidden\n        }\n", 1)
     # Zeile 1: Artikel | Artikelnummer | Gruppe (nur Positionen ohne Unterpositionen)
     s += item("P11_POS_ARTI_ID", "popupLov", "Artikel (Suche nach Gruppe, Artikelnummer, Name)", 10, p, spalten=6,
               extra="""        lov {
@@ -977,9 +1063,8 @@ def seite_11():
     s += item("P11_POS_ARTIKELNUMMER", "displayOnly", "Artikelnummer", 20, p, neue_zeile=False, spalten=3,
               extra=nur_anzeige, **ohne)
     s += item("P11_POS_GRUPPE", "displayOnly", "Gruppe", 30, p, neue_zeile=False, spalten=3, extra=nur_anzeige, **ohne)
-    # Zeile 2: Pos | Name | Optional
-    s += item("P11_POS_POSITION", "numberField", "Pos", 40, p, spalten=2, extra=ignorieren, **ohne)
-    s += item("P11_POS_NAME", "textField", "Name", 50, p, maxlen=200, neue_zeile=False, spalten=7,
+    # Zeile 2: Name | Optional (die Positionsnummer ergibt sich aus der Reihenfolge im Baum)
+    s += item("P11_POS_NAME", "textField", "Name", 50, p, maxlen=200, spalten=9,
               tmpl="@/required-floating", extra=ignorieren, **ohne)
     s += item("P11_POS_OPTIONAL", "switch", "Optional (nicht in der Summe)", 60, p, neue_zeile=False, spalten=3,
               extra=SWITCH("N") + ignorieren, **ohne)
@@ -991,20 +1076,18 @@ def seite_11():
     s += item("P11_POS_MENGE", "numberField", "Menge", 90, p, neue_zeile=False, spalten=3, extra=ignorieren, **ohne)
     s += item("P11_POS_MWST", "selectList", "MwSt. in %", 100, p, neue_zeile=False, spalten=3,
               extra=lov("lov-mwst-prozent") + ignorieren, **ohne)
-    # Zeile 4: Summe der Unterpositionen (nur Hauptposition mit Unterpositionen)
-    s += item("P11_POS_SUMME_UNTERPOS", "displayOnly", "Summe Unterpositionen", 110, p, spalten=3, extra=nur_anzeige, **ohne)
-    # Zeile 5: Rabatt | Summe bzw. Zwischensumme | Pauschalsumme (nur Hauptposition mit Unterpositionen)
+    # Zeile 4: Rabatt | Summe (Position bzw. Unterpositionen abzgl. Rabatt) | Pauschalsumme (nur Hauptposition mit
+    # Unterpositionen; gilt in der Rechnung statt der Summe)
     s += item("P11_POS_RABATT", "numberField", "Rabatt %", 120, p, spalten=3, extra=ignorieren, **ohne)
     s += hervorheben(item("P11_POS_SUMME", "displayOnly", "Summe", 130, p, neue_zeile=False, spalten=3,
                           extra=nur_anzeige, **ohne))
-    s += maske(item("P11_POS_PAUSCHAL", "numberField", "Pauschalsumme (statt Zwischensumme)", 140, p, neue_zeile=False,
+    s += maske(item("P11_POS_PAUSCHAL", "numberField", "Pauschalsumme der Hauptposition (statt Summe)", 140, p, neue_zeile=False,
                     spalten=4, extra=ignorieren, **ohne), "999G999G990D00")
     s += item("P11_POS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 150, p, spalten=12, extra=ignorieren, **ohne)
 
-    # Raster der Unterpositionen der gewaehlten Hauptposition (P11_HAUPT_ID im Sitzungsstatus, gesetzt von POS_LADEN);
+    # Raster der Unterpositionen der gewaehlten Hauptposition (P11_HAUPT_ID, vom Browser gesetzt und mitgeschickt);
     # Artikel als Popup LOV: Suche/Einschraenkung nach Gruppe, Artikelnummer, Name (Spalten von LOV_ARTIKEL im Portal)
     pos = (ig_spalte("RPOS_ID", "hidden", "ID", 10, "number", pk=True)
-           + ig_spalte("RPOS_POSITION", "numberField", "Pos", 30, "number")
            + ig_spalte("RPOS_ARTI_ID", "popupLov", "Artikel", 50, "number",
                        IG_LOV("lov-artikel").replace("                displayExtraValues: false\n", ""))
            + ig_spalte("RPOS_NAME", "textField", "Name", 60, "varchar2")
@@ -1017,18 +1100,19 @@ def seite_11():
                        IG_LOV("lov-ja-nein", False) + IG_DEFAULT("N"))
            + ig_spalte("RPOS_SUMME", "numberField", "Summe", 130, "number", BETRAG)
            + ig_spalte("RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, "clob"))
-    s += ig_region("positionen", "Unterpositionen", 40, """                select RPOS_ID, RPOS_POSITION, RPOS_ARTI_ID, RPOS_NAME,
+    s += ig_region("positionen", "Unterpositionen", 40, """                select RPOS_ID, RPOS_ARTI_ID, RPOS_NAME,
                        RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
                        RPOS_IST_OPTIONAL, RPOS_SUMME, RPOS_BESCHREIBUNG
                   from FAKT_RECHNUNGSPOSITIONEN
                  where RPOS_RECH_ID = :P11_RECH_ID
                    and RPOS_HAUPT_RPOS_ID = to_number(:P11_HAUPT_ID)
                  order by RPOS_POSITION""", pos,
-                   ["RPOS_POSITION", "RPOS_ARTI_ID", "RPOS_NAME", "RPOS_MENGE", "RPOS_EINHEIT",
+                   ["RPOS_ARTI_ID", "RPOS_NAME", "RPOS_MENGE", "RPOS_EINHEIT",
                     "RPOS_EINZELPREIS", "RPOS_RABATT_PROZENT", "RPOS_MWST_PROZENT", "RPOS_IST_OPTIONAL", "RPOS_SUMME"],
                    "", nur_lesen=NUR_LESEN).replace(
         "            sequence: 40\n            slot: body\n",
-        "            sequence: 40\n            parentRegion: @pos-rechts\n            slot: subRegions\n", 1)
+        "            sequence: 40\n            parentRegion: @pos-rechts\n            slot: subRegions\n", 1).replace(
+        "                P11_RECH_ID\n            ]", "                P11_RECH_ID\n                P11_HAUPT_ID\n            ]", 1)
 
     # ------------------------------------------------ Summen je Steuersatz
     s += f"""    region summen (
@@ -1328,8 +1412,6 @@ def seite_11():
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
-                -- Raster der Unterpositionen: leer, bis im Baum eine Hauptposition gewaehlt ist (POS_LADEN)
-                :P11_HAUPT_ID := null;
                 ```
         }
         execution {
@@ -1474,7 +1556,6 @@ def seite_11():
                 ```plsql
                 -- Felder einer Position fuer die Anzeige rechts: x01 = RPOS_ID (leer = neue Position mit Vorgaben),
                 -- x02 = Hauptposition einer neuen Unterposition. Zahlen im Format der Felder (Dezimalkomma).
-                -- Setzt P11_HAUPT_ID fuer das Raster der Unterpositionen (nur bei einer gespeicherten Hauptposition).
                 declare
                     c_nls constant varchar2(40) := 'NLS_NUMERIC_CHARACTERS='',.''';
                     l_id      number := to_number(apex_application.g_x01);
@@ -1525,7 +1606,6 @@ def seite_11():
                         l_artname := a.ARTI_NAME;
                         l_gruppe  := a.AGRP_BEZEICHNUNG;
                     end loop;
-                    :P11_HAUPT_ID := case when l_id is not null and p.RPOS_HAUPT_RPOS_ID is null then to_char(l_id) end;
 
                     apex_json.open_object;
                     apex_json.write('id', to_char(l_id));
@@ -1541,17 +1621,18 @@ def seite_11():
                     apex_json.write('P11_POS_ARTI_ID', to_char(p.RPOS_ARTI_ID), true);
                     apex_json.write('P11_POS_ARTIKELNUMMER', l_artnr, true);
                     apex_json.write('P11_POS_GRUPPE', l_gruppe, true);
-                    apex_json.write('P11_POS_POSITION', to_char(p.RPOS_POSITION), true);
                     apex_json.write('P11_POS_NAME', p.RPOS_NAME, true);
                     apex_json.write('P11_POS_OPTIONAL', p.RPOS_IST_OPTIONAL, true);
                     apex_json.write('P11_POS_EINZELPREIS', preis(p.RPOS_EINZELPREIS), true);
                     apex_json.write('P11_POS_EINHEIT', p.RPOS_EINHEIT, true);
                     apex_json.write('P11_POS_MENGE', zahl(p.RPOS_MENGE), true);
                     apex_json.write('P11_POS_MWST', to_char(p.RPOS_MWST_PROZENT), true);
-                    apex_json.write('P11_POS_SUMME_UNTERPOS', to_char(p.RPOS_SUMME_UNTERPOS, 'FML999G999G990D00'), true);
                     apex_json.write('P11_POS_RABATT', zahl(p.RPOS_RABATT_PROZENT), true);
                     apex_json.write('P11_POS_PAUSCHAL', preis(p.RPOS_PAUSCHALSUMME), true);
-                    apex_json.write('P11_POS_SUMME', to_char(nvl(p.RPOS_SUMME, 0), 'FML999G999G990D00'), true);
+                    -- Summe ohne Pauschale: Unterpositionen bzw. Menge x Einzelpreis, abzgl. Rabatt
+                    apex_json.write('P11_POS_SUMME',
+                                    to_char(round(coalesce(p.RPOS_SUMME_UNTERPOS, p.RPOS_MENGE * p.RPOS_EINZELPREIS)
+                                                  * (1 - nvl(p.RPOS_RABATT_PROZENT, 0) / 100), 2), 'FML999G999G990D00'), true);
                     apex_json.write('P11_POS_BESCHREIBUNG', p.RPOS_BESCHREIBUNG, true);
                     apex_json.close_object;
                     apex_json.close_object;
@@ -1602,7 +1683,7 @@ def seite_11():
                         raise_application_error(-20214, 'Bitte einen Namen für die Position eingeben.');
                     end if;
                     -- lokale Funktion nicht direkt in SQL (PLS-00231): Werte vorher in Variablen
-                    l_pos    := nvl(zahl(:P11_POS_POSITION), case when l_id is null then FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt) end);
+                    l_pos    := FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt);   -- neue Position: ans Ende
                     l_menge  := nvl(zahl(:P11_POS_MENGE), 1);
                     l_preis  := nvl(zahl(:P11_POS_EINZELPREIS), 0);
                     l_rabatt := zahl(:P11_POS_RABATT);
@@ -1622,7 +1703,6 @@ def seite_11():
                     else
                         update FAKT_RECHNUNGSPOSITIONEN
                            set RPOS_ARTI_ID        = to_number(:P11_POS_ARTI_ID),
-                               RPOS_POSITION       = nvl(l_pos, RPOS_POSITION),
                                RPOS_NAME           = l_name,
                                RPOS_BESCHREIBUNG   = :P11_POS_BESCHREIBUNG,
                                RPOS_MENGE          = l_menge,
@@ -1651,7 +1731,6 @@ def seite_11():
                         rollback;
                         apex_json.open_object;
                         apex_json.write('fehler', case
-                            when sqlcode = -1 then 'Diese Positionsnummer ist bereits vergeben.'
                             when sqlcode in (-1722, -6502, -1438) then 'Bitte gültige Zahlen eingeben.'
                             when sqlcode = -2290 then 'Rabatt und MwSt. müssen zwischen 0 und 100 liegen.'
                             else regexp_replace(sqlerrm, '^ORA-\\d+: ') end);
@@ -1676,6 +1755,24 @@ def seite_11():
                     l_id     number := to_number(apex_application.g_x01);
                     l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
                     l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                    l_haupt  FAKT_RECHNUNGSPOSITIONEN.RPOS_HAUPT_RPOS_ID%type;
+                    -- Geschwister neu durchnummerieren: Hauptpositionen (p_haupt leer) 1, 2, 3 …, Unterpositionen 10, 20, 30 …;
+                    -- p_id/p_schluessel: diese Position an die Stelle p_schluessel setzen (2 x Position des Ziels -/+ 1)
+                    procedure nummerieren(p_haupt in number, p_id in number default null, p_schluessel in number default null) is
+                    begin
+                        update FAKT_RECHNUNGSPOSITIONEN p
+                           set RPOS_POSITION = (select x.NR
+                                                  from (select RPOS_ID,
+                                                               row_number() over (order by case when RPOS_ID = p_id then p_schluessel
+                                                                                                else RPOS_POSITION * 2 end, RPOS_ID)
+                                                               * case when p_haupt is null then 1 else 10 end as NR
+                                                          from FAKT_RECHNUNGSPOSITIONEN
+                                                         where RPOS_RECH_ID = :P11_RECH_ID
+                                                           and (RPOS_HAUPT_RPOS_ID = p_haupt or (RPOS_HAUPT_RPOS_ID is null and p_haupt is null))) x
+                                                 where x.RPOS_ID = p.RPOS_ID)
+                         where p.RPOS_RECH_ID = :P11_RECH_ID
+                           and (p.RPOS_HAUPT_RPOS_ID = p_haupt or (p.RPOS_HAUPT_RPOS_ID is null and p_haupt is null));
+                    end;
                 begin
                     select RECH_MAND_ID, RECH_STATUS into l_mand, l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
                     if l_mand <> :MANDANT_ID then
@@ -1684,10 +1781,12 @@ def seite_11():
                     if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
                         raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
-                    delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
+                    delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID
+                    returning RPOS_HAUPT_RPOS_ID into l_haupt;
                     if sql%rowcount = 0 then
                         raise_application_error(-20211, 'Die Position gehört nicht zu dieser Rechnung.');
                     end if;
+                    nummerieren(l_haupt);   -- Luecke in der Nummerierung schliessen
                     FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);
                     apex_json.open_object;
                     apex_json.write('ok', true);
@@ -1703,6 +1802,103 @@ def seite_11():
         }
         execution {
             sequence: 50
+            point: ajaxCallback
+        }
+    )
+
+    process pos-verschieben (
+        name: POS_VERSCHIEBEN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Position im Baum verschieben (Drag & Drop): x01 = Position, x02 = Ziel, x03 = Art
+                --   vor / nach: auf die Ebene des Ziels, vor bzw. nach dem Ziel (Ziel Hauptposition -> wird Hauptposition,
+                --               Ziel Unterposition -> wird Unterposition derselben Hauptposition)
+                --   in:         als letzte Unterposition in die Hauptposition x02
+                -- Eine Hauptposition mit Unterpositionen kann nicht Unterposition werden (nur zwei Ebenen).
+                -- Danach werden die betroffenen Ebenen neu durchnummeriert und die Summen berechnet.
+                declare
+                    l_id     number := to_number(apex_application.g_x01);
+                    l_ziel   number := to_number(apex_application.g_x02);
+                    l_art    varchar2(10) := apex_application.g_x03;
+                    l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                    q        FAKT_RECHNUNGSPOSITIONEN%rowtype;   -- verschobene Position
+                    z        FAKT_RECHNUNGSPOSITIONEN%rowtype;   -- Ziel
+                    l_unter  pls_integer;
+                    l_neu    FAKT_RECHNUNGSPOSITIONEN.RPOS_HAUPT_RPOS_ID%type;   -- neue Hauptposition (leer = wird Hauptposition)
+                    l_stelle number;
+                    -- Geschwister neu durchnummerieren: Hauptpositionen (p_haupt leer) 1, 2, 3 …, Unterpositionen 10, 20, 30 …;
+                    -- p_id/p_schluessel: diese Position an die Stelle p_schluessel setzen (2 x Position des Ziels -/+ 1)
+                    procedure nummerieren(p_haupt in number, p_id in number default null, p_schluessel in number default null) is
+                    begin
+                        update FAKT_RECHNUNGSPOSITIONEN p
+                           set RPOS_POSITION = (select x.NR
+                                                  from (select RPOS_ID,
+                                                               row_number() over (order by case when RPOS_ID = p_id then p_schluessel
+                                                                                                else RPOS_POSITION * 2 end, RPOS_ID)
+                                                               * case when p_haupt is null then 1 else 10 end as NR
+                                                          from FAKT_RECHNUNGSPOSITIONEN
+                                                         where RPOS_RECH_ID = :P11_RECH_ID
+                                                           and (RPOS_HAUPT_RPOS_ID = p_haupt or (RPOS_HAUPT_RPOS_ID is null and p_haupt is null))) x
+                                                 where x.RPOS_ID = p.RPOS_ID)
+                         where p.RPOS_RECH_ID = :P11_RECH_ID
+                           and (p.RPOS_HAUPT_RPOS_ID = p_haupt or (p.RPOS_HAUPT_RPOS_ID is null and p_haupt is null));
+                    end;
+                begin
+                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+                    end if;
+                    if l_id = l_ziel or l_art not in ('vor', 'nach', 'in') then
+                        raise_application_error(-20216, 'Die Position kann nicht dorthin verschoben werden.');
+                    end if;
+                    select * into q from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
+                    select * into z from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_ziel and RPOS_RECH_ID = :P11_RECH_ID;
+                    select count(*) into l_unter from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = l_id;
+                    if l_art = 'in' then
+                        if z.RPOS_HAUPT_RPOS_ID is not null then
+                            raise_application_error(-20216, 'Unterpositionen können nur in eine Hauptposition verschoben werden.');
+                        end if;
+                        l_neu    := z.RPOS_ID;
+                        l_stelle := 1e9;   -- ans Ende
+                    else
+                        l_neu    := z.RPOS_HAUPT_RPOS_ID;
+                        l_stelle := z.RPOS_POSITION * 2 + case l_art when 'vor' then -1 else 1 end;
+                    end if;
+                    if l_neu is not null and l_unter > 0 then
+                        raise_application_error(-20217, 'Eine Hauptposition mit Unterpositionen kann nicht selbst Unterposition werden.');
+                    end if;
+                    -- umhaengen (Platzhalter-Nummer -1, RPOS_UK); als Unterposition ohne Pauschalsumme (RPOS_PAUSCHAL_CK)
+                    update FAKT_RECHNUNGSPOSITIONEN
+                       set RPOS_HAUPT_RPOS_ID  = l_neu,
+                           RPOS_POSITION       = -1,
+                           RPOS_PAUSCHALSUMME  = case when l_neu is null then RPOS_PAUSCHALSUMME end,
+                           RPOS_SUMME_UNTERPOS = case when l_neu is null then RPOS_SUMME_UNTERPOS end
+                     where RPOS_ID = l_id;
+                    nummerieren(l_neu, l_id, l_stelle);
+                    if nvl(q.RPOS_HAUPT_RPOS_ID, -1) <> nvl(l_neu, -1) then
+                        nummerieren(q.RPOS_HAUPT_RPOS_ID);   -- Luecke auf der bisherigen Ebene schliessen
+                    end if;
+                    FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);
+                    apex_json.open_object;
+                    apex_json.write('ok', true);
+                    apex_json.close_object;
+                exception
+                    when others then
+                        rollback;
+                        apex_json.open_object;
+                        apex_json.write('fehler', regexp_replace(sqlerrm, '^ORA-\\d+: '));
+                        apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 60
             point: ajaxCallback
         }
     )
@@ -1788,7 +1984,7 @@ def seite_11():
                     a        ARTI_ARTIKEL%rowtype;
                     l_mwst   ALLG_MWST_SAETZE.MWST_PROZENT%type;
                     l_einh   ALLG_EINHEITEN.EINH_CODE%type;
-                    l_pos    number := to_number(:RPOS_POSITION);
+                    l_pos    number;
                     l_haupt  number := to_number(:P11_HAUPT_ID);
                     l_preis  number;
                     -- Betraege kommen im Format der Spalte (z.B. EUR 1.250,00) oder als einfache Zahl
@@ -1797,6 +1993,23 @@ def seite_11():
                         return to_number(replace(replace(p_wert, nchr(8364)), ' '), '999G999G999G990D99999',
                                          'NLS_NUMERIC_CHARACTERS='',.''');
                     end;
+                    -- Geschwister neu durchnummerieren: Hauptpositionen (p_haupt leer) 1, 2, 3 …, Unterpositionen 10, 20, 30 …;
+                    -- p_id/p_schluessel: diese Position an die Stelle p_schluessel setzen (2 x Position des Ziels -/+ 1)
+                    procedure nummerieren(p_haupt in number, p_id in number default null, p_schluessel in number default null) is
+                    begin
+                        update FAKT_RECHNUNGSPOSITIONEN p
+                           set RPOS_POSITION = (select x.NR
+                                                  from (select RPOS_ID,
+                                                               row_number() over (order by case when RPOS_ID = p_id then p_schluessel
+                                                                                                else RPOS_POSITION * 2 end, RPOS_ID)
+                                                               * case when p_haupt is null then 1 else 10 end as NR
+                                                          from FAKT_RECHNUNGSPOSITIONEN
+                                                         where RPOS_RECH_ID = :P11_RECH_ID
+                                                           and (RPOS_HAUPT_RPOS_ID = p_haupt or (RPOS_HAUPT_RPOS_ID is null and p_haupt is null))) x
+                                                 where x.RPOS_ID = p.RPOS_ID)
+                         where p.RPOS_RECH_ID = :P11_RECH_ID
+                           and (p.RPOS_HAUPT_RPOS_ID = p_haupt or (p.RPOS_HAUPT_RPOS_ID is null and p_haupt is null));
+                    end;
                 begin
                     select RECH_STATUS into l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
                     if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
@@ -1804,6 +2017,7 @@ def seite_11():
                     end if;
                     if :APEX$ROW_STATUS = 'D' then
                         delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = :RPOS_ID and RPOS_RECH_ID = :P11_RECH_ID;
+                        nummerieren(l_haupt);   -- Luecke in der Nummerierung schliessen
                         FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);   -- auch beim Speichern nur ueber das Grid
                         return;
                     end if;
@@ -1816,9 +2030,7 @@ def seite_11():
                     if l_haupt is null then
                         raise_application_error(-20215, 'Bitte zuerst eine Hauptposition wählen.');
                     end if;
-                    if l_pos is null then   -- je Hauptposition 10, 20, 30 …
-                        l_pos := FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt, to_number(:RPOS_ID));
-                    end if;
+                    l_pos := FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt);   -- neue Zeile: ans Ende (10, 20, 30 …)
                     if :APEX$ROW_STATUS = 'C' then
                         insert into FAKT_RECHNUNGSPOSITIONEN
                               (RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_ARTIKELNUMMER,
@@ -1833,7 +2045,6 @@ def seite_11():
                     else
                         update FAKT_RECHNUNGSPOSITIONEN
                            set RPOS_ARTI_ID        = to_number(:RPOS_ARTI_ID),
-                               RPOS_POSITION       = l_pos,
                                RPOS_ARTIKELNUMMER  = coalesce(a.ARTI_NUMMER, RPOS_ARTIKELNUMMER),
                                RPOS_NAME           = coalesce(:RPOS_NAME, a.ARTI_NAME, RPOS_NAME),
                                RPOS_BESCHREIBUNG   = coalesce(to_clob(:RPOS_BESCHREIBUNG), a.ARTI_BESCHREIBUNG),
@@ -1848,7 +2059,7 @@ def seite_11():
                     FAKT_RECHNUNG.summen_berechnen(:P11_RECH_ID);   -- Zwischensumme der Hauptposition und Rechnungssummen
                 exception
                     when dup_val_on_index then
-                        raise_application_error(-20212, 'Position ' || l_pos || ' ist in dieser Hauptposition bereits vergeben.');
+                        raise_application_error(-20212, 'Die Positionsnummer ' || l_pos || ' ist bereits vergeben. Bitte erneut speichern.');
                 end;
                 ```
         }

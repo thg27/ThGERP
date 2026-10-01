@@ -15,7 +15,9 @@ Eine Tabelle (`FAKT_RECHNUNGSPOSITIONEN`), weil Haupt- und Unterposition gleich 
 | `RPOS_SUMME` | Trigger `RPOS_BIU`: `coalesce(Pauschale, round(coalesce(Summe Unterpos., Menge × Einzelpreis) × (1 − Rabatt/100), 2))` |
 
 - `RPOS_UK` = (Rechnung, Hauptposition, Position): Hauptpositionen 1, 2, 3 …, Unterpositionen je Hauptposition 10, 20, 30 …
-  (`FAKT_RECHNUNG.naechste_position(rech_id, haupt_rpos_id)`).
+  (`FAKT_RECHNUNG.naechste_position(rech_id, haupt_rpos_id)`). Die Nummern gibt niemand ein: neue Positionen kommen
+  ans Ende, nach Verschieben (Drag & Drop im Baum) und Löschen nummeriert die App die Ebene lückenlos neu – der
+  Ausdruck verwendet die gespeicherten Nummern.
 - `FAKT_RECHNUNG.summen_berechnen` trägt `RPOS_SUMME_UNTERPOS` nach (nur geänderte Zeilen, sonst zählt jede Berechnung
   `ROW_VERSION` hoch), der Trigger rechnet daraus die Summe der Hauptposition – ein Zeilentrigger darf die eigene
   Tabelle nicht lesen (mutating table), deshalb liegt die Summe der Unterpositionen als Spalte vor.
