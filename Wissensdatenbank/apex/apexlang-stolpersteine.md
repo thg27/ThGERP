@@ -147,3 +147,10 @@ Seite 11 hat das Formular „Rechnung“ und daneben Felder einer Position (`P11
 - **Klicks im Browsertest:** Koordinaten aus dem Screenshot können danebenliegen (ein „nicht reproduzierbarer“ Fehler
   war ein verfehlter Button). Buttons über `find` → `ref` anklicken und mit einem Ereignisprotokoll
   (`document.addEventListener(…, true)`) prüfen, ob der Klick angekommen ist.
+- **Interactive Grid: leere neue Zeile speichern** → `ORA-01400` (Pflichtspalte). Die Aktion `save` umhüllen
+  (`interactiveGrid("getActions").lookup("save").action`): erst `ansicht.view$.grid("finishEditing")` abwarten, dann
+  neue Zeilen ohne Inhalt mit `modell.deleteRecords([...])` entfernen und das Original aufrufen; im Prozess zusätzlich
+  eine verständliche Meldung als Absicherung.
+- **Button der Raster-Werkzeugleiste ausblenden** (z. B. „Zeile hinzufügen“, `data-action="selection-add-row"`): Die
+  Werkzeugleiste setzt `display` als Inline-Style → CSS nur mit `!important`
+  (`#region button[data-action="selection-add-row"] { display: none !important; }`).

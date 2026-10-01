@@ -46,7 +46,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Steuersätze der Unterpositionen verteilt (`FAKT_RECHNUNG_MWST_V`).
   Maske: links Baum der Positionen (Hauptposition/Unterposition anlegen, löschen, verschieben, Unterpositionen ein-/ausklappen), darunter die Summen je Steuersatz, rechts die Felder der gewählten Position (`P11_POS_*`,
   per AJAX `POS_LADEN`/`POS_SPEICHERN`/`POS_LOESCHEN`; Hauptposition: Name, Rabatt, Summe, Pauschalsumme; Unterposition: alle Felder), darunter bei einer
-  Hauptposition das Raster ihrer Unterpositionen („Schnelleingabe“, gewählte Hauptposition in `P11_HAUPT_ID`, vom Browser mitgeschickt);
+  Hauptposition das Raster ihrer Unterpositionen: „Schnelleingabe“ (neue Zeile) oder „Zeile Detail“ bzw. Zeilenmenü „Detail …“ (Dialog Seite 14);
+  gewählte Hauptposition in `P11_HAUPT_ID`, vom Browser mitgeschickt;
   Artikel-Auswahl als Popup LOV mit Gruppe/Artikelnummer/Name (`LOV_ARTIKEL`). Änderbar nur im Entwurf oder nach „Rechnung bearbeiten“, sonst nur Anzeige.
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).

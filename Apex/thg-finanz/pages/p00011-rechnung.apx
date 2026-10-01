@@ -16,7 +16,8 @@ page 11 (
             //  * links der Baum (#pos-baum): Hauptpositionen 1, 2, 3 … mit ihren Unterpositionen 10, 20, 30 …
             //    und der Summe je Zeile; Buttons Hauptposition / Unterposition / Löschen
             //  * rechts die Felder der gewaehlten Position (P11_POS_*), gespeichert per AJAX (POS_SPEICHERN)
-            //  * bei einer Hauptposition darunter das Raster ihrer Unterpositionen (Schnelleingabe)
+            //  * bei einer Hauptposition darunter das Raster ihrer Unterpositionen: Schnelleingabe (neue Zeile) oder
+            //    "Zeile Detail" bzw. Zeilenmenue "Detail …" (Dialog Seite 14)
             //  * Hauptposition: kein eigener Preis – Rabatt, Summe (Unterpositionen abzgl. Rabatt), Pauschalsumme
             //  * Reihenfolge per Drag & Drop im Baum (POS_VERSCHIEBEN); die Positionsnummern vergibt der Server:
             //    Hauptpositionen 1, 2, 3 …, Unterpositionen 10, 20, 30 …
@@ -133,6 +134,16 @@ page 11 (
                     });
                     return ja;
                 };
+                // Unterposition im Dialog (Seite 14) erfassen bzw. oeffnen; der Dialog speichert direkt in die Datenbank
+                var detail = function (rposId) {
+                    if (rasterGeaendert()) {
+                        apex.message.alert("Bitte zuerst die Änderungen an den Unterpositionen speichern.");
+                        return;
+                    }
+                    server("DETAIL_URL", { x01: rposId || "", x02: $v("P11_HAUPT_ID") }).then(function (d) {
+                        apex.navigation.redirect(d.url);
+                    });
+                };
                 window.thgPositionen = {
                     // neue Unterposition am Ende des Rasters, Cursor in den Artikel
                     schnelleingabe: function () {
@@ -143,8 +154,61 @@ page 11 (
                         var id = modell.insertNewRecord(null, letzte);
                         ansicht.view$.grid("gotoCell", id, "RPOS_ARTI_ID");
                         ansicht.view$.grid("setEditMode", true);
+                    },
+                    // neue Unterposition im Dialog erfassen
+                    detail: function () {
+                        detail(null);
                     }
                 };
+                // Zeilenmenue: gespeicherte Unterposition im Dialog oeffnen (aenderbar oder nur Anzeige wie die Rechnung)
+                if (ansicht.rowActionMenu$) {
+                    var rasterAenderbar = modell.getOption("editable");
+                    ansicht.rowActionMenu$.menu("option").items.unshift({
+                        type: "action",
+                        label: rasterAenderbar ? "Detail bearbeiten" : "Detail anzeigen",
+                        icon: rasterAenderbar ? "fa fa-pencil-square-o" : "fa fa-search",
+                        action: function (menue, element) {
+                            var satz = ansicht.getContextRecord(element)[0],
+                                meta = modell.getRecordMetadata(modell.getRecordId(satz)) || {};
+                            if (meta.inserted) {
+                                apex.message.alert("Bitte die neue Unterposition zuerst speichern.");
+                            } else {
+                                detail(modell.getValue(satz, "RPOS_ID"));
+                            }
+                        }
+                    });
+                }
+                // Dialog geschlossen (gespeichert): Baum, Summen, Felder und Raster neu laden
+                $("#positionen").on("apexafterclosedialog", function () {
+                    laden().then(function () {
+                        if (zustand.id) {
+                            oeffnen(zustand.id);
+                        }
+                    });
+                });
+                // Speichern des Rasters: leere neue Zeilen (ohne Artikel und Name) vorher entfernen – sonst meldet die
+                // Datenbank einen Fehler, wenn nach "Schnelleingabe" ohne Eingabe gespeichert wird
+                var speichernAktion = region.widget().interactiveGrid("getActions").lookup("save");
+                if (speichernAktion) {
+                    var rasterSpeichern = speichernAktion.action;
+                    speichernAktion.action = function (ereignis, element) {
+                        var das = this;
+                        // erst die laufende Eingabe uebernehmen, dann pruefen
+                        $.when(ansicht.view$.grid("finishEditing")).always(function () {
+                            var leer = [];
+                            modell.forEach(function (satz) {
+                                var meta = modell.getRecordMetadata(modell.getRecordId(satz)) || {};
+                                if (meta.inserted && !wert(modell.getValue(satz, "RPOS_ARTI_ID")) && !modell.getValue(satz, "RPOS_NAME")) {
+                                    leer.push(satz);
+                                }
+                            });
+                            if (leer.length) {
+                                modell.deleteRecords(leer);
+                            }
+                            rasterSpeichern.call(das, ereignis, element);
+                        });
+                    };
+                }
 
                 // ---------------------------------------------------------------- Baum und Summen
                 // Hauptposition mit Unterpositionen: Schalter +/- zum Ein- und Ausklappen; sonst gleich breiter Platzhalter
@@ -598,6 +662,8 @@ page 11 (
             .thg-pos-hinweis-optional { background: #fdf3c7; border-color: #ead98a; color: #6a5300; }
             .thg-pos-hinweis-pauschal { background: #fbe1df; border-color: #efb5b0; color: #8a221a; }
             .thg-pos-leer { padding: .75rem; opacity: .7; }
+            /* Raster der Unterpositionen: "Zeile hinzufügen" entfaellt (dafuer "Schnelleingabe" und "Zeile Detail") */
+            #positionen .a-Toolbar-group:has(> [data-action="selection-add-row"]), #positionen button[data-action="selection-add-row"] { display: none !important; }
             .thg-pos-knoten[draggable="true"] { cursor: grab; }
             .thg-pos-knoten.is-gezogen { opacity: .4; }
             .thg-pos-knoten.thg-drop-vor, .thg-pos-ende.thg-drop-vor { box-shadow: inset 0 3px 0 var(--thg-primaer, #0572ce); }
@@ -2793,6 +2859,32 @@ page 11 (
         }
     )
 
+    button zeile-detail (
+        buttonName: ZEILE_DETAIL
+        label: Zeile Detail
+        layout {
+            sequence: 20
+            region: @positionen
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and (:P11_RECH_STATUS = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y')
+        }
+    )
+
     button up (
         buttonName: UP
         label: Zurück zur Rechnungsliste
@@ -2833,6 +2925,30 @@ page 11 (
             action: executeJsCode
             settings {
                 jsCode: window.thgPositionen.schnelleingabe();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction zeile-detail (
+        name: Zeile Detail: Unterposition im Dialog erfassen
+        execution {
+            sequence: 40
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @zeile-detail
+        }
+
+        action zeile-detail-js (
+            action: executeJsCode
+            settings {
+                jsCode: window.thgPositionen.detail();
             }
             execution {
                 sequence: 10
@@ -3034,6 +3150,49 @@ page 11 (
         }
         execution {
             sequence: 10
+            point: ajaxCallback
+        }
+    )
+
+    process detail-url (
+        name: DETAIL_URL
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- URL des Dialogs "Unterposition" (Seite 14, mit Pruefsumme): x01 = RPOS_ID (leer = neue Unterposition),
+                -- x02 = Hauptposition; der Dialog meldet sein Schliessen an die Region "positionen" (apexafterclosedialog)
+                declare
+                    l_id    varchar2(40) := apex_application.g_x01;
+                    l_haupt varchar2(40) := apex_application.g_x02;
+                    l_anz   pls_integer;
+                begin
+                    select count(*) into l_anz
+                      from FAKT_RECHNUNGSPOSITIONEN
+                     where RPOS_ID = to_number(l_haupt) and RPOS_RECH_ID = :P11_RECH_ID and RPOS_HAUPT_RPOS_ID is null;
+                    if l_anz = 0 then
+                        raise_application_error(-20215, 'Bitte zuerst eine Hauptposition wählen.');
+                    end if;
+                    if l_id is not null then
+                        select count(*) into l_anz
+                          from FAKT_RECHNUNGSPOSITIONEN
+                         where RPOS_ID = to_number(l_id) and RPOS_RECH_ID = :P11_RECH_ID and RPOS_HAUPT_RPOS_ID = to_number(l_haupt);
+                        if l_anz = 0 then
+                            raise_application_error(-20211, 'Die Position gehört nicht zu dieser Hauptposition.');
+                        end if;
+                    end if;
+                    apex_json.open_object;
+                    apex_json.write('url', apex_page.get_url(p_page               => 14,
+                                                             p_clear_cache        => '14',
+                                                             p_items              => 'P14_RPOS_ID,P14_RECH_ID,P14_HAUPT_ID',
+                                                             p_values             => l_id || ',' || :P11_RECH_ID || ',' || l_haupt,
+                                                             p_triggering_element => 'apex.jQuery(''#positionen'')'));
+                    apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 15
             point: ajaxCallback
         }
     )
@@ -3634,6 +3793,10 @@ page 11 (
                     end if;
                     if l_haupt is null then
                         raise_application_error(-20215, 'Bitte zuerst eine Hauptposition wählen.');
+                    end if;
+                    -- leere Zeile (der Browser entfernt sie vor dem Speichern; hier nur die Absicherung)
+                    if :RPOS_ARTI_ID is null and trim(:RPOS_NAME) is null then
+                        raise_application_error(-20218, 'Bitte einen Artikel wählen oder einen Namen eingeben.');
                     end if;
                     l_pos := FAKT_RECHNUNG.naechste_position(:P11_RECH_ID, l_haupt);   -- neue Zeile: ans Ende (10, 20, 30 …)
                     if :APEX$ROW_STATUS = 'C' then
