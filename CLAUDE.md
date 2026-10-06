@@ -58,6 +58,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - Nach Änderungen committen, Commit-Nachricht beschreibt den Inhalt
 
 ## Wissensdatenbank
-- `Wissensdatenbank/` sammelt Praxiswissen (Oracle SQL, PL/SQL, APEX, SQLcl, ORDS, Git/GitHub, Datenmodell, Troubleshooting); Aufbau und Konventionen in `Wissensdatenbank/README.md`.
-- Laufend pflegen: Wenn bei der Arbeit eine Lösung, ein Muster, ein Stolperstein oder eine Fehlerursache gefunden wird, die wieder vorkommen kann, einen Eintrag anlegen oder den bestehenden aktualisieren und im Index (`README.md` des Bereichs) eintragen. Neue Bereiche bei Bedarf ergänzen.
+- Die Wissensdatenbank ist projektübergreifend und liegt zentral auf dem Netzlaufwerk: `//10.10.10.240/ThG_edv/Wissensdatenbank` (macOS: `/Volumes/ThG_edv/Wissensdatenbank`). Sie gehört nicht zum Repository ThGERP.
+- Sie sammelt Praxiswissen (Oracle SQL, PL/SQL, APEX, SQLcl, ORDS, Git/GitHub, Datenmodell, Troubleshooting); Aufbau und Konventionen in `README.md` dort.
+- Laufend pflegen: Wenn bei der Arbeit eine Lösung, ein Muster, ein Stolperstein oder eine Fehlerursache gefunden wird, die wieder vorkommen kann, dort einen Eintrag anlegen oder den bestehenden aktualisieren und im Index (`README.md` des Bereichs) eintragen. Neue Bereiche bei Bedarf ergänzen.
 - Vor der Lösung eines Problems zuerst in der Wissensdatenbank nachsehen.
+- Ist das Laufwerk nicht eingebunden, den Ordner zuerst verbinden (Finder > Mit Server verbinden > `smb://10.10.10.240/ThG_edv`).

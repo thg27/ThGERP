@@ -292,7 +292,7 @@ def da_klick(sid, name, seq, knopf, js):
 
 
 # Seitenskript Rechnung: Positionen als Baum (Haupt-/Unterpositionen) mit Detailfeldern und Raster der
-# Unterpositionen (ohne Backslashes – siehe Wissensdatenbank)
+# Unterpositionen (ohne Backslashes – siehe zentrale Wissensdatenbank)
 POS_JS = """    javaScript {
         executeWhenPageLoads:
             ```javascript-browser
