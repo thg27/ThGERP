@@ -1205,7 +1205,7 @@ def seite_11():
                    """        serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_STATUS in ('OFFEN', 'BEZAHLT')
+            plsqlExpression: :P11_RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
         }
 """).replace("            htmlDomId: zahlungen\n", "            htmlDomId: zahlungen\n            regionDisplaySelector: true\n", 1) \
        .replace("            template: @/standard\n            templateOptions: #DEFAULT#\n",

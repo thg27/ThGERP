@@ -183,9 +183,10 @@ page 10 (
                        r.RECH_DATUM,
                        to_char(r.RECH_DATUM, 'YYYY') as JAHR,
                        to_char(r.RECH_DATUM, 'YYYY-MM') as MONAT,
-                       initcap(r.RECH_STATUS) as STATUS,
+                       case r.RECH_STATUS when 'TEILBEZAHLT' then 'Teilweise bezahlt' else initcap(r.RECH_STATUS) end as STATUS,
                        case r.RECH_STATUS when 'ENTWURF' then 'fa-pencil u-warning-text'
                                           when 'OFFEN' then 'fa-clock-o u-info-text'
+                                          when 'TEILBEZAHLT' then 'fa-adjust u-warning-text'
                                           when 'BEZAHLT' then 'fa-check-circle u-success-text'
                                           else 'fa-ban u-danger-text' end as STATUS_ICON,
                        case r.IST_UEBERFAELLIG when 'Y' then 'Ja' else 'Nein' end as UEBERFAELLIG,

@@ -8,7 +8,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 
 | Datei | Inhalt |
 |---|---|
-| 00_install.sql | ruft 01–31 auf (ohne 14 und 25), bricht bei Fehler ab |
+| 00_install.sql | ruft 01–32 auf (ohne 14 und 25), bricht bei Fehler ab |
 | 01_tabellen.sql | Tabellen, PK/UK/Check-Constraints |
 | 02_fremdschluessel.sql | Fremdschlüssel + FK-Indizes |
 | 03_indizes.sql | fachliche Unique-Indizes, Suchindizes |
@@ -39,6 +39,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 29_artikel_ohne_zusatzfelder_dateien_bild.sql | Artikelstamm verschlankt: Tabellen ARTI_ZUSATZFELDER, ARTI_ARTIKEL_ZUSATZWERTE, ARTI_ARTIKEL_DATEIEN und Spalten ARTI_BILD* entfernt (Skript 19 legt sie nicht mehr an); wiederholbar |
 | 30_alt_id_je_mandant.sql | Kingbill-IDs je Mandant (eigene Kingbill-Datenbank je Firma): RECH_ALT_ID_UK auf (RECH_MAND_ID, RECH_ALT_ID), ZAHL_ALT_ID nur indiziert; wiederholbar |
 | 31_zahlungsstatus_trigger.sql | Compound Trigger ZAHL_STATUS_AIUD: nach jeder Änderung an FAKT_ZAHLUNGEN Status der Rechnung (OFFEN/BEZAHLT) neu bestimmen – das Zahlungsraster speichert per AJAX ohne Seitenprozesse; wiederholbar |
+| 32_status_teilbezahlt.sql | Rechnungsstatus TEILBEZAHLT: Check-Constraint, Package/View (ruft 21 auf), bestehende Rechnungen neu eingestuft; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

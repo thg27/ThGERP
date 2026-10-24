@@ -58,7 +58,7 @@ begin
   RECH_ZBED_ID number,
   RECH_EMPF_LAND_CODE varchar2(2 char),
   RECH_NUMMER varchar2(30 char),
-  RECH_STATUS varchar2(10 char) default 'ENTWURF' not null,
+  RECH_STATUS varchar2(15 char) default 'ENTWURF' not null,
   RECH_BETREFF varchar2(200 char),
   RECH_DATUM date,
   RECH_FAELLIG_AM date,
@@ -102,7 +102,7 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_ZBED_ID', 'number', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_EMPF_LAND_CODE', 'varchar2(2 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_NUMMER', 'varchar2(30 char)', 'Y');
-    DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_STATUS', 'varchar2(10 char)', 'N', q'~'ENTWURF'~');
+    DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_STATUS', 'varchar2(15 char)', 'N', q'~'ENTWURF'~');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_BETREFF', 'varchar2(200 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_DATUM', 'date', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_FAELLIG_AM', 'date', 'Y');
@@ -137,7 +137,7 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_ROW_VERSION', 'number', 'N');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_PK', 'P', 'RECH_ID');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_ALT_ID_UK', 'U', q'~RECH_MAND_ID, RECH_ALT_ID~');
-    DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_STATUS_CK', 'C', q'~RECH_STATUS in ('ENTWURF', 'OFFEN', 'BEZAHLT', 'STORNIERT')~');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_STATUS_CK', 'C', q'~RECH_STATUS in ('ENTWURF', 'OFFEN', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT')~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_DATUM_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_DATUM is not null~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_NUMMER_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_LEISTUNG_CK', 'C', q'~RECH_LEISTUNG_BIS is null or RECH_LEISTUNG_VON is null or RECH_LEISTUNG_BIS >= RECH_LEISTUNG_VON~');
@@ -408,7 +408,7 @@ comment on column FAKT_RECHNUNGEN.RECH_MITA_ID is 'FK: Mitarbeiter (Bearbeiter)'
 comment on column FAKT_RECHNUNGEN.RECH_ZBED_ID is 'FK: Zahlungsbedingung';
 comment on column FAKT_RECHNUNGEN.RECH_EMPF_LAND_CODE is 'Empfaenger (Kopie beim Anlegen): Land, FK ALLG_LAENDER';
 comment on column FAKT_RECHNUNGEN.RECH_NUMMER is 'Rechnungsnummer (eindeutig je Mandant), vergeben beim Abschliessen';
-comment on column FAKT_RECHNUNGEN.RECH_STATUS is 'ENTWURF, OFFEN, BEZAHLT, STORNIERT';
+comment on column FAKT_RECHNUNGEN.RECH_STATUS is 'ENTWURF, OFFEN, TEILBEZAHLT, BEZAHLT, STORNIERT';
 comment on column FAKT_RECHNUNGEN.RECH_BETREFF is 'Betreff, z.B. Rechnung 2026 - 13';
 comment on column FAKT_RECHNUNGEN.RECH_DATUM is 'Rechnungsdatum, gesetzt beim Abschliessen zusammen mit der Nummer (Entwurf: leer)';
 comment on column FAKT_RECHNUNGEN.RECH_FAELLIG_AM is 'Faelligkeitsdatum';

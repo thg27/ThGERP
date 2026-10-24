@@ -28,13 +28,13 @@ page 1 (
             type: sqlQuery
             sqlQuery:
                 ```sql
-                -- Rechnungen des im Portal gewaehlten Mandanten; Umsatz = OFFEN/BEZAHLT netto (ohne Entwuerfe, stornierte)
+                -- Rechnungen des im Portal gewaehlten Mandanten; Umsatz = OFFEN/TEILBEZAHLT/BEZAHLT netto (ohne Entwuerfe, stornierte)
                 with r as (
                     select RECH_STATUS, RECH_DATUM, RECH_SUMME_NETTO, OFFEN, IST_UEBERFAELLIG
                       from FAKT_RECHNUNGEN_V
                      where RECH_MAND_ID = :MANDANT_ID
                 ), u as (
-                    select * from r where RECH_STATUS in ('OFFEN', 'BEZAHLT')
+                    select * from r where RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
                 )
                 select 1 as ID, 'Umsatz ' || to_char(sysdate, 'YYYY') as TITLE,
                        to_char((select nvl(sum(RECH_SUMME_NETTO), 0) from u where RECH_DATUM >= trunc(sysdate, 'YYYY')),
@@ -55,16 +55,16 @@ page 1 (
                   from dual
                 union all
                 select 3, 'Offene Rechnungen',
-                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS = 'OFFEN'),
+                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS in ('OFFEN', 'TEILBEZAHLT')),
                                'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €',
-                       to_char((select count(*) from r where RECH_STATUS = 'OFFEN'), 'FM999G999') || ' Rechnungen',
-                       apex_page.get_url(p_page => 10, p_clear_cache => 10, p_items => 'P10_STATUS', p_values => 'Offen')
+                       to_char((select count(*) from r where RECH_STATUS in ('OFFEN', 'TEILBEZAHLT')), 'FM999G999') || ' Rechnungen',
+                       apex_page.get_url(p_page => 10, p_clear_cache => 10, p_items => 'P10_STATUS', p_values => 'Offen:Teilweise bezahlt')
                   from dual
                 union all
                 select 4, 'Überfällig',
-                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS = 'OFFEN' and IST_UEBERFAELLIG = 'Y'),
+                       to_char((select nvl(sum(OFFEN), 0) from r where IST_UEBERFAELLIG = 'Y'),
                                'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €',
-                       to_char((select count(*) from r where RECH_STATUS = 'OFFEN' and IST_UEBERFAELLIG = 'Y'), 'FM999G999') || ' Rechnungen',
+                       to_char((select count(*) from r where IST_UEBERFAELLIG = 'Y'), 'FM999G999') || ' Rechnungen',
                        apex_page.get_url(p_page => 10, p_clear_cache => 10, p_items => 'P10_UEBERFAELLIG', p_values => 'Ja')
                   from dual
                 union all
@@ -185,7 +185,7 @@ page 1 (
                                          p_items => 'P11_KUND_ID', p_values => r.RECH_KUND_ID) as KUND_URL
                   from FAKT_RECHNUNGEN_V r
                  where r.RECH_MAND_ID = :MANDANT_ID
-                   and r.RECH_STATUS = 'OFFEN'
+                   and r.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT')
                  order by r.RECH_FAELLIG_AM nulls last, r.RECH_NUMMER
                 ```
         }
@@ -398,7 +398,7 @@ page 1 (
                               from dual connect by level <= 12) m
                       left join FAKT_RECHNUNGEN r
                         on r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('OFFEN', 'BEZAHLT')
+                       and r.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= m.monat
                        and r.RECH_DATUM < add_months(m.monat, 1)
                      group by m.monat
@@ -440,7 +440,7 @@ page 1 (
                               from dual connect by level <= 12) m
                       left join FAKT_RECHNUNGEN r
                         on r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('OFFEN', 'BEZAHLT')
+                       and r.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= add_months(m.monat, -12)
                        and r.RECH_DATUM < add_months(m.monat, -11)
                      group by m.monat
@@ -511,7 +511,7 @@ page 1 (
                            || to_char(sum(RECH_SUMME_NETTO), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
                       from FAKT_RECHNUNGEN_V
                      where RECH_MAND_ID = :MANDANT_ID
-                       and RECH_STATUS in ('OFFEN', 'BEZAHLT')
+                       and RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
                        and RECH_DATUM >= add_months(trunc(sysdate), -12)
                      group by KUNDE, KUND_NUMMER
                      order by 2 desc

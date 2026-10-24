@@ -63,8 +63,8 @@ select r.RECH_ID,
        r.RECH_SUMME_MWST,
        r.RECH_SUMME_BRUTTO,
        nvl(z.BEZAHLT, 0) as BEZAHLT,
-       case when r.RECH_STATUS in ('OFFEN', 'BEZAHLT') then r.RECH_SUMME_BRUTTO - nvl(z.BEZAHLT, 0) end as OFFEN,
-       case when r.RECH_STATUS = 'OFFEN' and r.RECH_FAELLIG_AM < trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) then 'Y' else 'N' end as IST_UEBERFAELLIG,
+       case when r.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT') then r.RECH_SUMME_BRUTTO - nvl(z.BEZAHLT, 0) end as OFFEN,
+       case when r.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT') and r.RECH_FAELLIG_AM < trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) then 'Y' else 'N' end as IST_UEBERFAELLIG,
        r.RECH_UPDATED_ON,
        r.RECH_UPDATED_BY
   from FAKT_RECHNUNGEN r
@@ -109,7 +109,7 @@ create or replace package FAKT_RECHNUNG as
     -- Entwurf abschliessen: Rechnungsdatum = heute, Nummer vergeben (Jahr des Rechnungsdatums), Status OFFEN,
     -- Betreff/Faelligkeit vorbelegen
     procedure abschliessen(p_rech_id in number);
-    -- Status OFFEN/BEZAHLT aus den Zahlungen ableiten
+    -- Status aus den Zahlungen ableiten: keine Zahlung OFFEN, teilweise TEILBEZAHLT, vollstaendig BEZAHLT
     procedure zahlungsstatus(p_rech_id in number);
     -- Y = Rechnung hat die zuletzt vergebene Nummer ihres Nummernkreises (darf geloescht werden)
     function ist_letzte(p_rech_id in number) return varchar2;
@@ -293,11 +293,12 @@ create or replace package body FAKT_RECHNUNG as
     procedure zahlungsstatus(p_rech_id in number) is
     begin
         update FAKT_RECHNUNGEN r
-           set RECH_STATUS = case when (select nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0)
-                                          from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = r.RECH_ID) >= r.RECH_SUMME_BRUTTO
-                                  then 'BEZAHLT' else 'OFFEN' end
+           set RECH_STATUS = (select case when nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0) >= r.RECH_SUMME_BRUTTO then 'BEZAHLT'
+                                          when nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0) > 0 then 'TEILBEZAHLT'
+                                          else 'OFFEN' end
+                                from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = r.RECH_ID)
          where RECH_ID = p_rech_id
-           and RECH_STATUS in ('OFFEN', 'BEZAHLT');
+           and RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT');
     end zahlungsstatus;
 
     function ist_letzte(p_rech_id in number) return varchar2 is

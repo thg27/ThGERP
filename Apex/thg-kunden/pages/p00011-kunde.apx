@@ -70,7 +70,7 @@ page 11 (
                           from FAKT_RECHNUNGEN_V
                          where RECH_KUND_ID = :P11_KUND_ID
                            and RECH_MAND_ID = :MANDANT_ID
-                           and RECH_STATUS in ('OFFEN', 'BEZAHLT')) k
+                           and RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')) k
                 ```
             pageItemsToSubmit: [
                 P11_KUND_ID
