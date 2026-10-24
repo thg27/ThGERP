@@ -1,4 +1,4 @@
-page 111 (
+page 121 (
     name: Artikelgruppe
     alias: ARTIKELGRUPPEN-BEARBEITEN
     title: Artikelgruppe
@@ -65,7 +65,7 @@ page 111 (
         }
     )
 
-    pageItem P111_AGRP_ID (
+    pageItem P121_AGRP_ID (
         type: hidden
         layout {
             sequence: 1
@@ -83,7 +83,7 @@ page 111 (
         }
     )
 
-    pageItem P111_AGRP_CODE (
+    pageItem P121_AGRP_CODE (
         type: textField
         label {
             label: Code
@@ -109,7 +109,7 @@ page 111 (
         }
     )
 
-    pageItem P111_AGRP_BEZEICHNUNG (
+    pageItem P121_AGRP_BEZEICHNUNG (
         type: textField
         label {
             label: Bezeichnung
@@ -135,7 +135,7 @@ page 111 (
         }
     )
 
-    pageItem P111_AGRP_SORTIERUNG (
+    pageItem P121_AGRP_SORTIERUNG (
         type: numberField
         label {
             label: Sortierung
@@ -158,7 +158,7 @@ page 111 (
         }
     )
 
-    pageItem P111_AGRP_IST_AKTIV (
+    pageItem P121_AGRP_IST_AKTIV (
         type: switch
         label {
             label: Aktiv
@@ -240,7 +240,7 @@ page 111 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P111_AGRP_ID
+            item: P121_AGRP_ID
         }
     )
 
@@ -263,7 +263,7 @@ page 111 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P111_AGRP_ID
+            item: P121_AGRP_ID
         }
     )
 
@@ -286,7 +286,7 @@ page 111 (
         }
         serverSideCondition {
             type: itemIsNull
-            item: P111_AGRP_ID
+            item: P121_AGRP_ID
         }
     )
 

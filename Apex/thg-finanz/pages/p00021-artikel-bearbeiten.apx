@@ -1,7 +1,7 @@
-page 11 (
+page 21 (
     name: Artikel bearbeiten
     alias: ARTIKEL-BEARBEITEN
-    title: &P11_TITEL.
+    title: &P21_TITEL.
     appearance {
         pageTemplate: @/standard
         templateOptions: #DEFAULT#
@@ -16,7 +16,7 @@ page 11 (
 
     region breadcrumb (
         name: Breadcrumb
-        title: &P11_TITEL.
+        title: &P21_TITEL.
         type: breadcrumb
         source {
             breadcrumb: @breadcrumb
@@ -131,7 +131,7 @@ page 11 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P11_ARTI_ID
+            item: P21_ARTI_ID
         }
     )
 
@@ -149,11 +149,11 @@ page 11 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P11_ARTI_ID
+            item: P21_ARTI_ID
         }
     )
 
-    pageItem P11_ARTI_ID (
+    pageItem P21_ARTI_ID (
         type: hidden
         layout {
             sequence: 1
@@ -171,7 +171,7 @@ page 11 (
         }
     )
 
-    pageItem P11_TITEL (
+    pageItem P21_TITEL (
         type: hidden
         layout {
             sequence: 2
@@ -180,7 +180,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_NAME (
+    pageItem P21_ARTI_NAME (
         type: textField
         label {
             label: Name
@@ -208,7 +208,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_VK_PREIS (
+    pageItem P21_ARTI_VK_PREIS (
         type: numberField
         label {
             label: Verkaufspreis
@@ -240,7 +240,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_IST_BRUTTO (
+    pageItem P21_ARTI_IST_BRUTTO (
         type: switch
         label {
             label: brutto
@@ -276,7 +276,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_IST_AKTIV (
+    pageItem P21_ARTI_IST_AKTIV (
         type: switch
         label {
             label: Aktiv
@@ -312,7 +312,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_BILD (
+    pageItem P21_ARTI_BILD (
         type: imageUpload
         label {
             label: Artikelbild
@@ -337,7 +337,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_NUMMER (
+    pageItem P21_ARTI_NUMMER (
         type: textField
         label {
             label: Nummer
@@ -373,7 +373,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_EINH_ID (
+    pageItem P21_ARTI_EINH_ID (
         type: selectList
         label {
             label: Einheit
@@ -405,7 +405,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_AGRP_ID (
+    pageItem P21_ARTI_AGRP_ID (
         type: selectList
         label {
             label: Gruppe
@@ -436,7 +436,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_MWST_ID (
+    pageItem P21_ARTI_MWST_ID (
         type: selectList
         label {
             label: MwSt. in %
@@ -477,7 +477,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_BESCHREIBUNG (
+    pageItem P21_ARTI_BESCHREIBUNG (
         type: richTextEditor
         label {
             label: Beschreibung (wird in die Belegposition übernommen)
@@ -501,7 +501,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_KOMMENTAR (
+    pageItem P21_ARTI_KOMMENTAR (
         type: textarea
         label {
             label: Kommentar (intern)
@@ -525,7 +525,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_EAN (
+    pageItem P21_ARTI_EAN (
         type: textField
         label {
             label: Barcode EAN
@@ -552,7 +552,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_AUFGENOMMEN_AM (
+    pageItem P21_ARTI_AUFGENOMMEN_AM (
         type: datePicker
         label {
             label: Aufgenommen am
@@ -585,7 +585,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_EK_PREIS (
+    pageItem P21_ARTI_EK_PREIS (
         type: numberField
         label {
             label: Einkaufspreis netto
@@ -610,7 +610,7 @@ page 11 (
         }
     )
 
-    pageItem P11_ARTI_ERLOESKONTO (
+    pageItem P21_ARTI_ERLOESKONTO (
         type: textField
         label {
             label: Erlöskonto
@@ -651,14 +651,14 @@ page 11 (
                        z.ZUSF_BEZEICHNUNG,
                        (select w.AZUW_WERT
                           from ARTI_ARTIKEL_ZUSATZWERTE w
-                         where w.AZUW_ARTI_ID = :P11_ARTI_ID
+                         where w.AZUW_ARTI_ID = :P21_ARTI_ID
                            and w.AZUW_ZUSF_ID = z.ZUSF_ID) as AZUW_WERT
                   from ARTI_ZUSATZFELDER z
                  where z.ZUSF_IST_AKTIV = 'Y'
                  order by z.ZUSF_NUMMER
                 ```
             pageItemsToSubmit: [
-                P11_ARTI_ID
+                P21_ARTI_ID
             ]
         }
         layout {
@@ -678,7 +678,7 @@ page 11 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P11_ARTI_ID
+            item: P21_ARTI_ID
         }
 
         savedReport PRIMARY (
@@ -780,11 +780,11 @@ page 11 (
                   from FAKT_RECHNUNGEN r
                   join KUND_KUNDEN k on k.KUND_ID = r.RECH_KUND_ID
                  where exists (select 1 from FAKT_RECHNUNGSPOSITIONEN p
-                                where p.RPOS_RECH_ID = r.RECH_ID and p.RPOS_ARTI_ID = :P11_ARTI_ID)
+                                where p.RPOS_RECH_ID = r.RECH_ID and p.RPOS_ARTI_ID = :P21_ARTI_ID)
                  order by r.RECH_DATUM desc
                 ```
             pageItemsToSubmit: [
-                P11_ARTI_ID
+                P21_ARTI_ID
             ]
         }
         layout {
@@ -965,11 +965,11 @@ page 11 (
                        ADAT_CREATED_ON,
                        ADAT_CREATED_BY
                   from ARTI_ARTIKEL_DATEIEN
-                 where ADAT_ARTI_ID = :P11_ARTI_ID
+                 where ADAT_ARTI_ID = :P21_ARTI_ID
                  order by ADAT_CREATED_ON desc
                 ```
             pageItemsToSubmit: [
-                P11_ARTI_ID
+                P21_ARTI_ID
             ]
         }
         layout {
@@ -984,12 +984,12 @@ page 11 (
         link {
             linkColumn: customTarget
             target: {
-                page: 12
+                page: 22
                 items: {
-                    P12_ADAT_ID: #ADAT_ID#
-                    P12_ADAT_ARTI_ID: &P11_ARTI_ID.
+                    P22_ADAT_ID: #ADAT_ID#
+                    P22_ADAT_ARTI_ID: &P21_ARTI_ID.
                 }
-                clearCache: 12
+                clearCache: 22
             }
             linkIcon: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
         }
@@ -1143,7 +1143,7 @@ page 11 (
         behavior {
             action: redirectThisApp
             target: {
-                page: 10
+                page: 20
             }
             warnOnUnsavedChanges: doNotCheck
         }
@@ -1168,7 +1168,7 @@ page 11 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P11_ARTI_ID
+            item: P21_ARTI_ID
         }
     )
 
@@ -1191,7 +1191,7 @@ page 11 (
         }
         serverSideCondition {
             type: itemIsNull
-            item: P11_ARTI_ID
+            item: P21_ARTI_ID
         }
     )
 
@@ -1214,7 +1214,7 @@ page 11 (
         behavior {
             action: redirectThisApp
             target: {
-                page: 10
+                page: 20
             }
             warnOnUnsavedChanges: doNotCheck
         }
@@ -1239,11 +1239,11 @@ page 11 (
         behavior {
             action: redirectThisApp
             target: {
-                page: 12
+                page: 22
                 items: {
-                    P12_ADAT_ARTI_ID: &P11_ARTI_ID.
+                    P22_ADAT_ARTI_ID: &P21_ARTI_ID.
                 }
-                clearCache: 12
+                clearCache: 22
             }
             warnOnUnsavedChanges: doNotCheck
         }
@@ -1309,13 +1309,13 @@ page 11 (
             sqlQuery:
                 ```sql
                 select 1 from ARTI_ARTIKEL
-                 where ARTI_NUMMER = :P11_ARTI_NUMMER
-                   and ARTI_ID <> nvl(:P11_ARTI_ID, -1)
+                 where ARTI_NUMMER = :P21_ARTI_NUMMER
+                   and ARTI_ID <> nvl(:P21_ARTI_ID, -1)
                 ```
         }
         error {
             errorMessage: Diese Artikelnummer ist bereits vergeben.
-            associatedItem: @P11_ARTI_NUMMER
+            associatedItem: @P21_ARTI_NUMMER
         }
     )
 
@@ -1335,8 +1335,8 @@ page 11 (
         source {
             plsqlCode:
                 ```plsql
-                :P11_TITEL := case when :P11_ARTI_ID is null then 'Neuer Artikel'
-                                   else :P11_ARTI_NUMMER || ' – ' || :P11_ARTI_NAME end;
+                :P21_TITEL := case when :P21_ARTI_ID is null then 'Neuer Artikel'
+                                   else :P21_ARTI_NUMMER || ' – ' || :P21_ARTI_NAME end;
                 ```
         }
         execution {
@@ -1366,10 +1366,10 @@ page 11 (
                 ```plsql
                 -- je Zusatzfeld: Wert speichern bzw. leeren Wert entfernen
                 delete from ARTI_ARTIKEL_ZUSATZWERTE
-                 where AZUW_ARTI_ID = :P11_ARTI_ID and AZUW_ZUSF_ID = :ZUSF_ID;
+                 where AZUW_ARTI_ID = :P21_ARTI_ID and AZUW_ZUSF_ID = :ZUSF_ID;
                 if :AZUW_WERT is not null then
                     insert into ARTI_ARTIKEL_ZUSATZWERTE (AZUW_ARTI_ID, AZUW_ZUSF_ID, AZUW_WERT)
-                    values (:P11_ARTI_ID, :ZUSF_ID, :AZUW_WERT);
+                    values (:P21_ARTI_ID, :ZUSF_ID, :AZUW_WERT);
                 end if;
                 ```
         }
@@ -1385,9 +1385,9 @@ page 11 (
         }
         behavior {
             target: {
-                page: 11
+                page: 21
                 items: {
-                    P11_ARTI_ID: &P11_ARTI_ID.
+                    P21_ARTI_ID: &P21_ARTI_ID.
                 }
             }
         }
@@ -1403,7 +1403,7 @@ page 11 (
         }
         behavior {
             target: {
-                page: 10
+                page: 20
             }
         }
     )

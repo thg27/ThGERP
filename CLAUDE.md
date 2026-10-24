@@ -5,16 +5,18 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
 
 ## Status / offene Entscheidungen
 - Workspace `THGERP`, Schema `WKSP_THGERP`, SQLcl-Verbindung `wksp_thgerp@pdbthg` (Host dbthgprod, für ERP-Entwicklung freigegeben).
-- App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20040 THG-ARTIKEL, 20050 THG-FINANZ (Fakturierung, Tabellen FAKT_*).
+- App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20050 THG-FINANZ (Fakturierung, Tabellen FAKT_*, mit Artikelstamm ARTI_*).
+  Die App 20040 THG-ARTIKEL ist seit 2026-10-24 aufgelöst (nur Rechnungen verwenden Artikel): Artikel in THG-FINANZ Seiten 20/21/22,
+  Wertelisten Artikelgruppen 120/121 und Zusatzfelder 130/131 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–27 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–28 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
 
 ## Datenbank-Standards
 Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
-- Gruppencodes: `KUND` (Kundenstamm), `ALLG` (allgemeine Stammdaten), `ADMIN` (Administration, bewusst 5-stellig), `ARTI` (Artikelstamm), `FAKT` (Fakturierung)
+- Gruppencodes: `KUND` (Kundenstamm), `ALLG` (allgemeine Stammdaten), `ADMIN` (Administration, bewusst 5-stellig), `ARTI` (Artikelstamm, App THG-FINANZ), `FAKT` (Fakturierung)
 - Tabellen-Aliase: `Datenbank/db/aliase.md` – vor jeder neuen Tabelle prüfen und dort eintragen
 - DDL-Skripte: `Datenbank/db/ddl` (nummeriert, `00_install.sql` ruft alle auf)
 - ER-Modelle: `Datenbank/db/er-modell/kundenstamm_er_modell.mmd` und `artikel_fakturierung_er_modell.mmd` (generiert aus `ddl/generator/gen_19_20_…`) sind die Quellen; nach Modelländerungen `.mmd` anpassen und mit `python3 build_er_modell.py` PDF/SVG/PNG/HTML neu erzeugen

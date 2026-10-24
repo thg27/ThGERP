@@ -133,6 +133,29 @@ list navigation-menu (
         }
     )
 
+    entry artikel (
+        label: Artikel
+        icon {
+            imageIconCssClasses: fa-cube
+        }
+        layout {
+            sequence: 30
+        }
+        link {
+            target: {
+                page: 20
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                20
+                21
+                22
+            ]
+        }
+    )
+
     entry wertelisten (
         label: Wertelisten
         icon {
@@ -152,6 +175,10 @@ list navigation-menu (
                 100
                 110
                 111
+                120
+                121
+                130
+                131
             ]
         }
     )
@@ -175,6 +202,14 @@ list wertelisten-finanz (
               from (
                     select 'Nummernkreise' as label, 110 as seite, 'fa-sort-numeric-asc' as image, 'Belegnummern je Mandant, Belegart und Jahr (Format mit {JAHR} und {NR})' as beschreibung,
                            (select count(*) from FAKT_NUMMERNKREISE) as anzahl
+                      from dual
+                    union all
+                    select 'Artikelgruppen' as label, 120 as seite, 'fa-tags' as image, 'Gruppen der Artikel (Dienstleistung, Office 365 …)' as beschreibung,
+                           (select count(*) from ARTI_ARTIKELGRUPPEN) as anzahl
+                      from dual
+                    union all
+                    select 'Zusatzfelder' as label, 130 as seite, 'fa-list-alt' as image, 'Feldnamen der Zusatzfelder in der Artikelmaske (1–10)' as beschreibung,
+                           (select count(*) from ARTI_ZUSATZFELDER) as anzahl
                       from dual
                    )
              order by seite
@@ -203,7 +238,12 @@ list startseite (
                            (select count(*) || ' offen' from FAKT_RECHNUNGEN where RECH_STATUS = 'OFFEN' and RECH_MAND_ID = :MANDANT_ID) as anzahl
                       from dual
                     union all
-                    select 'Wertelisten', 100, 'fa-list-ul', 'Nummernkreise', null from dual
+                    select 'Artikel', 20, 'fa-cube',
+                           'Artikelstamm: Waren und Dienstleistungen mit Preis, Einheit, MwSt., Beschreibung, Zusatzfeldern und Dateien',
+                           to_char((select count(*) from ARTI_ARTIKEL where ARTI_IST_AKTIV = 'Y')) || ' aktiv'
+                      from dual
+                    union all
+                    select 'Wertelisten', 100, 'fa-list-ul', 'Nummernkreise, Artikelgruppen, Zusatzfelder', null from dual
                    )
              order by seite
             ```

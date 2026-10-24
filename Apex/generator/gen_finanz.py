@@ -4,7 +4,10 @@
 Seiten: 1 Startseite, 10 Rechnungen (Liste), 11 Rechnung (Allgemein, Kunde mit Anschrift und Lieferadresse,
 Vortext, Positionen als Baum aus Haupt- und Unterpositionen mit Detailfeldern und Summen je Steuersatz,
 Schlusstext, Zahlungen),
-12/13 Rechnung als PDF, 14 Unterposition (Dialog), 100 Wertelisten, 110/111 Nummernkreise.
+12/13 Rechnung als PDF, 14 Unterposition (Dialog), 20 Artikel, 21 Artikel bearbeiten, 22 Datei (Dialog),
+100 Wertelisten, 110/111 Nummernkreise, 120/121 Artikelgruppen, 130/131 Zusatzfelder.
+Der Artikelstamm (vorher eigene App THG-ARTIKEL 20040) gehoert seit 2026-10-24 zur Finanz-App, da nur Rechnungen
+Artikel verwenden; die Artikelseiten erzeugt gen_artikel.py (umnummeriert mit ga.in_finanz).
 Logik in der Datenbank: Package FAKT_RECHNUNG (21_finanz.sql).
 Grundgeruest: Kopie von THG-ALLGEMEIN (beim ersten Lauf).
 Aufruf:  python3.13 Apex/generator/gen_finanz.py   (f-Strings nach PEP 701)
@@ -2865,6 +2868,29 @@ def listen(lists_apx):
         }
     )
 
+    entry artikel (
+        label: Artikel
+        icon {
+            imageIconCssClasses: fa-cube
+        }
+        layout {
+            sequence: 30
+        }
+        link {
+            target: {
+                page: 20
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                20
+                21
+                22
+            ]
+        }
+    )
+
     entry wertelisten (
         label: Wertelisten
         icon {
@@ -2884,13 +2910,17 @@ def listen(lists_apx):
                 100
                 110
                 111
+                120
+                121
+                130
+                131
             ]
         }
     )""" + s[j:]
     s = re.sub(r"\nlist admin-lookup-values \(.*?\n\)\n", "\n", s, flags=re.S)
     teile = [f"""select '{w['titel']}' as label, {w['seite']} as seite, '{w['icon']}' as image, '{w['beschreibung']}' as beschreibung,
                            (select count(*) from {w['tabelle']}) as anzahl
-                      from dual""" for w in WL_FINANZ]
+                      from dual""" for w in WL_FINANZ + ga.WL_ARTIKEL]
     trenner = "\n                    union all\n                    "
     return s.rstrip("\n") + f"""
 
@@ -2938,7 +2968,12 @@ list startseite (
                            (select count(*) || ' offen' from FAKT_RECHNUNGEN where RECH_STATUS = 'OFFEN' and RECH_MAND_ID = :MANDANT_ID) as anzahl
                       from dual
                     union all
-                    select 'Wertelisten', 100, 'fa-list-ul', 'Nummernkreise', null from dual
+                    select 'Artikel', 20, 'fa-cube',
+                           'Artikelstamm: Waren und Dienstleistungen mit Preis, Einheit, MwSt., Beschreibung, Zusatzfeldern und Dateien',
+                           to_char((select count(*) from ARTI_ARTIKEL where ARTI_IST_AKTIV = 'Y')) || ' aktiv'
+                      from dual
+                    union all
+                    select 'Wertelisten', 100, 'fa-list-ul', 'Nummernkreise, Artikelgruppen, Zusatzfelder', null from dual
                    )
              order by seite
             ```
@@ -2995,13 +3030,46 @@ def breadcrumbs():
             }
         }
     )
+
+    entry artikel (
+        name: Artikel
+        pageNumber: 20
+        execution {
+            sequence: 40
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 20
+            }
+        }
+    )
+
+    entry artikel-bearbeiten (
+        name: Artikel bearbeiten
+        pageNumber: 21
+        execution {
+            sequence: 50
+        }
+        appearance {
+            parentEntry: @artikel
+        }
+        link {
+            target: {
+                page: 21
+            }
+        }
+    )
 """
-    wl.WERTELISTEN = WL_FINANZ
+    wl.WERTELISTEN = WL_FINANZ + ga.WL_ARTIKEL
     return out + wl.breadcrumb_eintraege() + ")\n"
 
 
 LOVS_ABO = ["lov-mandanten", "lov-mitarbeiter", "lov-artikel", "lov-mwst-prozent", "lov-einheiten-code",
-            "lov-kunden", "lov-zahlungsbedingungen", "lov-laender"]
+            "lov-kunden", "lov-zahlungsbedingungen", "lov-laender",
+            "lov-artikelgruppen", "lov-einheiten", "lov-mwst-saetze"]   # Artikelseiten 20-22
 
 
 def lovs_abonnieren():
@@ -3069,9 +3137,13 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00011-rechnung.apx").write_text(seite_11(), encoding="utf-8")
     (FIN / "pages" / "p00014-position.apx").write_text(seite_14(), encoding="utf-8")
     pdf_seiten()
+    # Artikelstamm (Seiten aus gen_artikel.py, umnummeriert 10/11/12 -> 20/21/22)
+    (FIN / "pages" / "p00020-artikel.apx").write_text(ga.in_finanz(ga.seite_10()), encoding="utf-8")
+    (FIN / "pages" / "p00021-artikel-bearbeiten.apx").write_text(ga.in_finanz(ga.seite_11()), encoding="utf-8")
+    (FIN / "pages" / "p00022-datei.apx").write_text(ga.in_finanz(ga.seite_12()), encoding="utf-8")
     (FIN / "pages" / "p00100-wertelisten.apx").write_text(
         wl.uebersicht("wertelisten-finanz", "Wertelisten Finanz"), encoding="utf-8")
-    ga.wl_seiten(FIN, WL_FINANZ)
+    ga.wl_seiten(FIN, WL_FINANZ + ga.WL_ARTIKEL)
     lp = FIN / "shared-components" / "lists.apx"
     lp.write_text(listen((ALLG / "shared-components" / "lists.apx").read_text(encoding="utf-8")), encoding="utf-8")
     (FIN / "shared-components" / "breadcrumbs.apx").write_text(breadcrumbs(), encoding="utf-8")

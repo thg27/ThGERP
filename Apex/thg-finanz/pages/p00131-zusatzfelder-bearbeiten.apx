@@ -1,4 +1,4 @@
-page 121 (
+page 131 (
     name: Zusatzfeld
     alias: ZUSATZFELDER-BEARBEITEN
     title: Zusatzfeld
@@ -65,7 +65,7 @@ page 121 (
         }
     )
 
-    pageItem P121_ZUSF_ID (
+    pageItem P131_ZUSF_ID (
         type: hidden
         layout {
             sequence: 1
@@ -83,7 +83,7 @@ page 121 (
         }
     )
 
-    pageItem P121_ZUSF_NUMMER (
+    pageItem P131_ZUSF_NUMMER (
         type: numberField
         label {
             label: Feldnummer
@@ -109,7 +109,7 @@ page 121 (
         }
     )
 
-    pageItem P121_ZUSF_BEZEICHNUNG (
+    pageItem P131_ZUSF_BEZEICHNUNG (
         type: textField
         label {
             label: Feldname
@@ -135,7 +135,7 @@ page 121 (
         }
     )
 
-    pageItem P121_ZUSF_IST_AKTIV (
+    pageItem P131_ZUSF_IST_AKTIV (
         type: switch
         label {
             label: In der Maske anzeigen
@@ -217,7 +217,7 @@ page 121 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P121_ZUSF_ID
+            item: P131_ZUSF_ID
         }
     )
 
@@ -240,7 +240,7 @@ page 121 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P121_ZUSF_ID
+            item: P131_ZUSF_ID
         }
     )
 
@@ -263,7 +263,7 @@ page 121 (
         }
         serverSideCondition {
             type: itemIsNull
-            item: P121_ZUSF_ID
+            item: P131_ZUSF_ID
         }
     )
 

@@ -46,6 +46,38 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry artikel (
+        name: Artikel
+        pageNumber: 20
+        execution {
+            sequence: 40
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 20
+            }
+        }
+    )
+
+    entry artikel-bearbeiten (
+        name: Artikel bearbeiten
+        pageNumber: 21
+        execution {
+            sequence: 50
+        }
+        appearance {
+            parentEntry: @artikel
+        }
+        link {
+            target: {
+                page: 21
+            }
+        }
+    )
+
     entry wertelisten (
         name: Wertelisten
         pageNumber: 100
@@ -74,6 +106,38 @@ breadcrumb breadcrumb (
         link {
             target: {
                 page: 110
+            }
+        }
+    )
+
+    entry werteliste-120 (
+        name: Artikelgruppen
+        pageNumber: 120
+        execution {
+            sequence: 120
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 120
+            }
+        }
+    )
+
+    entry werteliste-130 (
+        name: Zusatzfelder
+        pageNumber: 130
+        execution {
+            sequence: 130
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 130
             }
         }
     )

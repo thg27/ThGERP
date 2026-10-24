@@ -14,8 +14,7 @@ import re
 from pathlib import Path
 
 APEX = Path(__file__).resolve().parent.parent
-SUB_APPS = {"thg-allgemein": "Allgemein", "thg-kunden": "Kundenstammdaten", "thg-admin": "Administration",
-            "thg-artikel": "Artikelstamm", "thg-finanz": "Finanz"}
+SUB_APPS = {"thg-allgemein": "Allgemein", "thg-kunden": "Kundenstammdaten", "thg-admin": "Administration", "thg-finanz": "Finanz"}
 
 PROZESS = """appProcess mandant-vorbelegen (
     name: Mandant vorbelegen

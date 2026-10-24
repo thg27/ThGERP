@@ -1,13 +1,14 @@
 #!/usr/bin/env python3.13
-"""Erzeugt die App THG-ARTIKEL (20040) und die ALLG-Wertelisten fuer den Artikelstamm in THG-ALLGEMEIN (20010).
+"""Artikelstamm: Seiten fuer THG-FINANZ (20050) und die ALLG-Wertelisten in THG-ALLGEMEIN (20010).
 
-THG-ARTIKEL (Grundgeruest kopiert von THG-ALLGEMEIN):
-  1 Startseite, 10 Artikel (Liste), 11 Artikel (Maske nach Kingbill: Stammdaten, Beschreibung, Bild,
-  Registerkarten Kommentar / Zusatzfelder / Dokumente / Dateien), 12 Datei (Dialog),
-  100 Wertelisten, 110/111 Artikelgruppen, 120/121 Zusatzfelder
+Die eigene App THG-ARTIKEL (20040) ist seit 2026-10-24 aufgeloest – nur Rechnungen verwenden Artikel. Die Seiten
+werden hier mit den urspruenglichen Nummern erzeugt und von gen_finanz.py per in_finanz() umnummeriert:
+  Artikel (Liste) 10 -> 20, Artikel (Maske nach Kingbill: Stammdaten, Beschreibung, Bild, Registerkarten
+  Kommentar / Zusatzfelder / Dokumente / Dateien) 11 -> 21, Datei (Dialog) 12 -> 22;
+  Wertelisten Artikelgruppen 120/121, Zusatzfelder 130/131 (WL_ARTIKEL, Uebersicht Seite 100 der Finanz-App)
 THG-ALLGEMEIN: 140/141 Einheiten, 150/151 MwSt.-Saetze, 160/161 Textvorlagen (Look Up Values)
 LOVs liegen im Portal (20000) und werden abonniert (siehe CLAUDE.md).
-Aufruf:  python3.13 Apex/generator/gen_artikel.py   (f-Strings nach PEP 701, ab Python 3.12)
+Aufruf:  python3.13 Apex/generator/gen_artikel.py   (nur THG-ALLGEMEIN; Artikelseiten ueber gen_finanz.py)
 """
 import re
 import secrets
@@ -16,18 +17,30 @@ from pathlib import Path
 import gen_wertelisten_kunden as wl
 
 APEX = Path(__file__).resolve().parent.parent
-ART = APEX / "thg-artikel"
 ALLG = APEX / "thg-allgemein"
+
+# Seitennummern der Artikelseiten in THG-FINANZ (erzeugt werden sie mit 10/11/12)
+SEITEN_FINANZ = {10: 20, 11: 21, 12: 22}
+
+
+def in_finanz(text):
+    """Artikelseite fuer THG-FINANZ umnummerieren: Seitenkopf, Ziele, Cache, Elementnamen (P10_ -> P20_ …)."""
+    for alt, neu in SEITEN_FINANZ.items():
+        text = re.sub(rf"^page {alt} \(", f"page {neu} (", text, flags=re.M)
+        text = re.sub(rf"\b(page|clearCache): {alt}\b", rf"\1: {neu}", text)
+        text = re.sub(rf"\bP{alt}_", f"P{neu}_", text)
+    return text
+
 
 # --------------------------------------------------------------------------- Wertelisten
 WL_ARTIKEL = [
-    dict(seite=110, alias="ARTIKELGRUPPEN", titel="Artikelgruppen", einzahl="Artikelgruppe",
+    dict(seite=120, alias="ARTIKELGRUPPEN", titel="Artikelgruppen", einzahl="Artikelgruppe",
          tabelle="ARTI_ARTIKELGRUPPEN", pfx="AGRP", icon="fa-tags",
          beschreibung="Gruppen der Artikel (Dienstleistung, Office 365 …)",
          felder=[("CODE", "Code", "text", True), ("BEZEICHNUNG", "Bezeichnung", "text", True),
                  ("SORTIERUNG", "Sortierung", "number", False), ("IST_AKTIV", "Aktiv", "switch", True)],
          order="AGRP_SORTIERUNG nulls last, AGRP_BEZEICHNUNG"),
-    dict(seite=120, alias="ZUSATZFELDER", titel="Zusatzfelder", einzahl="Zusatzfeld",
+    dict(seite=130, alias="ZUSATZFELDER", titel="Zusatzfelder", einzahl="Zusatzfeld",
          tabelle="ARTI_ZUSATZFELDER", pfx="ZUSF", icon="fa-list-alt",
          beschreibung="Feldnamen der Zusatzfelder in der Artikelmaske (1–10)",
          felder=[("NUMMER", "Feldnummer", "number", True), ("BEZEICHNUNG", "Feldname", "text", True),
@@ -1218,172 +1231,6 @@ def startseite():
 """
 
 
-def listen(lists_apx):
-    s = lists_apx
-    # Navigationsmenue: Artikel + Wertelisten statt Look Up Values
-    i = s.index("    entry look-up-values (")
-    j = s.index("\n)", i)
-    s = s[:i] + """    entry artikel (
-        label: Artikel
-        icon {
-            imageIconCssClasses: fa-cube
-        }
-        layout {
-            sequence: 20
-        }
-        link {
-            target: {
-                page: 10
-            }
-        }
-        isCurrent {
-            type: pages
-            pages: [
-                10
-                11
-                12
-            ]
-        }
-    )
-
-    entry wertelisten (
-        label: Wertelisten
-        icon {
-            imageIconCssClasses: fa-list-ul
-        }
-        layout {
-            sequence: 90
-        }
-        link {
-            target: {
-                page: 100
-            }
-        }
-        isCurrent {
-            type: pages
-            pages: [
-                100
-                110
-                111
-                120
-                121
-            ]
-        }
-    )""" + s[j:]
-    # Liste der Look-Up-Values der Allgemein-App entfernen, eigene Listen anhaengen
-    s = re.sub(r"\nlist admin-lookup-values \(.*?\n\)\n", "\n", s, flags=re.S)
-    teile = [f"""select '{w['titel']}' as label, {w['seite']} as seite, '{w['icon']}' as image, '{w['beschreibung']}' as beschreibung,
-                           (select count(*) from {w['tabelle']}) as anzahl
-                      from dual""" for w in WL_ARTIKEL]
-    s = s.rstrip("\n") + f"""
-
-list wertelisten-artikel (
-    name: Wertelisten - Artikel
-    source {{
-        type: sqlQuery
-        sqlQuery:
-            ```sql
-            select 1 as the_level,
-                   label,
-                   apex_page.get_url(p_page => seite, p_clear_cache => seite) as target,
-                   null as is_current_list_entry,
-                   image,
-                   null as image_attribute,
-                   null as image_alt_attribute,
-                   beschreibung as attribute1,
-                   to_char(anzahl) as attribute2
-              from (
-                    {chr(10).join([''])}{(chr(10) + '                    union all' + chr(10) + '                    ').join(teile)}
-                   )
-             order by seite
-            ```
-    }}
-)
-
-list startseite (
-    name: Startseite
-    source {{
-        type: sqlQuery
-        sqlQuery:
-            ```sql
-            select 1 as the_level,
-                   label,
-                   apex_page.get_url(p_page => seite, p_clear_cache => seite) as target,
-                   null as is_current_list_entry,
-                   image,
-                   null as image_attribute,
-                   null as image_alt_attribute,
-                   beschreibung as attribute1,
-                   anzahl as attribute2
-              from (
-                    select 'Artikel' as label, 10 as seite, 'fa-cube' as image,
-                           'Artikelstamm: Waren und Dienstleistungen mit Preis, Einheit, MwSt., Beschreibung, Zusatzfeldern und Dateien' as beschreibung,
-                           to_char((select count(*) from ARTI_ARTIKEL where ARTI_IST_AKTIV = 'Y')) as anzahl
-                      from dual
-                    union all
-                    select 'Wertelisten', 100, 'fa-list-ul', 'Artikelgruppen und Zusatzfelder', null from dual
-                   )
-             order by seite
-            ```
-    }}
-)
-"""
-    return s
-
-
-def breadcrumbs():
-    out = """breadcrumb breadcrumb (
-    name: Breadcrumb
-
-    entry home (
-        name: Startseite
-        pageNumber: 1
-        execution {
-            sequence: 10
-        }
-        link {
-            target: {
-                page: 1
-            }
-        }
-    )
-
-    entry artikel (
-        name: Artikel
-        pageNumber: 10
-        execution {
-            sequence: 20
-        }
-        appearance {
-            parentEntry: @home
-        }
-        link {
-            target: {
-                page: 10
-            }
-        }
-    )
-
-    entry artikel-bearbeiten (
-        name: Artikel bearbeiten
-        pageNumber: 11
-        execution {
-            sequence: 30
-        }
-        appearance {
-            parentEntry: @artikel
-        }
-        link {
-            target: {
-                page: 11
-            }
-        }
-    )
-"""
-    wl.WERTELISTEN = WL_ARTIKEL
-    return out + wl.breadcrumb_eintraege() + ")\n"
-
-
 def allgemein_ergaenzen():
     """Look-Up-Values-Liste und Breadcrumbs der Allgemein-App um Einheiten, MwSt.-Saetze, Textvorlagen erweitern."""
     p = ALLG / "shared-components" / "lists.apx"
@@ -1432,31 +1279,6 @@ def allgemein_ergaenzen():
 
 
 if __name__ == "__main__":
-    # Anwendung
-    p = ART / "application.apx"
-    s = p.read_text(encoding="utf-8")
-    s = (s.replace("app THG-ALLGEMEIN (", "app THG-ARTIKEL (").replace("name: ThG – Allgemein", "name: ThG – Artikelstamm")
-          .replace("        text: Allgemein\n", "        text: Artikelstamm\n"))
-    salz_allg = re.search(r"checksumSalt: ([0-9A-F]+)", (ALLG / "application.apx").read_text(encoding="utf-8")).group(1)
-    if salz_allg in s:  # nur beim ersten Lauf: eigenes Salt statt des kopierten
-        s = s.replace(salz_allg, secrets.token_hex(32).upper())
-    p.write_text(s, encoding="utf-8")
-    p = ART / "deployments" / "default.json"
-    p.write_text(p.read_text(encoding="utf-8").replace('"id": 20010', '"id": 20040'), encoding="utf-8")
-    p = ART / "pages" / "p09999-login.apx"
-    p.write_text(p.read_text(encoding="utf-8").replace("ThG – Allgemein", "ThG – Artikelstamm"), encoding="utf-8")
-
-    (ART / "pages" / "p00001-home.apx").write_text(startseite(), encoding="utf-8")
-    (ART / "pages" / "p00010-artikel.apx").write_text(seite_10(), encoding="utf-8")
-    (ART / "pages" / "p00011-artikel-bearbeiten.apx").write_text(seite_11(), encoding="utf-8")
-    (ART / "pages" / "p00012-datei.apx").write_text(seite_12(), encoding="utf-8")
-    (ART / "pages" / "p00100-wertelisten.apx").write_text(
-        wl.uebersicht("wertelisten-artikel", "Wertelisten zum Artikel"), encoding="utf-8")
-    wl_seiten(ART, WL_ARTIKEL)
-    lp = ART / "shared-components" / "lists.apx"
-    lp.write_text(listen((ALLG / "shared-components" / "lists.apx").read_text(encoding="utf-8")), encoding="utf-8")
-    (ART / "shared-components" / "breadcrumbs.apx").write_text(breadcrumbs(), encoding="utf-8")
-
     wl_seiten(ALLG, WL_ALLG)
     allgemein_ergaenzen()
-    print("THG-ARTIKEL erzeugt; THG-ALLGEMEIN um Einheiten, MwSt.-Sätze, Textvorlagen ergänzt")
+    print("THG-ALLGEMEIN um Einheiten, MwSt.-Sätze, Textvorlagen ergänzt (Artikelseiten: gen_finanz.py)")

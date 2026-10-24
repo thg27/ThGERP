@@ -10,7 +10,7 @@ Aufruf (wiederholbar):  python3 Apex/generator/texte_de.py   (danach Portal und 
 from pathlib import Path
 
 APEX = Path(__file__).resolve().parent.parent
-SUB_APPS = ["thg-allgemein", "thg-kunden", "thg-admin", "thg-artikel", "thg-finanz"]
+SUB_APPS = ["thg-allgemein", "thg-kunden", "thg-admin", "thg-finanz"]
 
 TEXTE = {
     # Interactive Grid

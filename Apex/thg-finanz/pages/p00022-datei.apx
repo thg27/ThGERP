@@ -1,4 +1,4 @@
-page 12 (
+page 22 (
     name: Datei
     alias: DATEI
     title: Datei
@@ -62,7 +62,7 @@ page 12 (
         }
     )
 
-    pageItem P12_ADAT_ID (
+    pageItem P22_ADAT_ID (
         type: hidden
         layout {
             sequence: 1
@@ -80,7 +80,7 @@ page 12 (
         }
     )
 
-    pageItem P12_ADAT_ARTI_ID (
+    pageItem P22_ADAT_ARTI_ID (
         type: hidden
         layout {
             sequence: 2
@@ -97,7 +97,7 @@ page 12 (
         }
     )
 
-    pageItem P12_ADAT_DATEINAME (
+    pageItem P22_ADAT_DATEINAME (
         type: displayOnly
         label {
             label: Datei
@@ -120,11 +120,11 @@ page 12 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P12_ADAT_ID
+            item: P22_ADAT_ID
         }
     )
 
-    pageItem P12_UPLOAD (
+    pageItem P22_UPLOAD (
         type: fileUpload
         label {
             label: Datei auswählen
@@ -153,11 +153,11 @@ page 12 (
         }
         serverSideCondition {
             type: itemIsNull
-            item: P12_ADAT_ID
+            item: P22_ADAT_ID
         }
     )
 
-    pageItem P12_ADAT_BEMERKUNG (
+    pageItem P22_ADAT_BEMERKUNG (
         type: textarea
         label {
             label: Bemerkung
@@ -224,7 +224,7 @@ page 12 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P12_ADAT_ID
+            item: P22_ADAT_ID
         }
         confirmation {
             message: Datei wirklich löschen?
@@ -251,7 +251,7 @@ page 12 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P12_ADAT_ID
+            item: P22_ADAT_ID
         }
     )
 
@@ -273,7 +273,7 @@ page 12 (
         }
         serverSideCondition {
             type: itemIsNull
-            item: P12_ADAT_ID
+            item: P22_ADAT_ID
         }
     )
 
@@ -315,9 +315,9 @@ page 12 (
             plsqlCode:
                 ```plsql
                 insert into ARTI_ARTIKEL_DATEIEN (ADAT_ARTI_ID, ADAT_DATEINAME, ADAT_MIMETYPE, ADAT_INHALT, ADAT_BEMERKUNG)
-                select :P12_ADAT_ARTI_ID, filename, mime_type, blob_content, :P12_ADAT_BEMERKUNG
+                select :P22_ADAT_ARTI_ID, filename, mime_type, blob_content, :P22_ADAT_BEMERKUNG
                   from apex_application_temp_files
-                 where name = :P12_UPLOAD;
+                 where name = :P22_UPLOAD;
                 ```
         }
         execution {

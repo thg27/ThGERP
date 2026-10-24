@@ -1,7 +1,7 @@
 page 120 (
-    name: Zusatzfelder
-    alias: ZUSATZFELDER
-    title: Zusatzfelder
+    name: Artikelgruppen
+    alias: ARTIKELGRUPPEN
+    title: Artikelgruppen
     pageGroup: @administration
     appearance {
         pageTemplate: @/standard
@@ -18,7 +18,7 @@ page 120 (
 
     region breadcrumb (
         name: Breadcrumb
-        title: Zusatzfelder
+        title: Artikelgruppen
         type: breadcrumb
         source {
             breadcrumb: @breadcrumb
@@ -40,21 +40,22 @@ page 120 (
     )
 
     region bericht (
-        name: Zusatzfelder
+        name: Artikelgruppen
         type: interactiveReport
         source {
             location: localDatabase
             type: sqlQuery
             sqlQuery:
                 ```sql
-                select ZUSF_ID,
-                       ZUSF_NUMMER,
-                       ZUSF_BEZEICHNUNG,
-                       case ZUSF_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as ZUSF_IST_AKTIV,
-                       ZUSF_UPDATED_ON,
-                       ZUSF_UPDATED_BY
-                  from ARTI_ZUSATZFELDER
-                 order by ZUSF_NUMMER
+                select AGRP_ID,
+                       AGRP_CODE,
+                       AGRP_BEZEICHNUNG,
+                       AGRP_SORTIERUNG,
+                       case AGRP_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as AGRP_IST_AKTIV,
+                       AGRP_UPDATED_ON,
+                       AGRP_UPDATED_BY
+                  from ARTI_ARTIKELGRUPPEN
+                 order by AGRP_SORTIERUNG nulls last, AGRP_BEZEICHNUNG
                 ```
         }
         layout {
@@ -70,7 +71,7 @@ page 120 (
             target: {
                 page: 121
                 items: {
-                    P121_ZUSF_ID: #ZUSF_ID#
+                    P121_AGRP_ID: #AGRP_ID#
                 }
                 clearCache: 121
             }
@@ -86,7 +87,7 @@ page 120 (
             whenNoDataFound: Keine Einträge vorhanden.
         }
 
-        column ZUSF_ID (
+        column AGRP_ID (
             type: hidden
             heading {
                 heading: ID
@@ -99,23 +100,23 @@ page 120 (
             }
         )
 
-        column ZUSF_NUMMER (
+        column AGRP_CODE (
             type: plainText
             heading {
-                heading: Feldnummer
+                heading: Code
             }
             layout {
                 sequence: 20
             }
             source {
-                dataType: NUMBER
+                dataType: STRING
             }
         )
 
-        column ZUSF_BEZEICHNUNG (
+        column AGRP_BEZEICHNUNG (
             type: plainText
             heading {
-                heading: Feldname
+                heading: Bezeichnung
             }
             layout {
                 sequence: 30
@@ -125,39 +126,52 @@ page 120 (
             }
         )
 
-        column ZUSF_IST_AKTIV (
+        column AGRP_SORTIERUNG (
             type: plainText
             heading {
-                heading: In der Maske anzeigen
+                heading: Sortierung
             }
             layout {
                 sequence: 40
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column AGRP_IST_AKTIV (
+            type: plainText
+            heading {
+                heading: Aktiv
+            }
+            layout {
+                sequence: 50
             }
             source {
                 dataType: STRING
             }
         )
 
-        column ZUSF_UPDATED_ON (
+        column AGRP_UPDATED_ON (
             type: plainText
             heading {
                 heading: Geändert am
             }
             layout {
-                sequence: 50
+                sequence: 60
             }
             source {
                 dataType: TIMESTAMP
             }
         )
 
-        column ZUSF_UPDATED_BY (
+        column AGRP_UPDATED_BY (
             type: plainText
             heading {
                 heading: Geändert von
             }
             layout {
-                sequence: 60
+                sequence: 70
             }
             source {
                 dataType: STRING
@@ -221,7 +235,7 @@ page 120 (
 
     button hinzufuegen (
         buttonName: CREATE
-        label: Zusatzfeld hinzufügen
+        label: Artikelgruppe hinzufügen
         layout {
             sequence: 20
             region: @breadcrumb
