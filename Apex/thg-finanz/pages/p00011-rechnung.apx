@@ -3106,14 +3106,8 @@ page 11 (
             icon: fa-file-pdf-o
         }
         behavior {
-            action: redirectThisApp
-            target: {
-                page: 13
-                items: {
-                    P13_RECH_ID: &P11_RECH_ID.
-                }
-            }
             warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
         }
         serverSideCondition {
             type: expression
@@ -3139,13 +3133,8 @@ page 11 (
             icon: fa-eye
         }
         behavior {
-            action: redirectThisApp
-            target: {
-                page: 13
-                items: {
-                    P13_RECH_ID: &P11_RECH_ID.
-                }
-            }
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
         }
         serverSideCondition {
             type: expression
@@ -3544,6 +3533,8 @@ page 11 (
                 ```plsql
                 -- bewusste Aktion "Rechnung bearbeiten": Maske und Positionen fuer diese Rechnung wieder aenderbar
                 :P11_BEARBEITEN := 'Y';
+                FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Zur Bearbeitung geöffnet',
+                                        'Rechnung ' || :P11_RECH_NUMMER || ' (Status ' || :P11_RECH_STATUS || ')');
                 ```
         }
         execution {
@@ -4218,8 +4209,9 @@ page 11 (
             sequence: 10
         }
         serverSideCondition {
-            type: requestIsContainedInValue
-            value: CREATE,SAVE,ABSCHLIESSEN
+            type: expression
+            language: plsql
+            plsqlExpression: :REQUEST in ('CREATE', 'SAVE', 'ABSCHLIESSEN') or (:REQUEST in ('PDF', 'VORSCHAU') and (:P11_RECH_STATUS = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y'))
         }
         successMessage {
             successMessage: Rechnung gespeichert.
@@ -4409,7 +4401,7 @@ page 11 (
     )
 
     branch nach-abschliessen-drucken (
-        name: Nach dem Abschließen die Rechnung drucken (PDF öffnen)
+        name: Nach Abschließen, Drucken oder Vorschau das PDF öffnen
         execution {
             sequence: 6
         }
@@ -4423,7 +4415,8 @@ page 11 (
             }
         }
         serverSideCondition {
-            whenButtonPressed: @abschliessen
+            type: requestIsContainedInValue
+            value: ABSCHLIESSEN,PDF,VORSCHAU
         }
     )
 

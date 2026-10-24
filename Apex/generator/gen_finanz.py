@@ -1502,16 +1502,11 @@ def seite_11():
         }
 """)
     # PDF-Ausdruck (Vorschau-Dialog Seite 13 mit Drucken/Herunterladen), sobald die Rechnung abgeschlossen ist
+    # (Seite abschicken: nach "Rechnung bearbeiten" werden Aenderungen vorher gespeichert, danach oeffnet das PDF)
     s += button("pdf", "PDF", "Rechnung drucken", 17, "breadcrumb", "next", "@/text-with-icon",
                 icon="fa-file-pdf-o", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
-                verhalten="""            action: redirectThisApp
-            target: {
-                page: 13
-                items: {
-                    P13_RECH_ID: &P11_RECH_ID.
-                }
-            }
-            warnOnUnsavedChanges: doNotCheck
+                verhalten="""            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
 """, bedingung="""        serverSideCondition {
             type: expression
             language: plsql
@@ -1519,15 +1514,11 @@ def seite_11():
         }
 """)
     # Rechnungsvorschau (nur Entwurf): PDF mit Wasserzeichen "VORSCHAU", beliebig oft, Rechnung bleibt Entwurf
+    # (Seite abschicken: ungespeicherte Aenderungen speichern, danach oeffnet die Seite das PDF - P11_PDF_OEFFNEN)
     s += button("vorschau", "VORSCHAU", "Rechnungsvorschau", 17, "breadcrumb", "next", "@/text-with-icon",
                 icon="fa-eye", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
-                verhalten="""            action: redirectThisApp
-            target: {
-                page: 13
-                items: {
-                    P13_RECH_ID: &P11_RECH_ID.
-                }
-            }
+                verhalten="""            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
 """, bedingung=entwurf)
     # "Rechnung drucken" im Entwurf: speichern, abschliessen (Nummer, Rechnungsdatum) und danach das PDF oeffnen
     s += button("abschliessen", "ABSCHLIESSEN", "Rechnung drucken", 25, "breadcrumb", "next", "@/text-with-icon",
@@ -1757,6 +1748,8 @@ def seite_11():
                 ```plsql
                 -- bewusste Aktion "Rechnung bearbeiten": Maske und Positionen fuer diese Rechnung wieder aenderbar
                 :P11_BEARBEITEN := 'Y';
+                FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Zur Bearbeitung geöffnet',
+                                        'Rechnung ' || :P11_RECH_NUMMER || ' (Status ' || :P11_RECH_STATUS || ')');
                 ```
         }
         execution {
@@ -2431,8 +2424,9 @@ def seite_11():
             sequence: 10
         }
         serverSideCondition {
-            type: requestIsContainedInValue
-            value: CREATE,SAVE,ABSCHLIESSEN
+            type: expression
+            language: plsql
+            plsqlExpression: :REQUEST in ('CREATE', 'SAVE', 'ABSCHLIESSEN') or (:REQUEST in ('PDF', 'VORSCHAU') and (:P11_RECH_STATUS = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y'))
         }
         successMessage {
             successMessage: Rechnung gespeichert.
@@ -2622,7 +2616,7 @@ def seite_11():
     )
 
     branch nach-abschliessen-drucken (
-        name: Nach dem Abschließen die Rechnung drucken (PDF öffnen)
+        name: Nach Abschließen, Drucken oder Vorschau das PDF öffnen
         execution {
             sequence: 6
         }
@@ -2636,7 +2630,8 @@ def seite_11():
             }
         }
         serverSideCondition {
-            whenButtonPressed: @abschliessen
+            type: requestIsContainedInValue
+            value: ABSCHLIESSEN,PDF,VORSCHAU
         }
     )
 
