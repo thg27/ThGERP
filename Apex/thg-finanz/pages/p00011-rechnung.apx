@@ -2994,142 +2994,6 @@ page 11 (
 
     )
 
-    region storno-dialog (
-        name: Rechnung stornieren
-        type: staticContent
-        source {
-            htmlCode:
-                ```html
-                <p>Die Rechnung &P11_RECH_NUMMER. wird storniert. Sie behält Nummer und Datum, zählt nicht mehr zum Umsatz
-                und kann danach nicht mehr geändert werden.</p>
-                ```
-        }
-        layout {
-            sequence: 90
-            slot: dialogsDrawersAndPopups
-        }
-        appearance {
-            template: @/inline-dialog
-            templateOptions: [
-                #DEFAULT#
-                js-dialog-autoheight
-                js-dialog-size480x320
-            ]
-        }
-        serverSideCondition {
-            type: expression
-            language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET')
-        }
-    )
-
-    pageItem P11_STORNO_GRUND (
-        type: textarea
-        label {
-            label: Grund für das Storno
-            alignment: left
-        }
-        layout {
-            sequence: 10
-            region: @storno-dialog
-            slot: regionBody
-            alignment: left
-        }
-        appearance {
-            template: @/required-floating
-            templateOptions: #DEFAULT#
-        }
-        validation {
-            maxLength: 1000
-        }
-    )
-
-    button storno-abbrechen (
-        buttonName: STORNO_ABBRECHEN
-        label: Abbrechen
-        layout {
-            sequence: 10
-            region: @storno-dialog
-            slot: close
-        }
-        appearance {
-            buttonTemplate: @/text
-            templateOptions: #DEFAULT#
-        }
-        behavior {
-            action: definedByDynamicAction
-        }
-    )
-
-    button stornieren-ausfuehren (
-        buttonName: STORNIEREN
-        label: Stornieren
-        layout {
-            sequence: 20
-            region: @storno-dialog
-            slot: next
-        }
-        appearance {
-            buttonTemplate: @/text
-            templateOptions: [
-                #DEFAULT#
-                t-Button--danger
-            ]
-        }
-        behavior {
-            executeValidations: false
-            warnOnUnsavedChanges: doNotCheck
-        }
-    )
-
-    dynamicAction storno-dialog-oeffnen (
-        name: Storno-Dialog öffnen
-        execution {
-            sequence: 8
-        }
-        when {
-            event: click
-            selectionType: button
-            button: @stornieren
-        }
-
-        action storno-dialog-auf (
-            action: openRegion
-            affectedElements {
-                selectionType: region
-                region: @storno-dialog
-            }
-            execution {
-                sequence: 10
-            }
-        )
-
-    )
-
-    dynamicAction storno-dialog-schliessen (
-        name: Storno-Dialog schließen
-        execution {
-            sequence: 9
-        }
-        when {
-            event: click
-            selectionType: button
-            button: @storno-abbrechen
-        }
-
-        action storno-dialog-zu (
-            action: closeRegion
-            affectedElements {
-                selectionType: region
-                region: @storno-dialog
-            }
-            execution {
-                sequence: 10
-            }
-        )
-
-    )
-
     button delete (
         buttonName: DELETE
         label: Rechnung löschen
@@ -3236,7 +3100,15 @@ page 11 (
             icon: fa-ban
         }
         behavior {
-            action: definedByDynamicAction
+            action: redirectThisApp
+            target: {
+                page: 15
+                items: {
+                    P15_RECH_ID: &P11_RECH_ID.
+                }
+                clearCache: 15
+            }
+            warnOnUnsavedChanges: doNotCheck
         }
         serverSideCondition {
             type: expression
@@ -3582,6 +3454,33 @@ page 11 (
             affectedElements {
                 selectionType: region
                 region: @historie
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction storno-nach-dialog (
+        name: Nach dem Stornieren die Rechnung neu laden
+        execution {
+            sequence: 6
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @stornieren
+        }
+
+        action storno-neu-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.navigation.redirect($v("P11_SELBST_URL"));
+                    ```
             }
             execution {
                 sequence: 10
@@ -4610,37 +4509,6 @@ page 11 (
         serverSideCondition {
             type: requestIsContainedInValue
             value: ABSCHLIESSEN,PDF,VORSCHAU
-        }
-    )
-
-    process stornieren (
-        name: Rechnung stornieren
-        type: executeCode
-        source {
-            plsqlCode:
-                ```plsql
-                begin
-                    FAKT_RECHNUNG.stornieren(:P11_RECH_ID, :P11_STORNO_GRUND);
-                    :P11_STORNO_GRUND := null;
-                exception
-                    when others then
-                        if sqlcode between -20299 and -20200 then
-                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
-                                                 p_display_location => apex_error.c_inline_in_notification);
-                        else
-                            raise;
-                        end if;
-                end;
-                ```
-        }
-        execution {
-            sequence: 65
-        }
-        serverSideCondition {
-            whenButtonPressed: @stornieren-ausfuehren
-        }
-        successMessage {
-            successMessage: Rechnung storniert.
         }
     )
 

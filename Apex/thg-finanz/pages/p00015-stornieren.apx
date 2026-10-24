@@ -1,0 +1,228 @@
+page 15 (
+    name: Rechnung stornieren
+    alias: STORNIEREN
+    title: Rechnung stornieren
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 560
+        chained: false
+        resizable: false
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region storno (
+        name: Rechnung stornieren
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Die Rechnung &P15_RECH_NUMMER. wird storniert. Sie behält Nummer und Datum, zählt nicht mehr zum Umsatz
+                und kann danach nicht mehr geändert werden.</p>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region grund (
+        name: Grund
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_RECH_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @storno
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P15_RECH_NUMMER (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @storno
+            slot: regionBody
+        }
+    )
+
+    pageItem P15_GRUND (
+        type: textarea
+        label {
+            label: Grund für das Storno
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @grund
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+            maxLength: 1000
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Abbrechen
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button stornieren (
+        buttonName: STORNIEREN
+        label: Stornieren
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+            ]
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process rechnung-laden (
+        name: Rechnungsnummer laden
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                select max(RECH_NUMMER) into :P15_RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P15_RECH_ID;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process stornieren (
+        name: Rechnung stornieren
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    FAKT_RECHNUNG.stornieren(:P15_RECH_ID, :P15_GRUND);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            whenButtonPressed: @stornieren
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            whenButtonPressed: @stornieren
+        }
+    )
+
+)

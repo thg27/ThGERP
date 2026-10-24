@@ -45,7 +45,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - Rechnungsstatus: ENTWURF → GEDRUCKT („Offen – gedruckt“, bei „Rechnung drucken“) → GESENDET („Offen – gesendet“, nach E-Mail-Versand aus der App – geplant)
   → TEILBEZAHLT / BEZAHLT automatisch aus den Zahlungen (Trigger ZAHL_STATUS_AIUD, DDL 31/32/34; ohne Zahlung bleibt GEDRUCKT bzw. GESENDET);
   GEDRUCKT und GESENDET gelten überall als offen (überfällig, Dashboard, Storno). Anzeigetext: `FAKT_RECHNUNG.status_text`.
-  STORNIERT über Button „Rechnung stornieren“ (Inline-Dialog mit Pflicht-Grund, `FAKT_RECHNUNG.stornieren`; nur GEDRUCKT/GESENDET ohne Zahlung, behält Nummer/Datum,
+  STORNIERT über Button „Rechnung stornieren“ (Dialogseite 15 mit Pflicht-Grund – kein Inline-Dialog, der blitzte auf; `FAKT_RECHNUNG.stornieren`; nur GEDRUCKT/GESENDET ohne Zahlung, behält Nummer/Datum,
   gesperrt, PDF mit Wasserzeichen STORNIERT, Grund in der Historie). Löschen nur Entwurf bzw. letzte vergebene Rechnung.
   teilbezahlte Rechnungen zählen als offen/überfällig und zum Umsatz.
 - „Rechnung kopieren“ (Button im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,

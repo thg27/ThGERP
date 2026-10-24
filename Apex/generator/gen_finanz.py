@@ -1448,115 +1448,6 @@ def seite_11():
 
 """
 
-    # Storno-Dialog (Inline-Dialog): Grund ist Pflicht, Stornieren schickt die Seite mit Request STORNIEREN ab.
-    # Slot dialogsDrawersAndPopups (versteckter Bereich der Seite) – in body blitzt er beim Laden kurz auf
-    s += """    region storno-dialog (
-        name: Rechnung stornieren
-        type: staticContent
-        source {
-            htmlCode:
-                ```html
-                <p>Die Rechnung &P11_RECH_NUMMER. wird storniert. Sie behält Nummer und Datum, zählt nicht mehr zum Umsatz
-                und kann danach nicht mehr geändert werden.</p>
-                ```
-        }
-        layout {
-            sequence: 90
-            slot: dialogsDrawersAndPopups
-        }
-        appearance {
-            template: @/inline-dialog
-            templateOptions: [
-                #DEFAULT#
-                js-dialog-autoheight
-                js-dialog-size480x320
-            ]
-        }
-        serverSideCondition {
-            type: expression
-            language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET')
-        }
-    )
-
-    pageItem P11_STORNO_GRUND (
-        type: textarea
-        label {
-            label: Grund für das Storno
-            alignment: left
-        }
-        layout {
-            sequence: 10
-            region: @storno-dialog
-            slot: regionBody
-            alignment: left
-        }
-        appearance {
-            template: @/required-floating
-            templateOptions: #DEFAULT#
-        }
-        validation {
-            maxLength: 1000
-        }
-    )
-
-"""
-    s += button("storno-abbrechen", "STORNO_ABBRECHEN", "Abbrechen", 10, "storno-dialog", "close",
-                verhalten="            action: definedByDynamicAction\n")
-    s += button("stornieren-ausfuehren", "STORNIEREN", "Stornieren", 20, "storno-dialog", "next",
-                options="[\n                #DEFAULT#\n                t-Button--danger\n            ]",
-                verhalten="""            executeValidations: false
-            warnOnUnsavedChanges: doNotCheck
-""")   # ohne Seitenvalidierungen (Positionsfelder); den Grund prueft FAKT_RECHNUNG.stornieren
-    s += """    dynamicAction storno-dialog-oeffnen (
-        name: Storno-Dialog öffnen
-        execution {
-            sequence: 8
-        }
-        when {
-            event: click
-            selectionType: button
-            button: @stornieren
-        }
-
-        action storno-dialog-auf (
-            action: openRegion
-            affectedElements {
-                selectionType: region
-                region: @storno-dialog
-            }
-            execution {
-                sequence: 10
-            }
-        )
-
-    )
-
-    dynamicAction storno-dialog-schliessen (
-        name: Storno-Dialog schließen
-        execution {
-            sequence: 9
-        }
-        when {
-            event: click
-            selectionType: button
-            button: @storno-abbrechen
-        }
-
-        action storno-dialog-zu (
-            action: closeRegion
-            affectedElements {
-                selectionType: region
-                region: @storno-dialog
-            }
-            execution {
-                sequence: 10
-            }
-        )
-
-    )
-
-"""
 
     # ------------------------------------------------ Buttons
     grau = "[\n                #DEFAULT#\n                t-Button--noUI\n            ]"
@@ -1605,10 +1496,20 @@ def seite_11():
             style: warning
         }
 """)
-    # Rechnung stornieren (nur offen – GEDRUCKT/GESENDET – ohne Zahlung): oeffnet den Storno-Dialog
+    # Rechnung stornieren (nur offen – GEDRUCKT/GESENDET – ohne Zahlung): oeffnet die Dialogseite 15 (Grund ist Pflicht).
+    # Eigene Seite statt Inline-Dialog – der Inline-Dialog blitzte beim Aufbau der Seite immer wieder kurz auf.
     s += button("stornieren", "STORNO", "Rechnung stornieren", 14, "breadcrumb", "next", "@/text-with-icon",
                 icon="fa-ban", options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n                t-Button--iconLeft\n            ]",
-                verhalten="            action: definedByDynamicAction\n", bedingung="""        serverSideCondition {
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 15
+                items: {
+                    P15_RECH_ID: &P11_RECH_ID.
+                }
+                clearCache: 15
+            }
+            warnOnUnsavedChanges: doNotCheck
+""", bedingung="""        serverSideCondition {
             type: expression
             language: plsql
             plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET') and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
@@ -1742,6 +1643,34 @@ def seite_11():
                 sequence: 10
                 fireOnInit: false
             }}
+        )
+
+    )
+
+"""
+    s += """    dynamicAction storno-nach-dialog (
+        name: Nach dem Stornieren die Rechnung neu laden
+        execution {
+            sequence: 6
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @stornieren
+        }
+
+        action storno-neu-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.navigation.redirect($v("P11_SELBST_URL"));
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
         )
 
     )
@@ -2769,37 +2698,6 @@ def seite_11():
         }
     )
 
-    process stornieren (
-        name: Rechnung stornieren
-        type: executeCode
-        source {
-            plsqlCode:
-                ```plsql
-                begin
-                    FAKT_RECHNUNG.stornieren(:P11_RECH_ID, :P11_STORNO_GRUND);
-                    :P11_STORNO_GRUND := null;
-                exception
-                    when others then
-                        if sqlcode between -20299 and -20200 then
-                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
-                                                 p_display_location => apex_error.c_inline_in_notification);
-                        else
-                            raise;
-                        end if;
-                end;
-                ```
-        }
-        execution {
-            sequence: 65
-        }
-        serverSideCondition {
-            whenButtonPressed: @stornieren-ausfuehren
-        }
-        successMessage {
-            successMessage: Rechnung storniert.
-        }
-    )
-
     process kopieren (
         name: Rechnung kopieren
         type: executeCode
@@ -2876,6 +2774,187 @@ def seite_11():
 
 
 # --------------------------------------------------------------------------- Seite 14 Unterposition (Dialog)
+
+def seite_15():
+    """Dialog "Rechnung stornieren" (Button im Kopf von Seite 11, nur GEDRUCKT/GESENDET ohne Zahlung): Grund ist Pflicht,
+    FAKT_RECHNUNG.stornieren prueft Status und Zahlungen. Seite 11 laedt nach dem Schliessen neu (DA storno-nach-dialog)."""
+    ohne = dict(form=None)
+    s = """page 15 (
+    name: Rechnung stornieren
+    alias: STORNIEREN
+    title: Rechnung stornieren
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 560
+        chained: false
+        resizable: false
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region storno (
+        name: Rechnung stornieren
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Die Rechnung &P15_RECH_NUMMER. wird storniert. Sie behält Nummer und Datum, zählt nicht mehr zum Umsatz
+                und kann danach nicht mehr geändert werden.</p>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region grund (
+        name: Grund
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_RECH_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @storno
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P15_RECH_NUMMER (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @storno
+            slot: regionBody
+        }
+    )
+
+"""
+    s += item("P15_GRUND", "textarea", "Grund für das Storno", 10, "grund", req=True, maxlen=1000, spalten=12, **ohne)
+    s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close", verhalten="            action: definedByDynamicAction\n")
+    s += button("stornieren", "STORNIEREN", "Stornieren", 20, "buttons", "next", hot=True,
+                options="[\n                #DEFAULT#\n                t-Button--danger\n            ]",
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n")
+    s += """    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process rechnung-laden (
+        name: Rechnungsnummer laden
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                select max(RECH_NUMMER) into :P15_RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P15_RECH_ID;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process stornieren (
+        name: Rechnung stornieren
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    FAKT_RECHNUNG.stornieren(:P15_RECH_ID, :P15_GRUND);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            whenButtonPressed: @stornieren
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            whenButtonPressed: @stornieren
+        }
+    )
+
+)
+"""
+    return s
+
 def seite_14():
     """Dialog "Unterposition": eine Unterposition der gewaehlten Hauptposition mit allen Feldern erfassen/aendern
     (Button "Zeile Detail" bzw. Zeilenmenue "Detail bearbeiten"/"Detail anzeigen" im Raster der Unterpositionen auf
@@ -3638,6 +3717,7 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00010-rechnungen.apx").write_text(seite_10(), encoding="utf-8")
     (FIN / "pages" / "p00011-rechnung.apx").write_text(seite_11(), encoding="utf-8")
     (FIN / "pages" / "p00014-position.apx").write_text(seite_14(), encoding="utf-8")
+    (FIN / "pages" / "p00015-stornieren.apx").write_text(seite_15(), encoding="utf-8")
     pdf_seiten()
     # Artikelstamm (Seiten aus gen_artikel.py, umnummeriert 10/11/12 -> 20/21/22)
     (FIN / "pages" / "p00020-artikel.apx").write_text(ga.in_finanz(ga.seite_10()), encoding="utf-8")
