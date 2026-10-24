@@ -7,7 +7,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
 - Workspace `THGERP`, Schema `WKSP_THGERP`, SQLcl-Verbindung `wksp_thgerp@pdbthg` (Host dbthgprod, für ERP-Entwicklung freigegeben).
 - App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20040 THG-ARTIKEL, 20050 THG-FINANZ (Fakturierung, Tabellen FAKT_*).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-01): alle DDL-Skripte 01–26 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–27 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -49,6 +49,21 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Hauptposition das Raster ihrer Unterpositionen: „Schnelleingabe“ (neue Zeile) oder „Zeile Detail“ bzw. Zeilenmenü „Detail …“ (Dialog Seite 14);
   gewählte Hauptposition in `P11_HAUPT_ID`, vom Browser mitgeschickt;
   Artikel-Auswahl als Popup LOV mit Gruppe/Artikelnummer/Name (`LOV_ARTIKEL`). Änderbar nur im Entwurf oder nach „Rechnung bearbeiten“, sonst nur Anzeige.
+- **Kundenstamm (THG-KUNDEN 20020)** – Aufbau wie im Projekt Marchler (App 10020), aber schlanker: keine Hauptgruppe/Branchen/Unterkategorien,
+  keine Mandanten je Kunde (Kunden mandantenübergreifend), keine Bemerkung, keine Kundenberichte/Auswertungen.
+  Seite 1 Dashboard (Kennzahlen-Karten aktive/neue Kunden, Umsatz, Kunden mit Umsatz, offene Rechnungen; Liste offene Rechnungen; Diagramme Umsatz je Monat mit Vorjahr,
+  Top 10 Kunden, aktive Kunden nach Land/Bundesland – Rechnungen aus `FAKT_RECHNUNGEN_V` des Mandanten der Sitzung, ohne Entwurf/storniert; Klick öffnet Kundenliste/Kunde/Rechnung in 20050),
+  Seite 10 Kundenliste (Facetten Status, Land, PLZ von–bis und Bundesland nur AT, Ort, Kunde seit Jahr), Seite 11 Kunde mit Registerkarten
+  (Alle als Ebenen-Icon, Stammdaten, Kommunikation, Rechtliches und Konditionen, Konzern und Sonstiges, Adressen, Kontakte, Dokumente; Kurzname optional, eindeutig),
+  Kopfinfo (Rechnungen, Umsatz netto, offen, letzte Rechnung mit Link, Kundenbetreuer) und Änderungsinformationen inkl. Detaildaten (Wiener Zeit);
+  Schubladen 14 Adresse, 15 Kontakt, 16 Dokument, 19 Kommunikation; 17/18 Dokument herunterladen/anzeigen.
+  Dokumente je Mandant: DDL 27 (`KUND_DOKUMENTARTEN` DART, `KUND_KUNDEN_DOKUMENTE` KDOK), Pflege der Dokumentarten unter Wertelisten (Seiten 190/191).
+  Wertelisten: Abteilungen, Funktionen, Rechtsformen, Standorttypen, Betreuungsrollen, Dokumentarten (`Apex/generator/gen_wertelisten_kunden.py`).
+  Übernommen 2026-10-24 per Skript aus den Marchler-Quellen; Weiterentwicklung jetzt direkt in den Dateien unter `Apex/thg-kunden/pages`.
+- Gemeinsame Bausteine in `thg.css`/`thg.js` (aus Marchler): Registerkarten `thg-rds` (Alle-Icon, erste Karte beim Öffnen), `thg-ohne-titel`, `thg-kundenname`,
+  `thg-kundennr`, `thg-badge`, Kennzahlen `#kennzahlen`, PLZ-Facette `thg-plz-bereich`, Regionstitel in Mandantenfarbe (`thg-region-farbig`, App-Liste in `thg.js`, derzeit 20020),
+  inaktive LOV-Einträge („ – inaktiv“) werden ausgeblendet, Dialoge übernehmen den Mandanten der aufrufenden Seite.
+- **Navigationsmenü** in allen Apps standardmäßig aufgeklappt (Template-Option `js-defaultCollapsed` entfernt, `thg.js` setzt die gemerkte Vorgabe je Seite zurück).
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).
 - `Apex/strategic-planner` ist Vorlage und wird nicht in Git eingecheckt.

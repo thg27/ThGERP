@@ -1,0 +1,1008 @@
+page 15 (
+    name: Kontakt
+    alias: KONTAKT
+    title: Kontakt
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/drawer
+        templateOptions: [
+            #DEFAULT#
+            js-dialog-class-t-Drawer--pullOutEnd
+        ]
+    }
+    dialog {
+        width: 900
+        chained: false
+        resizable: false
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 90
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region kontakt (
+        name: Kontakt
+        type: form
+        source {
+            location: localDatabase
+            tableName: KUND_ANSPRECHPARTNER
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+    region person (
+        name: Person
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @kontakt
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
+        }
+    )
+
+    region kommunikation (
+        name: Kommunikation
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select AKOM_ID, AKOM_ANSP_ID, AKOM_KART_ID, AKOM_WERT, AKOM_BEZEICHNUNG, AKOM_IST_BEVORZUGT
+                  from KUND_ANSPRECHPARTNER_KOMMUNIKATION
+                 where AKOM_ANSP_ID = :P15_ANSP_ID
+                ```
+            pageItemsToSubmit: [
+                P15_ANSP_ID
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+        messages {
+            whenNoDataFound: Noch keine Telefonnummern oder E-Mail-Adressen erfasst.
+        }
+        toolbar {
+            controls: [
+                actionsMenu
+                saveButton
+            ]
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P15_ANSP_ID
+        }
+
+        savedReport PRIMARY (
+            visibility: primary
+            view {
+                default: grid
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+        displayColumn (
+            column: @APEX$ROW_ACTION
+            layout {
+                sequence: 0
+            }
+        )
+        displayColumn (
+            column: @AKOM_ID
+            layout {
+                sequence: 1
+            }
+        )
+        displayColumn (
+            column: @AKOM_ANSP_ID
+            layout {
+                sequence: 2
+            }
+        )
+        displayColumn (
+            column: @AKOM_KART_ID
+            layout {
+                sequence: 3
+            }
+        )
+        displayColumn (
+            column: @AKOM_WERT
+            layout {
+                sequence: 4
+            }
+        )
+        displayColumn (
+            column: @AKOM_BEZEICHNUNG
+            layout {
+                sequence: 5
+            }
+        )
+        displayColumn (
+            column: @AKOM_IST_BEVORZUGT
+            layout {
+                sequence: 6
+            }
+        )
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column AKOM_ID (
+            type: hidden
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: AKOM_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column AKOM_ANSP_ID (
+            type: hidden
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: AKOM_ANSP_ID
+                dataType: number
+            }
+            default {
+                type: item
+                item: P15_ANSP_ID
+            }
+        )
+
+        column AKOM_KART_ID (
+            type: selectList
+            heading {
+                heading: Art
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: AKOM_KART_ID
+                dataType: number
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-kommunikationsarten
+                displayNullValue: false
+                displayExtraValues: false
+            }
+        )
+
+        column AKOM_WERT (
+            type: textField
+            heading {
+                heading: Telefon / E-Mail …
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: AKOM_WERT
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+                maxLength: 255
+            }
+        )
+
+        column AKOM_BEZEICHNUNG (
+            type: textField
+            heading {
+                heading: Bezeichnung
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: AKOM_BEZEICHNUNG
+                dataType: varchar2
+            }
+            validation {
+                maxLength: 100
+            }
+        )
+
+        column AKOM_IST_BEVORZUGT (
+            type: selectList
+            heading {
+                heading: Bevorzugt
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: AKOM_IST_BEVORZUGT
+                dataType: varchar2
+            }
+            validation {
+                valueRequired: true
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ja-nein
+                displayNullValue: false
+                displayExtraValues: false
+            }
+            default {
+                type: static
+                staticValue: N
+            }
+        )
+
+    )
+
+    pageItem P15_ANSP_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @person
+            slot: regionBody
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P15_KUND_ID (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @person
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P15_ANSP_ANREDE (
+        type: selectList
+        label {
+            label: Anrede
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @person
+            slot: regionBody
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_ANREDE
+            dataType: varchar2
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-anrede
+            nullDisplayValue: -
+        }
+    )
+
+    pageItem P15_ANSP_TITEL (
+        type: textField
+        label {
+            label: Titel
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_TITEL
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 50
+        }
+    )
+
+    pageItem P15_ANSP_VORNAME (
+        type: textField
+        label {
+            label: Vorname
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_VORNAME
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 100
+        }
+    )
+
+    pageItem P15_ANSP_NACHNAME (
+        type: textField
+        label {
+            label: Nachname
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_NACHNAME
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 100
+        }
+    )
+
+    pageItem P15_ANSP_FUNK_ID (
+        type: selectList
+        label {
+            label: Funktion
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @person
+            slot: regionBody
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_FUNK_ID
+            dataType: number
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-funktionen
+            nullDisplayValue: - keine -
+        }
+    )
+
+    pageItem P15_ANSP_ABTE_ID (
+        type: selectList
+        label {
+            label: Abteilung
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_ABTE_ID
+            dataType: number
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-abteilungen
+            nullDisplayValue: - keine -
+        }
+    )
+
+    pageItem P15_ANSP_DURCHWAHL (
+        type: textField
+        label {
+            label: Durchwahl
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_DURCHWAHL
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 50
+        }
+    )
+
+    pageItem P15_ANSP_KSTO_ID (
+        type: selectList
+        label {
+            label: Adresse (Standort)
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @person
+            slot: regionBody
+            columnSpan: 8
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_KSTO_ID
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-kunden-standorte
+            displayNullValue: false
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P15_ANSP_GEBURTSDATUM (
+        type: datePicker
+        label {
+            label: Geburtsdatum
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_GEBURTSDATUM
+            dataType: date
+        }
+    )
+
+    pageItem P15_ANSP_BEWERTUNG (
+        type: selectList
+        label {
+            label: Bewertung
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            region: @person
+            slot: regionBody
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_BEWERTUNG
+            dataType: varchar2
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ansprechpartner-bewertung
+            nullDisplayValue: -
+        }
+    )
+
+    pageItem P15_ANSP_IST_HAUPTKONTAKT (
+        type: switch
+        label {
+            label: Hauptkontakt
+            alignment: left
+        }
+        layout {
+            sequence: 110
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_IST_HAUPTKONTAKT
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+    )
+
+    pageItem P15_ANSP_IST_INFOMAIL (
+        type: switch
+        label {
+            label: Infomail
+            alignment: left
+        }
+        layout {
+            sequence: 120
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_IST_INFOMAIL
+            dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+    )
+
+    pageItem P15_ANSP_INFOMAIL_AM (
+        type: datePicker
+        label {
+            label: Infomail-Einwilligung am
+            alignment: left
+        }
+        layout {
+            sequence: 130
+            region: @person
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_INFOMAIL_AM
+            dataType: date
+        }
+    )
+
+    pageItem P15_ANSP_BEMERKUNG (
+        type: textarea
+        label {
+            label: Bemerkung
+            alignment: left
+        }
+        layout {
+            sequence: 140
+            region: @person
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kontakt
+            column: ANSP_BEMERKUNG
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 4000
+        }
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Abbrechen
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Löschen
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: delete
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+                t-Button--simple
+            ]
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Kontakt mit Telefonnummern und E-Mail-Adressen wirklich löschen? Kontakte, die in Belegen oder Besuchsberichten vorkommen, können nicht gelöscht werden.
+            style: danger
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P15_ANSP_ID
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 30
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P15_ANSP_ID
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Anlegen
+        layout {
+            sequence: 40
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P15_ANSP_ID
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process initialize-form (
+        name: Formular Kontakt initialisieren
+        type: formInitialization
+        formRegion: @kontakt
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process kunde-ermitteln (
+        name: Kunde ermitteln
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Kunde des Kontakts (fuer die Standort-Auswahl), falls nicht uebergeben
+                if :P15_KUND_ID is null and :P15_ANSP_ID is not null then
+                    select s.KSTO_KUND_ID
+                      into :P15_KUND_ID
+                      from KUND_ANSPRECHPARTNER a
+                      join KUND_STANDORTE s on s.KSTO_ID = a.ANSP_KSTO_ID
+                     where a.ANSP_ID = :P15_ANSP_ID;
+                end if;
+                ```
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+    )
+
+    process vorbelegen (
+        name: Neuen Kontakt vorbelegen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Neuer Kontakt: am Hauptsitz des Kunden
+                select max(KSTO_ID)
+                  into :P15_ANSP_KSTO_ID
+                  from KUND_STANDORTE
+                 where KSTO_KUND_ID = :P15_KUND_ID
+                   and KSTO_IST_HAUPTSITZ = 'Y';
+                ```
+        }
+        execution {
+            sequence: 25
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P15_ANSP_ID
+        }
+    )
+
+    process loeschen-pruefen (
+        name: Löschen prüfen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Loeschen nur, wenn der Kontakt nirgends verwendet wird (alle Fremdschluessel ausser der eigenen Kommunikation);
+                -- danach die Kommunikation des Kontakts loeschen
+                declare
+                    l_anz    pls_integer;
+                    l_summe  pls_integer := 0;
+                begin
+                    for f in (select c.table_name as TAB, cc.column_name as SPALTE
+                                from user_constraints c
+                                join user_constraints p on p.constraint_name = c.r_constraint_name
+                                join user_cons_columns cc on cc.constraint_name = c.constraint_name
+                               where p.table_name = 'KUND_ANSPRECHPARTNER'
+                                 and c.constraint_type = 'R'
+                                 and c.table_name <> 'KUND_ANSPRECHPARTNER_KOMMUNIKATION') loop
+                        execute immediate 'select count(*) from ' || f.TAB || ' where ' || f.SPALTE || ' = :id'
+                           into l_anz using to_number(:P15_ANSP_ID);
+                        l_summe := l_summe + l_anz;
+                    end loop;
+                    if l_summe > 0 then
+                        raise_application_error(-20125, 'Der Kontakt wird in Rechnungen verwendet und kann nicht gelöscht werden.');
+                    end if;
+                    delete from KUND_ANSPRECHPARTNER_KOMMUNIKATION where AKOM_ANSP_ID = :P15_ANSP_ID;
+                end;
+                ```
+        }
+        execution {
+            sequence: 6
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: DELETE
+        }
+    )
+
+    process process-form (
+        name: Formular Kontakt verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @kontakt
+        execution {
+            sequence: 10
+        }
+    )
+
+    process kommunikation-speichern (
+        name: Kommunikation speichern
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @kommunikation
+        execution {
+            sequence: 20
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 90
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: SAVE,DELETE
+        }
+    )
+
+    branch nach-anlegen (
+        name: Nach dem Anlegen im Kontakt bleiben
+        execution {
+            sequence: 10
+        }
+        behavior {
+            target: {
+                page: 15
+                items: {
+                    P15_ANSP_ID: &P15_ANSP_ID.
+                    P15_KUND_ID: &P15_KUND_ID.
+                }
+                clearCache: 15
+            }
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE
+        }
+    )
+
+)

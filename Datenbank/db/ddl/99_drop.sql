@@ -22,6 +22,8 @@ drop table ALLG_TEXTVORLAGEN cascade constraints purge;
 drop table ALLG_MWST_SAETZE cascade constraints purge;
 drop table ALLG_EINHEITEN cascade constraints purge;
 drop table ADMIN_APPLIKATIONEN cascade constraints purge;
+drop table KUND_KUNDEN_DOKUMENTE cascade constraints purge;
+drop table KUND_DOKUMENTARTEN cascade constraints purge;
 drop table KUND_KUNDEN_UNTERKATEGORIEN cascade constraints purge;
 drop table KUND_KUNDEN_BRANCHEN cascade constraints purge;
 drop table KUND_UNTERKATEGORIEN cascade constraints purge;

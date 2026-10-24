@@ -1,0 +1,157 @@
+page 18 (
+    name: Dokument anzeigen
+    alias: DOKUMENT-ANZEIGEN
+    title: Dokument
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1000
+        height: 860
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region vorschau (
+        name: Vorschau
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                -- Datei von Seite 17 (inline); wird per JavaScript als Blob geladen (DA "Dokument laden"),
+                -- da die App das Einbetten eigener Seiten in Frames verbietet (Browser Security: Deny)
+                for d in (select KDOK_BEZEICHNUNG, KDOK_DATEINAME
+                            from KUND_KUNDEN_DOKUMENTE
+                           where KDOK_ID = :P18_KDOK_ID
+                             and KDOK_MAND_ID = :MANDANT_ID)
+                loop
+                    return '<iframe id="dokument-anzeige" title="' || apex_escape.html_attribute(d.KDOK_BEZEICHNUNG) || '" '
+                        || 'style="width:100%;height:calc(100vh - 40px);border:0;display:block;background:#fff" data-src="'
+                        || apex_escape.html_attribute(
+                               apex_page.get_url(p_page      => 17,
+                                                 p_items     => 'P17_KDOK_ID,P17_INLINE',
+                                                 p_values    => :P18_KDOK_ID || ',Y',
+                                                 -- ohne Dialog-Behandlung (sonst "#action$a-dialog-close")
+                                                 p_plain_url => true))
+                        || '" data-dateiname="' || apex_escape.html_attribute(d.KDOK_DATEINAME)
+                        || '" data-titel="' || apex_escape.html_attribute(d.KDOK_BEZEICHNUNG)
+                        || '"></iframe>';
+                end loop;
+                return '<p>Dokument nicht gefunden.</p>';
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P18_KDOK_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @vorschau
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    dynamicAction dokument-laden (
+        name: Dokument laden, Drucken/Herunterladen in die Titelleiste
+        execution {
+            sequence: 10
+        }
+        when {
+            event: ready
+        }
+
+        action native-js-dokument-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    var f = document.getElementById('dokument-anzeige'),
+                        pdfUrl = null;
+
+                    // Titelleiste liegt im aufrufenden Fenster: Titeltext leeren,
+                    // Buttons Drucken/Herunterladen links neben das X setzen
+                    if (window.frameElement && parent.apex) {
+                        var $p = parent.apex.jQuery,
+                            $bar = $p(window.frameElement).closest('.ui-dialog').children('.ui-dialog-titlebar'),
+                            $box = $p('<span class="thg-pdf-aktionen"></span>').css({
+                                position: 'absolute', right: '12px', top: '50%',
+                                transform: 'translateY(-50%)', display: 'flex',
+                                alignItems: 'center', gap: '8px'
+                            });
+                        function knopf(text, icon, fn) {
+                            return $p('<button type="button" class="t-Button t-Button--small t-Button--iconLeft" disabled>'
+                                      + '<span class="t-Icon t-Icon--left fa ' + icon + '" aria-hidden="true"></span>'
+                                      + '<span class="t-Button-label">' + text + '</span></button>')
+                                   .on('click', fn);
+                        }
+                        // ohne Redwood-Musterstreifen oben (thg.css)
+                        $bar.closest('.ui-dialog').addClass('thg-dialog-schlicht');
+                        $bar.find('.ui-dialog-title').text(f ? f.dataset.titel : '');
+                        $bar.children('.thg-pdf-aktionen').remove();  // nur falls schon vorhanden
+                        $box.append(
+                            knopf('Drucken', 'fa-print', function () {
+                                f.contentWindow.focus();
+                                f.contentWindow.print();
+                            }),
+                            knopf('Herunterladen', 'fa-download', function () {
+                                var a = document.createElement('a');
+                                a.href = pdfUrl;
+                                a.download = f.dataset.dateiname;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            })
+                        );
+                        // X ausblenden, stattdessen Button Schliessen in derselben Zeile
+                        $bar.children('.ui-dialog-titlebar-close').hide();
+                        $box.append(knopf('Schließen', 'fa-times', function () {
+                            apex.navigation.dialog.cancel(true);
+                        }).prop('disabled', false));
+                        $bar.append($box);
+                    }
+
+                    // Datei holen und als Blob-URL anzeigen (Frame-Sperre der App greift fuer blob: nicht);
+                    // Viewer ohne Werkzeugleiste und Seitenvorschau
+                    fetch(f.dataset.src, { credentials: 'same-origin' })
+                        .then(function (r) {
+                            if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                            return r.blob();
+                        })
+                        .then(function (b) {
+                            pdfUrl = URL.createObjectURL(b);
+                            f.src = pdfUrl + (b.type === 'application/pdf' ? '#toolbar=0&navpanes=0&view=FitH' : '');
+                            if ($box) { $box.find('button').prop('disabled', false); }
+                        })
+                        .catch(function (e) {
+                            apex.message.showErrors([{ type: 'error', location: 'page',
+                                message: 'Dokument konnte nicht geladen werden (' + e.message + ').' }]);
+                        });
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+)

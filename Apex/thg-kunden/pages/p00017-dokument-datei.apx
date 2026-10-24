@@ -1,0 +1,80 @@
+page 17 (
+    name: Dokument-Datei
+    alias: DOKUMENT-DATEI
+    title: Dokument
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region datei (
+        name: Datei
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P17_KDOK_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @datei
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P17_INLINE (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @datei
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    process datei-ausliefern (
+        name: Datei ausliefern (Download oder inline fuer die Anzeige auf Seite 18)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- nur Dokumente des Mandanten der Sitzung
+                for d in (select KDOK_DATEI, KDOK_MIME_TYPE, KDOK_DATEINAME
+                            from KUND_KUNDEN_DOKUMENTE
+                           where KDOK_ID = :P17_KDOK_ID
+                             and KDOK_MAND_ID = :MANDANT_ID)
+                loop
+                    apex_http.download(
+                        p_blob         => d.KDOK_DATEI,
+                        p_content_type => nvl(d.KDOK_MIME_TYPE, 'application/octet-stream'),
+                        p_filename     => d.KDOK_DATEINAME,
+                        p_is_inline    => :P17_INLINE = 'Y');
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P17_KDOK_ID
+        }
+    )
+)

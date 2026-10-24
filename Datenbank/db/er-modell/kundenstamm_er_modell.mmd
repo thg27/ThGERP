@@ -7,6 +7,9 @@ erDiagram
   KUND_UNTERKATEGORIEN ||--o{ KUND_KUNDEN_UNTERKATEGORIEN : ""
   KUND_ABTEILUNGEN ||--o{ KUND_ANSPRECHPARTNER : ""
   KUND_FUNKTIONEN ||--o{ KUND_ANSPRECHPARTNER : ""
+  KUND_KUNDEN ||--o{ KUND_KUNDEN_DOKUMENTE : "hat"
+  KUND_DOKUMENTARTEN ||--o{ KUND_KUNDEN_DOKUMENTE : ""
+  ADMIN_MANDANTEN ||--o{ KUND_KUNDEN_DOKUMENTE : "je Mandant"
   KUND_KUNDEN ||--o{ KUND_KUNDEN : "ist Mutter von"
   KUND_KUNDEN ||--|{ KUND_STANDORTE : hat
   KUND_KUNDEN ||--o{ KUND_KUNDEN_MITARBEITER : "wird betreut"
@@ -385,6 +388,35 @@ erDiagram
     timestamp ABTE_UPDATED_ON "Audit"
     varchar2 ABTE_UPDATED_BY "Audit"
     number ABTE_ROW_VERSION "Audit"
+  }
+  KUND_DOKUMENTARTEN {
+    number DART_ID PK
+    varchar2 DART_CODE UK
+    varchar2 DART_BEZEICHNUNG
+    number DART_SORTIERUNG
+    varchar2 DART_IST_AKTIV "Y oder N"
+    timestamp DART_CREATED_ON "Audit"
+    varchar2 DART_CREATED_BY "Audit"
+    timestamp DART_UPDATED_ON "Audit"
+    varchar2 DART_UPDATED_BY "Audit"
+    number DART_ROW_VERSION "Audit"
+  }
+  KUND_KUNDEN_DOKUMENTE {
+    number KDOK_ID PK
+    number KDOK_KUND_ID FK
+    number KDOK_MAND_ID FK
+    number KDOK_DART_ID FK
+    varchar2 KDOK_BEZEICHNUNG
+    varchar2 KDOK_BESCHREIBUNG
+    varchar2 KDOK_DATEINAME
+    varchar2 KDOK_MIME_TYPE
+    number KDOK_GROESSE "Trigger"
+    blob KDOK_DATEI
+    timestamp KDOK_CREATED_ON "Audit"
+    varchar2 KDOK_CREATED_BY "Audit"
+    timestamp KDOK_UPDATED_ON "Audit"
+    varchar2 KDOK_UPDATED_BY "Audit"
+    number KDOK_ROW_VERSION "Audit"
   }
   KUND_FUNKTIONEN {
     number FUNK_ID PK

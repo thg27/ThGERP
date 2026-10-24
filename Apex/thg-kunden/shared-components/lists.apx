@@ -96,9 +96,9 @@ list navigation-menu (
     )
 
     entry home (
-        label: Startseite
+        label: Dashboard
         icon {
-            imageIconCssClasses: fa-home
+            imageIconCssClasses: fa-dashboard
         }
         layout {
             sequence: 10
@@ -226,18 +226,6 @@ list wertelisten-kunden (
                    beschreibung as attribute1,
                    to_char(anzahl) as attribute2
               from (
-                    select 'Kundengruppen' as label, 110 as seite, 'fa-tags' as image, 'Hauptgruppen der Kunden (OEM, Wiederverkäufer, Endkunde …)' as beschreibung,
-                           (select count(*) from KUND_KUNDENGRUPPEN) as anzahl
-                      from dual
-                    union all
-                    select 'Branchen' as label, 120 as seite, 'fa-industry' as image, 'Branchen der Kunden' as beschreibung,
-                           (select count(*) from KUND_BRANCHEN) as anzahl
-                      from dual
-                    union all
-                    select 'Unterkategorien' as label, 130 as seite, 'fa-sitemap' as image, 'Unterkategorien je Branche' as beschreibung,
-                           (select count(*) from KUND_UNTERKATEGORIEN) as anzahl
-                      from dual
-                    union all
                     select 'Abteilungen' as label, 140 as seite, 'fa-building-o' as image, 'Abteilungen der Ansprechpersonen' as beschreibung,
                            (select count(*) from KUND_ABTEILUNGEN) as anzahl
                       from dual
@@ -256,6 +244,10 @@ list wertelisten-kunden (
                     union all
                     select 'Betreuungsrollen' as label, 180 as seite, 'fa-users' as image, 'Rollen der Mitarbeiter in der Kundenbetreuung' as beschreibung,
                            (select count(*) from KUND_BETREUUNGSROLLEN) as anzahl
+                      from dual
+                    union all
+                    select 'Dokumentarten' as label, 190 as seite, 'fa-file-o' as image, 'Arten der Kundendokumente (Vertrag, Angebot, Lizenz …)' as beschreibung,
+                           (select count(*) from KUND_DOKUMENTARTEN) as anzahl
                       from dual
                    )
              order by label

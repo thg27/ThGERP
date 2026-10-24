@@ -74,16 +74,32 @@ begin
 :root,
 body:has([data-mandant="EDV"]) {
   --thg-primaer: #108024;   /* THG-EDV GmbH: Gruen */
+  --thg-primaer-dunkel: #0b5c1a;
   --thg-fokus: #e7f3e9;     /* helles Gruen fuer aktive Eingabefelder */
 }
 body:has([data-mandant="HOLDING"]) {
   --thg-primaer: #003096;   /* Thomas Gesslbauer GmbH: Blau */
+  --thg-primaer-dunkel: #00226b;
   --thg-fokus: #e6ecf7;     /* helles Blau */
+}
+/* Schrift auf der hellen Mandantenfarbe (Regionstitel, Badges, Registerkarten'));
+    dbms_lob.append(l_inhalt, to_clob(') */
+body {
+  --thg-fokus-schrift: var(--thg-primaer-dunkel);
+}
+/* Dunkler Stil (Vita - Dark): Mandantenfarbe als dunkle Toenung, Schrift hell */
+body.apex-theme-vita-dark,
+body.apex-theme-vita-dark:has([data-mandant="EDV"]) {
+  --thg-fokus: #173a1f;
+  --thg-fokus-schrift: #7fd18f;
+}
+body.apex-theme-vita-dark:has([data-mandant="HOLDING"]) {
+  --thg-fokus: #1c2c50;
+  --thg-fokus-schrift: #8cacea;
 }
 
 /* Header (Banner ganz oben) in allen Theme-Stilen in der Mandantenfarbe mit weisser Schrift.
-   !important, weil die Stil-CSS (Vita, Iris, Red'));
-    dbms_lob.append(l_inhalt, to_clob('wood …) nach dieser Datei geladen wird und den Header einfaerbt;
+   !important, weil die Stil-CSS (Vita, Iris, Redwood …) nach dieser Datei geladen wird und den Header einfaerbt;
    die Farbe kommt ausschliesslich vom Mandanten. */
 body .t-Header {
   --ut-header-background-color: var(--thg-primaer) !important;
@@ -93,7 +109,8 @@ body .t-Header {
   background-color: var(--thg-primaer) !important;
   border-color: var(--thg-primaer) !important;
   color: #fff;
-}
+}'));
+    dbms_lob.append(l_inhalt, to_clob('
 body .t-Header .t-Header-logo-link,
 body .t-Header .t-Button--header,
 body .t-Header .t-NavigationBar-item .t-Button {
@@ -113,8 +130,7 @@ body .t-Header .t-NavigationBar-item .t-Button {
   align-items: center;
   background: #fff;
   border-radius: 6px;
-  padding: 2px 6px'));
-    dbms_lob.append(l_inhalt, to_clob(';
+  padding: 2px 6px;
   margin-inline-end: .75rem;
   vertical-align: middle;
 }
@@ -129,7 +145,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
   display: none;
 }
 
-/* Radio-/Checkbox-Gruppen nebeneinander statt untereinander:
+/* Radio-/Checkbox-Gruppen nebeneina'));
+    dbms_lob.append(l_inhalt, to_clob('nder statt untereinander:
    am Feld Appearance > CSS Classes "thg-horizontal" setzen */
 .thg-horizontal.apex-item-group--rc,
 .thg-horizontal .apex-item-group--rc {
@@ -141,15 +158,15 @@ body .t-Header .t-NavigationBar-item .t-Button {
 /* Aktives Eingabefeld hervorheben (Hintergrund), damit sofort sichtbar ist, wo der Cursor steht;
    Radio-/Checkbox-Gruppen ausgenommen (dort wäre die ganze Gruppe eingefärbt) */
 .t-Form-fieldContainer:focus-within .t-Form-inputContainer :is(input:not([type=radio]):not([type=checkbox]), textarea, select),
-.t-Form-fie'));
-    dbms_lob.append(l_inhalt, to_clob('ldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-fieldContainer-inner,
+.t-Form-fieldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-fieldContainer-inner,
 .t-Form-fieldContainer--floatingLabel:not(:has(.apex-item-group--rc)):focus-within .t-Form-itemWrapper {
   background-color: var(--thg-fokus) !important;
 }
 
 /* Wichtige Anzeigefelder leicht hervorheben (z.B. Rechnungsnummer, Rechnungsdatum):
    Seitenelement > Appearance > CSS Classes "thg-hervorheben" (APEX setzt die Klasse auf den Feld-Container);
-   eingefaerbt wird nur die Flaeche innerhalb des Rahmens (Anzeige-Element), Farbe des Mandanten */
+ '));
+    dbms_lob.append(l_inhalt, to_clob('  eingefaerbt wird nur die Flaeche innerhalb des Rahmens (Anzeige-Element), Farbe des Mandanten */
 .t-Form-fieldContainer.thg-hervorheben :is(.display_only, input:not([type=hidden]), textarea, select) {
   background-color: var(--thg-fokus) !important;
 }
@@ -160,8 +177,7 @@ body .t-Header .t-NavigationBar-item .t-Button {
 /* Mehrzeilige Anzeige (z.B. Anschrift wie am Ausdruck): Seitenelement > Appearance > CSS Classes "thg-anschrift" */
 .t-Form-fieldContainer.thg-anschrift .display_only {
   white-space: pre-line;
-  min-height: 7.5r'));
-    dbms_lob.append(l_inhalt, to_clob('em;
+  min-height: 7.5rem;
 }
 
 /* Summen der Rechnung (Finanz Seite 11, vom Seitenskript gefuellt) */
@@ -170,7 +186,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
 .thg-summen-tabelle .thg-summen-fett td { font-weight: 600; border-top: 1px solid var(--ut-component-border-color, #ddd); }
 
 /* Kompakte Formular-Regionen: Region > Appearance > CSS Classes "thg-kompakt"
-   (zusammen mit Template-Option "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
+   (zusammen mit Template-Op'));
+    dbms_lob.append(l_inhalt, to_clob('tion "Slim Padding"): weniger Leerraum zwischen und in den Abschnitten */
 .t-Region.thg-kompakt {
   margin-block-end: .75rem;
 }
@@ -189,8 +206,7 @@ body .t-Header .t-NavigationBar-item .t-Button {
   padding: .375rem .5rem .5rem;
 }
 
-/* Dialog ohne Redwood-Musterstreifen über der Titelleiste: Klasse "thg-'));
-    dbms_lob.append(l_inhalt, to_clob('dialog-schlicht" am .ui-dialog
+/* Dialog ohne Redwood-Musterstreifen über der Titelleiste: Klasse "thg-dialog-schlicht" am .ui-dialog
    (setzt z.B. das Kundenstammblatt, Seite 13 in 20020, per JavaScript) */
 .ui-dialog.thg-dialog-schlicht .ui-dialog-titlebar::before {
   display: none !important;
@@ -202,7 +218,8 @@ body .t-Header .t-NavigationBar-item .t-Button {
   top: 3rem;
   font-size: .875rem;
   line-height: 1.4;
-  text-align: center;
+ '));
+    dbms_lob.append(l_inhalt, to_clob(' text-align: center;
 }
 .thg-login-firma--links  { left: clamp(2rem, 6vw, 10rem); }
 .thg-login-firma--rechts { right: clamp(2rem, 6vw, 10rem); }
@@ -220,8 +237,7 @@ body .t-Header .t-NavigationBar-item .t-Button {
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem;
-'));
-    dbms_lob.append(l_inhalt, to_clob('  }
+  }
   .thg-login-firma { position: static; font-size: .75rem; }
   .thg-login-firma-name { font-size: 1rem; }
   .thg-login-firma img { height: 5rem; }
@@ -230,6 +246,178 @@ body .t-Header .t-NavigationBar-item .t-Button {
 /* Popup LOV (Inline-Popup): Mindestbreite fuer mehrspaltige Wertelisten, z. B. Artikel mit Gruppe / Artikelnummer / Name
    – ohne diese Regel ist das Popup nur so breit wie das Feld bzw. die Rasterspalte */
 .ui-dialog.ui-dialog-popuplov { min-width: min(640px, 95vw); }
+
+/* ===== Kundenstamm (20020),'));
+    dbms_lob.append(l_inhalt, to_clob(' uebernommen aus dem Projekt Marchler ===== */
+
+/* Kundenliste (Seite 10): Facette "PLZ von – bis" – Felder schmal, nebeneinander, Inhalt zentriert
+   (APEX stellt Zahlenbereiche sonst untereinander in voller Breite dar: .a-FS-range--number) */
+.thg-plz-bereich .a-FS-range--number {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+.thg-plz-bereich .a-FS-range--number .apex-item-text {
+    --a-fs-control-inline-size: 5.5em;
+    --a-fs-control-input-max-width: 5.5em;
+    text-align: center;
+}
+.thg-plz-bereich .a-FS-range--number .a-FS-rangeTo {
+    margin-block: 0;
+    margin-inline: 8px;
+    font-size: 0;            /* APEX-Systemtext "to" ausblenden ... */
+}
+.thg-plz-bereich .a-FS-range--number .a-FS-rangeTo::after {
+    content: "–";           /* ... und durch einen Strich ersetzen */
+    font-size: 14px;
+}
+/* keine Plus/Minus-Pfeile (Spin-Buttons) im Zahlenfeld */
+.thg-plz-bereich input::-webkit-outer-spin-button,
+.thg-plz-bereich input::-webkit-inner-spin-b'));
+    dbms_lob.append(l_inhalt, to_clob('utton {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.thg-plz-bereich input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+/* Systemtext "Go" auf dem Anwenden-Button durch das Aktualisierungs-Icon ersetzen */
+.thg-plz-bereich .a-FS-range--number .a-Button.js-ctrlApply {
+    margin-block-start: 0;
+    margin-inline-start: 8px;
+    font-size: 0;
+    min-inline-size: 32px;
+}
+.thg-plz-bereich .a-FS-range--number .a-Button.js-ctrlApply::before {
+    content: "\f021";
+    font-family: "Font APEX Small";
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* Kundenliste (Seite 10): Kundennummer umrahmt */
+.thg-kundennr {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Kundendetail (Seite 11): Kundenname in der hellen Mandantenfarbe hervorheben
+   (Klasse am Feld-Container: nur das Feld selbst einfaerben, nicht den Rand um das Feld) */
+.th'));
+    dbms_lob.append(l_inhalt, to_clob('g-kundenname {
+    background-color: transparent !important;
+}
+.thg-kundenname .t-Form-fieldContainer-inner,
+.thg-kundenname input,
+.thg-kundenname input:focus {
+    background-color: var(--thg-fokus) !important;
+    font-weight: 600;
+}
+
+/* Badge (z.B. "überfällig" im Dashboard); leere Badges ausblenden */
+.thg-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.thg-badge:empty {
+    display: none;
+}
+.thg-badge--UEBERFAELLIG { background-color: var(--ut-palette-danger, #c62828); color: var(--ut-palette-danger-contrast, #fff); }
+.thg-badge--FAELLIG      { background-color: var(--ut-palette-warning, #ef6c00); color: var(--ut-palette-warning-contrast, #fff); }
+.thg-badge--OFFEN        { background-color: var(--thg-fokus); color: var(--thg-fokus-schrift); }
+
+/* Dashboard: Bereich um die Kennzahlen-Karten ohne eigenen (weissen) Hintergrund, Karten mit dezenten Farben,
+'));
+    dbms_lob.append(l_inhalt, to_clob('   Texte zentriert, ganze Karte klickbar (Link auf die gefilterte Liste) */
+#kennzahlen,
+#kennzahlen .t-Region-body,
+#kennzahlen .t-Region-bodyWrap {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+}
+#kennzahlen {
+    margin-block-end: 48px !important;
+}
+#kennzahlen li:nth-child(1) .t-MetricCard { background-color: rgba(16, 128, 36, 0.09); border-color: rgba(16, 128, 36, 0.25); }
+#kennzahlen li:nth-child(2) .t-MetricCard { background-color: rgba(0, 48, 150, 0.09); border-color: rgba(0, 48, 150, 0.25); }
+#kennzahlen li:nth-child(3) .t-MetricCard { background-color: rgba(239, 108, 0, 0.09); border-color: rgba(239, 108, 0, 0.25); }
+#kennzahlen li:nth-child(4) .t-MetricCard { background-color: rgba(123, 77, 196, 0.09); border-color: rgba(123, 77, 196, 0.25); }
+#kennzahlen li:nth-child(5) .t-MetricCard { background-color: rgba(198, 40, 40, 0.09); border-color: rgba(198, 40, 40, 0.25); }
+#kennzahlen .t-MetricCard,
+#kennzahlen .t-MetricCard-b'));
+    dbms_lob.append(l_inhalt, to_clob('ody,
+#kennzahlen .t-MetricCard-content {
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+#kennzahlen .t-MetricCard:hover {
+    filter: brightness(0.97);
+}
+
+/* Regionstitel dezent in der Mandantenfarbe; aktiv in den Apps, die thg.js mit thg-region-farbig markiert */
+.thg-region-farbig .t-Region > .t-Region-header {
+    background-color: var(--thg-fokus);
+    border-bottom-color: color-mix(in srgb, var(--thg-primaer) 25%, transparent);
+}
+.thg-region-farbig .t-Region > .t-Region-header .t-Region-title {
+    color: var(--thg-fokus-schrift);
+}
+
+/* Seiten mit linker Spalte (Facettensuche + Liste): Suchfeld und Listenregion auf gleicher Hoehe */
+.t-PageTemplate--leftCol .t-Body-contentInner {
+    padding-top: 16px !important;
+}
+.t-PageTemplate--leftCol .t-Body-side {
+    padding-top: 16px;
+}
+
+/* Region als Registerkarte (Region Display Selector): Titel steht schon auf der Registerkarte - im Kopf nur die
+   Buttons (rechts) zeigen, ohne Titel und ohne Hintergrun'));
+    dbms_lob.append(l_inhalt, to_clob('d (Region > Appearance > CSS Classes "thg-ohne-titel") */
+.t-Region.thg-ohne-titel > .t-Region-header {
+    background-color: transparent !important;
+    border-bottom: 0;
+}
+.t-Region.thg-ohne-titel > .t-Region-header .t-Region-title {
+    visibility: hidden;
+}
+/* Registerkarten im Slot "Full Width Content" (CSS-Klasse thg-rds): wenig Abstand zum Inhalt, Leiste dezent in der
+   Mandantenfarbe */
+.t-Body:has(.thg-rds) .t-Body-contentInner {
+    padding-block-start: 16px;
+}
+.thg-rds.u-padding-inline-dynamic {
+    padding-inline: 16px;
+}
+.thg-rds {
+    background-color: var(--thg-fokus);
+    border-bottom: 1px solid color-mix(in srgb, var(--thg-primaer) 20%, transparent);
+}
+/* Registerkarte "Alle" (Ebenen-Icon, thg.js): alle Bereiche untereinander, dann mit Ueberschrift */
+body.thg-rds-alle .t-Region.t-Region--removeHeader > .t-Region-header {
+    display: flex;
+}
+body.thg-rds-alle .t-Region.thg-ohne-titel > .t-Region-header .t-Region-title {
+    visibility: visible;
+}
+/* Kennzahlen unter'));
+    dbms_lob.append(l_inhalt, to_clob(' der Titelleiste (Classic Report "Contextual Info", Beschriftung ueber dem Wert) */
+.t-ContextualInfo-label--stacked .t-ContextualInfo-item {
+    align-items: center;
+    text-align: center;
+}
 '));
     workspace_datei(p_file_name => 'thg.css', p_mime_type => 'text/css', p_inhalt => l_inhalt, p_base64 => false);
     dbms_lob.freetemporary(l_inhalt);
@@ -265,6 +453,22 @@ document.addEventListener("click", function (ereignis) {
     }
 }, true);
 
+/* Navigationsmenue beim Laden jeder Seite ausgeklappt (alle Apps). Das Universal Theme merkt sich das Zuklappen
+   je App in der Session Storage (ORA_WWV_apex.toggleCore.nav.<App>.preferenceForExpanded) und klappt danach auf
+   allen Seiten zu - die Vorgabe wird hier vor der Initialisierung des Themes wieder auf "ausgeklappt" gesetzt.
+   Unter der Breite --js-mq-lg (992px) klappt das Theme das Menue weiterhin selbst zu. */
+(function () {
+    try {
+        if (window.apex && apex.storage && apex.storage.getScopedSessionStorage) {
+            apex.storage.getScopedSessionStorage({ prefix: "ORA_WWV_apex.toggleCore.nav", useAppId: true })
+                .setItem("preferenceForExpanded", "true");
+        }
+    } catch (e) {
+        // Session Storage gesperrt (privates Fenster): Standard des Theme'));
+    dbms_lob.append(l_inhalt, to_clob('s gilt
+    }
+})();
+
 /* Region Display Selector: Registerkarte "Show All" auf Deutsch (deutsche APEX-Systemtexte nicht installiert) */
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".apex-rds a").forEach(function (a) {
@@ -273,6 +477,133 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 });
+
+/* Registerkarten unter der Titelleiste (CSS-Klasse thg-rds, z.B. Kundendetail 20020 Seite 11): "Alle" als Ebenen-Icon
+   (fa-layers) an erster Stelle; beim Oeffnen trotzdem die erste Sachkarte (z.B. Stammdaten). Unter "Alle" zeigen die
+   Bereiche ihre Ueberschrift (body-Klasse thg-rds-alle, thg.css). */
+if (window.apex && apex.jQuery) {
+    apex.jQuery(window).on("apexreadyend", function () {
+        var leiste = document.querySelector(".thg-rds");
+        if (!leiste) {
+            return;
+        }
+        var karten = leiste.querySelectorAl'));
+    dbms_lob.append(l_inhalt, to_clob('l(".apex-rds-item a");
+        var alle = Array.prototype.find.call(karten, function (a) { return /SHOW_ALL$/.test(a.getAttribute("href") || ""); });
+        if (!alle) {
+            return;
+        }
+        alle.innerHTML = ''<span class="fa fa-layers" aria-hidden="true"></span>'';
+        alle.title = "Alle";
+        alle.setAttribute("aria-label", "Alle");
+        var merken = function () {
+            document.body.classList.toggle("thg-rds-alle",
+                !!alle.closest(".apex-rds-item").classList.contains("apex-rds-selected"));
+        };
+        // Auswahl ueber die Klasse apex-rds-selected verfolgen (der Region Display Selector laesst den Klick nicht durch)
+        new MutationObserver(merken).observe(alle.closest(".apex-rds-item"), { attributes: true, attributeFilter: ["class"] });
+        var erste = Array.prototype.find.call(karten, function (a) { return a !== alle; });
+        if (erste && alle.closest(".apex-rds-item").classList.contains("apex-rds-selected")) {
+     '));
+    dbms_lob.append(l_inhalt, to_clob('       erste.click();
+        }
+        merken();
+    });
+}
+
+/* Kundenliste (20020 Seite 10): Facette "PLZ von – bis" – nur Ziffern, hoechstens 4 (oesterreichische PLZ).
+   Ereignisse am document, weil APEX die Facetten-Felder erst nachtraeglich erzeugt. */
+document.addEventListener("keydown", function (ereignis) {
+    var feld = ereignis.target;
+    if (!feld.closest || !feld.closest(".thg-plz-bereich") || feld.tagName !== "INPUT") {
+        return;
+    }
+    if (ereignis.ctrlKey || ereignis.metaKey || ereignis.altKey || ereignis.key.length !== 1) {
+        return;   // Steuertasten (Entf, Pfeile, Tab, Enter, Kopieren ...) erlauben
+    }
+    if (!/[0-9]/.test(ereignis.key) || String(feld.value).length >= 4) {
+        ereignis.preventDefault();
+    }
+}, true);
+document.addEventListener("input", function (ereignis) {
+    var feld = ereignis.target;
+    if (feld.closest && feld.closest(".thg-plz-bereich") && feld.tagName === "INPUT") {
+        var bereinigt = String(feld.value).replace(/'));
+    dbms_lob.append(l_inhalt, to_clob('[^0-9]/g, "").slice(0, 4);
+        if (feld.value !== bereinigt) {
+            feld.value = bereinigt;   // z.B. beim Einfuegen aus der Zwischenablage
+        }
+    }
+}, true);
+
+/* Regionstitel in Mandantenfarbe (thg.css: .thg-region-farbig) – vorerst nur in diesen Apps;
+   fuer weitere Apps die App-ID ergaenzen (20020 = Kundenstammdaten). */
+document.addEventListener("DOMContentLoaded", function () {
+    var apps = ["20020"];
+    if (window.apex && apex.env && apps.indexOf(String(apex.env.APP_ID)) >= 0) {
+        document.body.classList.add("thg-region-farbig");
+    }
+});
+
+/* Inaktive Eintraege nicht neu zuordnen (alle Apps): Wertelisten kennzeichnen inaktive Eintraege mit "– inaktiv".
+   Solche Eintraege werden aus der Auswahl entfernt bzw. ausgeblendet - in Auswahllisten (auch in Grids),
+   Mehrfachauswahl und Popup-Listen. Ein bereits gespeicherter (ausgewaehlter) inaktiver Wert bleibt sichtbar. */
+(function () {
+    var INAKTIV = "– inaktiv", geplant = false;
+    var bereinigen = '));
+    dbms_lob.append(l_inhalt, to_clob('function () {
+        geplant = false;
+        document.querySelectorAll("select option").forEach(function (o) {
+            if (!o.selected && o.text.indexOf(INAKTIV) >= 0) {
+                o.remove();
+            }
+        });
+        // Popup-Liste (Dialog), Mehrfachauswahl (Combobox): Zeilen bzw. Optionen ausblenden
+        document.querySelectorAll(".a-PopupLOV-dialog tr, .a-PopupLOV-dialog li, [role=''option'']").forEach(function (el) {
+            if (el.textContent.indexOf(INAKTIV) >= 0 && el.getAttribute("aria-selected") !== "true"
+                    && !el.classList.contains("is-selected")) {
+                el.style.display = "none";
+            }
+        });
+    };
+    var planen = function () {
+        if (!geplant) {
+            geplant = true;
+            window.requestAnimationFrame(bereinigen);
+        }
+    };
+    document.addEventListener("DOMContentLoaded", function () {
+        bereinigen();
+        new MutationObserver(planen).observe(document.body, { childList: t'));
+    dbms_lob.append(l_inhalt, to_clob('rue, subtree: true });
+    });
+})();
+
+/* Dialoge (Modal/Schublade) laufen in einem iframe ohne Logo und kennen den Mandanten nicht - die Mandantenfarben in
+   thg.css haengen an [data-mandant] im Logo. Den Mandanten deshalb von der aufrufenden Seite uebernehmen. */
+(function () {
+    try {
+        if (window.parent === window || document.querySelector("[data-mandant]")) {
+            return;
+        }
+        var quelle = window.parent.document.querySelector("[data-mandant]");
+        if (quelle) {
+            var marke = document.createElement("span");
+            marke.hidden = true;
+            marke.setAttribute("data-mandant", quelle.getAttribute("data-mandant"));
+            if (document.body) {
+                document.body.appendChild(marke);
+            } else {
+                document.addEventListener("DOMContentLoaded", function () {
+                    document.body.appendChild(marke);
+                });
+            }
+        }
+    } catch (e) {
+        // aufrufende Seit'));
+    dbms_lob.append(l_inhalt, to_clob('e aus anderer Herkunft: Standardfarben
+    }
+})();
 '));
     workspace_datei(p_file_name => 'thg.js', p_mime_type => 'text/javascript', p_inhalt => l_inhalt, p_base64 => false);
     dbms_lob.freetemporary(l_inhalt);

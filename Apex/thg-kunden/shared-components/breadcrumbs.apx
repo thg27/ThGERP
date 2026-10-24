@@ -2,7 +2,7 @@ breadcrumb breadcrumb (
     name: Breadcrumb
 
     entry home (
-        name: Startseite
+        name: Dashboard
         pageNumber: 1
         execution {
             sequence: 10
@@ -59,54 +59,6 @@ breadcrumb breadcrumb (
         link {
             target: {
                 page: 100
-            }
-        }
-    )
-
-    entry werteliste-110 (
-        name: Kundengruppen
-        pageNumber: 110
-        execution {
-            sequence: 110
-        }
-        appearance {
-            parentEntry: @wertelisten
-        }
-        link {
-            target: {
-                page: 110
-            }
-        }
-    )
-
-    entry werteliste-120 (
-        name: Branchen
-        pageNumber: 120
-        execution {
-            sequence: 120
-        }
-        appearance {
-            parentEntry: @wertelisten
-        }
-        link {
-            target: {
-                page: 120
-            }
-        }
-    )
-
-    entry werteliste-130 (
-        name: Unterkategorien
-        pageNumber: 130
-        execution {
-            sequence: 130
-        }
-        appearance {
-            parentEntry: @wertelisten
-        }
-        link {
-            target: {
-                page: 130
             }
         }
     )
@@ -191,4 +143,19 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry werteliste-190 (
+        name: Dokumentarten
+        pageNumber: 190
+        execution {
+            sequence: 190
+        }
+        appearance {
+            parentEntry: @wertelisten
+        }
+        link {
+            target: {
+                page: 190
+            }
+        }
+    )
 )

@@ -20,7 +20,6 @@ app THG-PORTAL (
         listTemplate: @/side-navigation-menu
         templateOptions: [
             #DEFAULT#
-            js-defaultCollapsed
             js-navCollapsed--hidden
             t-TreeNav--classic
         ]

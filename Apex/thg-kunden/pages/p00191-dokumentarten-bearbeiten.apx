@@ -1,7 +1,7 @@
-page 121 (
-    name: Branche
-    alias: BRANCHEN-BEARBEITEN
-    title: Branche
+page 191 (
+    name: Dokumentart
+    alias: DOKUMENTARTEN-BEARBEITEN
+    title: Dokumentart
     pageGroup: @administration
     appearance {
         pageMode: modalDialog
@@ -41,11 +41,11 @@ page 121 (
     )
 
     region formular (
-        name: Branche
+        name: Dokumentart
         type: form
         source {
             location: localDatabase
-            tableName: KUND_BRANCHEN
+            tableName: KUND_DOKUMENTARTEN
         }
         layout {
             sequence: 10
@@ -65,7 +65,7 @@ page 121 (
         }
     )
 
-    pageItem P121_BRAN_ID (
+    pageItem P191_DART_ID (
         type: hidden
         layout {
             sequence: 1
@@ -74,7 +74,7 @@ page 121 (
         }
         source {
             formRegion: @formular
-            column: BRAN_ID
+            column: DART_ID
             dataType: number
             primaryKey: true
         }
@@ -83,10 +83,10 @@ page 121 (
         }
     )
 
-    pageItem P121_BRAN_BEZEICHNUNG (
+    pageItem P191_DART_CODE (
         type: textField
         label {
-            label: Bezeichnung
+            label: Code
             alignment: left
         }
         layout {
@@ -104,15 +104,15 @@ page 121 (
         }
         source {
             formRegion: @formular
-            column: BRAN_BEZEICHNUNG
+            column: DART_CODE
             dataType: varchar2
         }
     )
 
-    pageItem P121_BRAN_BEWERTUNG (
-        type: numberField
+    pageItem P191_DART_BEZEICHNUNG (
+        type: textField
         label {
-            label: Bewertung
+            label: Bezeichnung
             alignment: left
         }
         layout {
@@ -122,17 +122,20 @@ page 121 (
             alignment: left
         }
         appearance {
-            template: @/optional-floating
+            template: @/required-floating
             templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
         }
         source {
             formRegion: @formular
-            column: BRAN_BEWERTUNG
-            dataType: number
+            column: DART_BEZEICHNUNG
+            dataType: varchar2
         }
     )
 
-    pageItem P121_BRAN_SORTIERUNG (
+    pageItem P191_DART_SORTIERUNG (
         type: numberField
         label {
             label: Sortierung
@@ -150,12 +153,12 @@ page 121 (
         }
         source {
             formRegion: @formular
-            column: BRAN_SORTIERUNG
+            column: DART_SORTIERUNG
             dataType: number
         }
     )
 
-    pageItem P121_BRAN_IST_AKTIV (
+    pageItem P191_DART_IST_AKTIV (
         type: switch
         label {
             label: Aktiv
@@ -176,7 +179,7 @@ page 121 (
         }
         source {
             formRegion: @formular
-            column: BRAN_IST_AKTIV
+            column: DART_IST_AKTIV
             dataType: varchar2
         }
         settings {
@@ -237,7 +240,7 @@ page 121 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P121_BRAN_ID
+            item: P191_DART_ID
         }
     )
 
@@ -260,7 +263,7 @@ page 121 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P121_BRAN_ID
+            item: P191_DART_ID
         }
     )
 
@@ -283,7 +286,7 @@ page 121 (
         }
         serverSideCondition {
             type: itemIsNull
-            item: P121_BRAN_ID
+            item: P191_DART_ID
         }
     )
 

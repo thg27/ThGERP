@@ -1,8 +1,7 @@
-page 131 (
-    name: Unterkategorie
-    alias: UNTERKATEGORIEN-BEARBEITEN
-    title: Unterkategorie
-    pageGroup: @administration
+page 19 (
+    name: Kommunikation
+    alias: KOMMUNIKATION
+    title: Kommunikation
     appearance {
         pageMode: modalDialog
         dialogTemplate: @/drawer
@@ -12,14 +11,14 @@ page 131 (
         ]
     }
     dialog {
+        width: 640
         chained: false
         resizable: false
     }
     navigation {
-        cursorFocus: firstItemOnPage
+        cursorFocus: doNotFocusCursor
     }
     security {
-        authorizationScheme: @administration-rights
         pageAccessProtection: argumentsMustHaveChecksum
         formAutoComplete: false
     }
@@ -28,7 +27,7 @@ page 131 (
         name: Buttons
         type: staticContent
         layout {
-            sequence: 20
+            sequence: 90
             slot: dialogFooter
         }
         appearance {
@@ -40,12 +39,12 @@ page 131 (
         }
     )
 
-    region formular (
-        name: Unterkategorie
+    region kommunikation (
+        name: Kommunikation
         type: form
         source {
             location: localDatabase
-            tableName: KUND_UNTERKATEGORIEN
+            tableName: KUND_STANDORT_KOMMUNIKATION
         }
         layout {
             sequence: 10
@@ -65,16 +64,33 @@ page 131 (
         }
     )
 
-    pageItem P131_UKAT_ID (
+    region eintrag (
+        name: Eintrag
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @kommunikation
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
+        }
+    )
+
+    pageItem P19_SKOM_ID (
         type: hidden
         layout {
             sequence: 1
-            region: @formular
+            region: @eintrag
             slot: regionBody
         }
         source {
-            formRegion: @formular
-            column: UKAT_ID
+            formRegion: @kommunikation
+            column: SKOM_ID
             dataType: number
             primaryKey: true
         }
@@ -83,133 +99,166 @@ page 131 (
         }
     )
 
-    pageItem P131_UKAT_BRAN_ID (
+    pageItem P19_KUND_ID (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @eintrag
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P19_SKOM_KSTO_ID (
         type: selectList
         label {
-            label: Branche
+            label: Adresse
             alignment: left
         }
         layout {
             sequence: 10
-            region: @formular
+            region: @eintrag
             slot: regionBody
+            columnSpan: 12
             alignment: left
         }
         appearance {
             template: @/required-floating
             templateOptions: #DEFAULT#
         }
+        source {
+            formRegion: @kommunikation
+            column: SKOM_KSTO_ID
+            dataType: number
+        }
         validation {
             valueRequired: true
         }
-        source {
-            formRegion: @formular
-            column: UKAT_BRAN_ID
-            dataType: number
-        }
         lov {
             type: sharedComponent
-            lov: @lov-branchen
-            displayNullValue: true
-            nullDisplayValue: - bitte wählen -
+            lov: @lov-standorte-kommunikation
+            displayNullValue: false
+            displayExtraValues: false
         }
     )
 
-    pageItem P131_UKAT_BEZEICHNUNG (
+    pageItem P19_SKOM_KART_ID (
+        type: selectList
+        label {
+            label: Art
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @eintrag
+            slot: regionBody
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kommunikation
+            column: SKOM_KART_ID
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-kommunikationsarten
+            displayNullValue: false
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P19_SKOM_WERT (
+        type: textField
+        label {
+            label: Telefon / E-Mail / Homepage
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @eintrag
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 8
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kommunikation
+            column: SKOM_WERT
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 255
+        }
+    )
+
+    pageItem P19_SKOM_BEZEICHNUNG (
         type: textField
         label {
             label: Bezeichnung
             alignment: left
         }
         layout {
-            sequence: 20
-            region: @formular
+            sequence: 40
+            region: @eintrag
             slot: regionBody
+            columnSpan: 8
             alignment: left
         }
         appearance {
-            template: @/required-floating
+            template: @/optional-floating
             templateOptions: #DEFAULT#
         }
-        validation {
-            valueRequired: true
-        }
         source {
-            formRegion: @formular
-            column: UKAT_BEZEICHNUNG
+            formRegion: @kommunikation
+            column: SKOM_BEZEICHNUNG
             dataType: varchar2
         }
-    )
-
-    pageItem P131_UKAT_BEWERTUNG (
-        type: numberField
-        label {
-            label: Bewertung
-            alignment: left
-        }
-        layout {
-            sequence: 30
-            region: @formular
-            slot: regionBody
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @formular
-            column: UKAT_BEWERTUNG
-            dataType: number
+        validation {
+            maxLength: 100
         }
     )
 
-    pageItem P131_UKAT_SORTIERUNG (
-        type: numberField
-        label {
-            label: Sortierung
-            alignment: left
-        }
-        layout {
-            sequence: 40
-            region: @formular
-            slot: regionBody
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @formular
-            column: UKAT_SORTIERUNG
-            dataType: number
-        }
-    )
-
-    pageItem P131_UKAT_IST_AKTIV (
+    pageItem P19_SKOM_IST_BEVORZUGT (
         type: switch
         label {
-            label: Aktiv
+            label: Bevorzugt
             alignment: left
         }
         layout {
             sequence: 50
-            region: @formular
+            region: @eintrag
             slot: regionBody
+            startNewRow: false
+            columnSpan: 4
             alignment: left
         }
         appearance {
-            template: @/required-floating
+            template: @/optional-floating
             templateOptions: #DEFAULT#
         }
-        validation {
-            valueRequired: true
-        }
         source {
-            formRegion: @formular
-            column: UKAT_IST_AKTIV
+            formRegion: @kommunikation
+            column: SKOM_IST_BEVORZUGT
             dataType: varchar2
+        }
+        default {
+            type: static
+            staticValue: N
         }
         settings {
             useDefaults: false
@@ -217,10 +266,6 @@ page 131 (
             onLabel: Ja
             offValue: N
             offLabel: Nein
-        }
-        default {
-            type: static
-            staticValue: Y
         }
     )
 
@@ -264,12 +309,12 @@ page 131 (
             requiresConfirmation: true
         }
         confirmation {
-            message: Eintrag wirklich löschen? Bereits verwendete Einträge können nicht gelöscht werden.
+            message: Eintrag wirklich löschen?
             style: danger
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P131_UKAT_ID
+            item: P19_SKOM_ID
         }
     )
 
@@ -292,7 +337,7 @@ page 131 (
         }
         serverSideCondition {
             type: itemIsNotNull
-            item: P131_UKAT_ID
+            item: P19_SKOM_ID
         }
     )
 
@@ -315,7 +360,7 @@ page 131 (
         }
         serverSideCondition {
             type: itemIsNull
-            item: P131_UKAT_ID
+            item: P19_SKOM_ID
         }
     )
 
@@ -341,19 +386,93 @@ page 131 (
     )
 
     process initialize-form (
-        name: Formular initialisieren
+        name: Formular Kommunikation initialisieren
         type: formInitialization
-        formRegion: @formular
+        formRegion: @kommunikation
         execution {
             sequence: 10
             point: beforeHeader
         }
     )
 
+    process kunde-ermitteln (
+        name: Kunde ermitteln
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Kunde des Eintrags (fuer die Adress-Auswahl), falls nicht uebergeben
+                if :P19_KUND_ID is null and :P19_SKOM_ID is not null then
+                    select s.KSTO_KUND_ID
+                      into :P19_KUND_ID
+                      from KUND_STANDORT_KOMMUNIKATION c
+                      join KUND_STANDORTE s on s.KSTO_ID = c.SKOM_KSTO_ID
+                     where c.SKOM_ID = :P19_SKOM_ID;
+                end if;
+                ```
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+    )
+
+    process vorbelegen (
+        name: Neuen Eintrag vorbelegen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Neuer Eintrag: am gueltigen Hauptsitz des Kunden
+                select max(KSTO_ID) keep (dense_rank last order by KSTO_GUELTIG_VON nulls first)
+                  into :P19_SKOM_KSTO_ID
+                  from KUND_STANDORTE
+                 where KSTO_KUND_ID = :P19_KUND_ID
+                   and KSTO_IST_HAUPTSITZ = 'Y'
+                   and trunc(sysdate) between nvl(KSTO_GUELTIG_VON, trunc(sysdate)) and nvl(KSTO_GUELTIG_BIS, trunc(sysdate));
+                ```
+        }
+        execution {
+            sequence: 25
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P19_SKOM_ID
+        }
+    )
+
+    process bevorzugt (
+        name: Bevorzugt nur einmal je Adresse und Art
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- je Standort und Art nur ein bevorzugter Eintrag (eindeutiger Index SKOM_BEVORZUGT_UI): der neue nimmt das
+                -- Kennzeichen dem bisherigen
+                if :P19_SKOM_IST_BEVORZUGT = 'Y' then
+                    update KUND_STANDORT_KOMMUNIKATION
+                       set SKOM_IST_BEVORZUGT = 'N'
+                     where SKOM_KSTO_ID = :P19_SKOM_KSTO_ID
+                       and SKOM_KART_ID = :P19_SKOM_KART_ID
+                       and SKOM_IST_BEVORZUGT = 'Y'
+                       and SKOM_ID <> nvl(to_number(:P19_SKOM_ID), -1);
+                end if;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
     process process-form (
-        name: Formular verarbeiten
+        name: Formular Kommunikation verarbeiten
         type: formAutoRowProcessing
-        formRegion: @formular
+        formRegion: @kommunikation
         execution {
             sequence: 10
         }
@@ -363,7 +482,7 @@ page 131 (
         name: Dialog schließen
         type: closeDialog
         execution {
-            sequence: 50
+            sequence: 90
         }
         serverSideCondition {
             type: requestIsContainedInValue

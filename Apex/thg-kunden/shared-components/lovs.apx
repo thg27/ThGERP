@@ -179,21 +179,242 @@ lov lov-kunden (
     }
 )
 
-lov lov-branchen (
-    name: LOV_BRANCHEN
+lov lov-abteilungen (
+    name: LOV_ABTEILUNGEN
     source {
         type: sqlQuery
         sqlQuery:
             ```sql
-            select BRAN_BEZEICHNUNG as d,
-                   BRAN_ID as r
-              from KUND_BRANCHEN
-             where BRAN_IST_AKTIV = 'Y'
-             order by BRAN_SORTIERUNG nulls last, BRAN_BEZEICHNUNG
+            select ABTE_BEZEICHNUNG || case when ABTE_IST_AKTIV = 'N' then ' – inaktiv' end as d,
+                   ABTE_ID as r
+              from KUND_ABTEILUNGEN
+             order by ABTE_SORTIERUNG nulls last, ABTE_BEZEICHNUNG
             ```
     }
     subscription {
-        master: @/20000/lov-branchen
+        master: @/20000/lov-abteilungen
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-ansprechpartner-bewertung (
+    name: LOV_ANSPRECHPARTNER_BEWERTUNG
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/20000/lov-ansprechpartner-bewertung
+    }
+
+    entry a (
+        sequence: 1
+        display: A
+        return: A
+    )
+
+    entry b (
+        sequence: 2
+        display: B
+        return: B
+    )
+
+    entry c (
+        sequence: 3
+        display: C
+        return: C
+    )
+
+    entry u (
+        sequence: 4
+        display: U
+        return: U
+    )
+
+    entry x (
+        sequence: 5
+        display: X
+        return: X
+    )
+
+)
+
+lov lov-dokumentarten (
+    name: LOV_DOKUMENTARTEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select DART_BEZEICHNUNG || case when DART_IST_AKTIV = 'N' then ' – inaktiv' end as d,
+                   DART_ID as r
+              from KUND_DOKUMENTARTEN
+             order by DART_SORTIERUNG nulls last, DART_BEZEICHNUNG
+            ```
+    }
+    subscription {
+        master: @/20000/lov-dokumentarten
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-funktionen (
+    name: LOV_FUNKTIONEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select FUNK_BEZEICHNUNG || case when FUNK_IST_AKTIV = 'N' then ' – inaktiv' end as d,
+                   FUNK_ID as r
+              from KUND_FUNKTIONEN
+             order by FUNK_SORTIERUNG nulls last, FUNK_BEZEICHNUNG
+            ```
+    }
+    subscription {
+        master: @/20000/lov-funktionen
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-kommunikationsarten (
+    name: LOV_KOMMUNIKATIONSARTEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select KART_BEZEICHNUNG as d,
+                   KART_ID as r
+              from ALLG_KOMMUNIKATIONSARTEN
+             order by KART_SORTIERUNG, KART_BEZEICHNUNG
+            ```
+    }
+    subscription {
+        master: @/20000/lov-kommunikationsarten
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-kunden-standorte (
+    name: LOV_KUNDEN_STANDORTE
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select t.STYP_BEZEICHNUNG || ': '
+                   || trim(a.ADRE_STRASSE || ' ' || a.ADRE_HAUSNUMMER) || nvl2(a.ADRE_ORT, ', ' || trim(a.ADRE_PLZ || ' ' || a.ADRE_ORT), null)
+                   || case when trunc(sysdate) not between nvl(s.KSTO_GUELTIG_VON, trunc(sysdate)) and nvl(s.KSTO_GUELTIG_BIS, trunc(sysdate))
+                           then ' – inaktiv' end as d,
+                   s.KSTO_ID as r
+              from KUND_STANDORTE s
+              join KUND_STANDORT_TYPEN t on t.STYP_ID = s.KSTO_STYP_ID
+              join ALLG_ADRESSEN a on a.ADRE_ID = s.KSTO_ADRE_ID
+             where s.KSTO_KUND_ID = :P15_KUND_ID
+             order by case s.KSTO_IST_HAUPTSITZ when 'Y' then 0 else 1 end, t.STYP_BEZEICHNUNG, a.ADRE_PLZ
+            ```
+    }
+    subscription {
+        master: @/20000/lov-kunden-standorte
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-laender (
+    name: LOV_LAENDER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select LAND_BEZEICHNUNG || ' (' || LAND_CODE || ')' as d,
+                   LAND_CODE as r
+              from ALLG_LAENDER
+             where LAND_CODE <> 'XX'
+             order by case LAND_CODE when 'AT' then 0 when 'DE' then 1 when 'CH' then 2 else 3 end, LAND_BEZEICHNUNG
+            ```
+    }
+    subscription {
+        master: @/20000/lov-laender
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-mitarbeiter (
+    name: LOV_MITARBEITER
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select MITA_NAME as d,
+                   MITA_ID as r
+              from ALLG_MITARBEITER
+             order by MITA_NAME
+            ```
+    }
+    subscription {
+        master: @/20000/lov-mitarbeiter
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-standorte-kommunikation (
+    name: LOV_STANDORTE_KOMMUNIKATION
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select t.STYP_BEZEICHNUNG || ': '
+                   || trim(a.ADRE_STRASSE || ' ' || a.ADRE_HAUSNUMMER) || nvl2(a.ADRE_ORT, ', ' || trim(a.ADRE_PLZ || ' ' || a.ADRE_ORT), null)
+                   || case when trunc(sysdate) not between nvl(s.KSTO_GUELTIG_VON, trunc(sysdate)) and nvl(s.KSTO_GUELTIG_BIS, trunc(sysdate))
+                           then ' – inaktiv' end as d,
+                   s.KSTO_ID as r
+              from KUND_STANDORTE s
+              join KUND_STANDORT_TYPEN t on t.STYP_ID = s.KSTO_STYP_ID
+              join ALLG_ADRESSEN a on a.ADRE_ID = s.KSTO_ADRE_ID
+             where s.KSTO_KUND_ID = :P19_KUND_ID
+             order by case s.KSTO_IST_HAUPTSITZ when 'Y' then 0 else 1 end, t.STYP_BEZEICHNUNG, a.ADRE_PLZ
+            ```
+    }
+    subscription {
+        master: @/20000/lov-standorte-kommunikation
+    }
+    columnMapping {
+        return: R
+        display: D
+    }
+)
+
+lov lov-standorttypen (
+    name: LOV_STANDORTTYPEN
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select STYP_BEZEICHNUNG as d,
+                   STYP_ID as r
+              from KUND_STANDORT_TYPEN
+             order by STYP_BEZEICHNUNG
+            ```
+    }
+    subscription {
+        master: @/20000/lov-standorttypen
     }
     columnMapping {
         return: R

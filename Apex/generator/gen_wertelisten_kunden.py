@@ -14,27 +14,6 @@ APP = Path(__file__).resolve().parent.parent / "thg-kunden" / "pages"
 
 # kind: text | number | switch | select   (select: lov = static-id der LOV)
 WERTELISTEN = [
-    dict(seite=110, alias="KUNDENGRUPPEN", titel="Kundengruppen", einzahl="Kundengruppe",
-         tabelle="KUND_KUNDENGRUPPEN", pfx="KGRP", icon="fa-tags",
-         beschreibung="Hauptgruppen der Kunden (OEM, Wiederverkäufer, Endkunde …)",
-         felder=[("CODE", "Code", "text", True), ("BEZEICHNUNG", "Bezeichnung", "text", True),
-                 ("SORTIERUNG", "Sortierung", "number", False), ("IST_AKTIV", "Aktiv", "switch", True)],
-         order="KGRP_SORTIERUNG nulls last, KGRP_BEZEICHNUNG"),
-    dict(seite=120, alias="BRANCHEN", titel="Branchen", einzahl="Branche",
-         tabelle="KUND_BRANCHEN", pfx="BRAN", icon="fa-industry",
-         beschreibung="Branchen der Kunden",
-         felder=[("BEZEICHNUNG", "Bezeichnung", "text", True), ("BEWERTUNG", "Bewertung", "number", False),
-                 ("SORTIERUNG", "Sortierung", "number", False), ("IST_AKTIV", "Aktiv", "switch", True)],
-         order="BRAN_SORTIERUNG nulls last, BRAN_BEZEICHNUNG"),
-    dict(seite=130, alias="UNTERKATEGORIEN", titel="Unterkategorien", einzahl="Unterkategorie",
-         tabelle="KUND_UNTERKATEGORIEN", pfx="UKAT", icon="fa-sitemap",
-         beschreibung="Unterkategorien je Branche",
-         felder=[("BRAN_ID", "Branche", "select", True), ("BEZEICHNUNG", "Bezeichnung", "text", True),
-                 ("BEWERTUNG", "Bewertung", "number", False), ("SORTIERUNG", "Sortierung", "number", False),
-                 ("IST_AKTIV", "Aktiv", "switch", True)],
-         lov="lov-branchen",
-         join=("KUND_BRANCHEN b on b.BRAN_ID = t.UKAT_BRAN_ID", "b.BRAN_BEZEICHNUNG"),
-         order="b.BRAN_BEZEICHNUNG, t.UKAT_SORTIERUNG nulls last, t.UKAT_BEZEICHNUNG"),
     dict(seite=140, alias="ABTEILUNGEN", titel="Abteilungen", einzahl="Abteilung",
          tabelle="KUND_ABTEILUNGEN", pfx="ABTE", icon="fa-building-o",
          beschreibung="Abteilungen der Ansprechpersonen",
@@ -63,6 +42,12 @@ WERTELISTEN = [
          felder=[("CODE", "Code", "text", True), ("BEZEICHNUNG", "Bezeichnung", "text", True),
                  ("SORTIERUNG", "Sortierung", "number", False)],
          order="BROL_SORTIERUNG nulls last, BROL_BEZEICHNUNG"),
+    dict(seite=190, alias="DOKUMENTARTEN", titel="Dokumentarten", einzahl="Dokumentart",
+         tabelle="KUND_DOKUMENTARTEN", pfx="DART", icon="fa-file-o",
+         beschreibung="Arten der Kundendokumente (Vertrag, Angebot, Lizenz …)",
+         felder=[("CODE", "Code", "text", True), ("BEZEICHNUNG", "Bezeichnung", "text", True),
+                 ("SORTIERUNG", "Sortierung", "number", False), ("IST_AKTIV", "Aktiv", "switch", True)],
+         order="DART_SORTIERUNG nulls last, DART_BEZEICHNUNG"),
 ]
 
 

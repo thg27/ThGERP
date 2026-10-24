@@ -27,6 +27,8 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | KUND | KUND_KUNDEN_UNTERKATEGORIEN | KUKA | Zuordnung Kunde-Branche–Unterkategorie |
 | KUND | KUND_ABTEILUNGEN | ABTE | Abteilungen der Ansprechpartner |
 | KUND | KUND_FUNKTIONEN | FUNK | Funktionen der Ansprechpartner |
+| KUND | KUND_DOKUMENTARTEN | DART | Dokumentarten der Kundendokumente |
+| KUND | KUND_KUNDEN_DOKUMENTE | KDOK | Dokumente (Dateien) je Kunde und Mandant |
 | ADMIN | ADMIN_APPLIKATIONEN | APPL | APEX-Applikationen (Module) für die Portal-Startseite |
 | ADMIN | ADMIN_MANDANTEN | MAND | Mandanten (THG-EDV GmbH, Thomas Geßlbauer GmbH) |
 | ADMIN | ADMIN_MANDANT_BANKVERBINDUNGEN | MBNK | Bankverbindungen der Mandanten (Rechnungsfuß) |

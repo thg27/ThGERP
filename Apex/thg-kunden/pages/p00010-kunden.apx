@@ -86,45 +86,6 @@ page 10 (
             }
         )
 
-        facet P10_TYP (
-            type: checkboxGroup
-            label {
-                label: Typ
-            }
-            lov {
-                type: sharedComponent
-                lov: @lov-kunden-typ
-            }
-            layout {
-                sequence: 30
-            }
-            listEntries {
-                maxDisplayedEntries: 7
-            }
-            source {
-                databaseColumn: KUND_TYP
-            }
-        )
-
-        facet P10_RECHTSFORM (
-            type: checkboxGroup
-            label {
-                label: Rechtsform
-            }
-            lov {
-                type: distinctValues
-            }
-            layout {
-                sequence: 40
-            }
-            listEntries {
-                maxDisplayedEntries: 7
-            }
-            source {
-                databaseColumn: RECHTSFORM
-            }
-        )
-
         facet P10_LAND (
             type: checkboxGroup
             label {
@@ -144,6 +105,54 @@ page 10 (
             }
         )
 
+        facet P10_PLZ (
+            type: range
+            label {
+                label: PLZ von – bis
+            }
+            layout {
+                sequence: 55
+            }
+            source {
+                databaseColumn: PLZ_AT
+                dataType: number
+            }
+            dependingOn {
+                facet: @P10_LAND
+                type: =
+                value: Österreich
+            }
+            advanced {
+                cssClasses: [
+                    thg-plz-bereich
+                ]
+            }
+        )
+
+        facet P10_BUNDESLAND (
+            type: checkboxGroup
+            label {
+                label: Bundesland
+            }
+            lov {
+                type: distinctValues
+            }
+            layout {
+                sequence: 57
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+            }
+            source {
+                databaseColumn: BUNDESLAND
+            }
+            dependingOn {
+                facet: @P10_LAND
+                type: =
+                value: Österreich
+            }
+        )
+
         facet P10_ORT (
             type: checkboxGroup
             label {
@@ -160,6 +169,30 @@ page 10 (
             }
             source {
                 databaseColumn: ORT
+            }
+            appearance {
+                display: addFilterDialog
+            }
+        )
+
+        facet P10_SEIT_JAHR (
+            type: checkboxGroup
+            label {
+                label: Kunde seit (Jahr)
+            }
+            lov {
+                type: distinctValues
+                sortDirection: desc
+            }
+            layout {
+                sequence: 75
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+                sortByTopCounts: false
+            }
+            source {
+                databaseColumn: SEIT_JAHR
             }
             appearance {
                 display: addFilterDialog
@@ -208,19 +241,36 @@ page 10 (
                        case k.KUND_TYP when 'FIRMA' then 'Firma' else 'Privat' end as TYP,
                        k.KUND_STATUS,
                        initcap(k.KUND_STATUS) as STATUS,
+                       case k.KUND_STATUS when 'AKTIV' then 'fa-check-circle u-success-text'
+                                          else 'fa-times-circle u-danger-text' end as STATUS_ICON,
                        r.RFRM_KURZ as RECHTSFORM,
                        k.KUND_UID_NUMMER,
                        a.ADRE_PLZ as PLZ,
+                       -- PLZ als Zahl fuer den Filter von-bis (nur Oesterreich, nur gueltige 4-stellige PLZ)
+                       case when a.ADRE_LAND_CODE = 'AT' and regexp_like(trim(a.ADRE_PLZ), '^[0-9]{4}$')
+                            then to_number(trim(a.ADRE_PLZ)) end as PLZ_AT,
                        a.ADRE_ORT as ORT,
                        l.LAND_BEZEICHNUNG as LAND,
+                       case when a.ADRE_LAND_CODE = 'AT' then
+                            case upper(a.ADRE_REGION)
+                                 when 'W' then 'Wien'            when 'N' then 'Niederösterreich' when 'NÖ' then 'Niederösterreich'
+                                 when 'O' then 'Oberösterreich'  when 'OÖ' then 'Oberösterreich' when 'ST' then 'Steiermark'
+                                 when 'K' then 'Kärnten'         when 'SA' then 'Salzburg'        when 'T' then 'Tirol'
+                                 when 'V' then 'Vorarlberg'      when 'B' then 'Burgenland'
+                                 else 'unbekannt' end end as BUNDESLAND,
                        case when m.KUND_ID is not null then m.KUND_NUMMER || ' – ' || nvl(m.KUND_FIRMENNAME, m.KUND_NACHNAME) end as KONZERN,
-                       k.KUND_KUNDE_SEIT
+                       k.KUND_KUNDE_SEIT,
+                       to_char(k.KUND_KUNDE_SEIT, 'YYYY') as SEIT_JAHR
                   from KUND_KUNDEN k
                   left join KUND_RECHTSFORMEN r on r.RFRM_ID = k.KUND_RFRM_ID
                   left join KUND_STANDORTE s on s.KSTO_KUND_ID = k.KUND_ID and s.KSTO_IST_HAUPTSITZ = 'Y'
                   left join ALLG_ADRESSEN a on a.ADRE_ID = s.KSTO_ADRE_ID
                   left join ALLG_LAENDER l on l.LAND_CODE = a.ADRE_LAND_CODE
                   left join KUND_KUNDEN m on m.KUND_ID = k.KUND_PARENT_KUND_ID
+                 order by upper(case k.KUND_TYP
+                                    when 'FIRMA' then k.KUND_FIRMENNAME
+                                    else k.KUND_NACHNAME || nvl2(k.KUND_VORNAME, ' ' || k.KUND_VORNAME, null)
+                                end) desc
                 ```
         }
         layout {
@@ -275,7 +325,7 @@ page 10 (
                     }
                     clearCache: 11
                 }
-                linkText: #KUND_NUMMER#
+                linkText: <span class="thg-kundennr">#KUND_NUMMER#</span>
             }
         )
 
@@ -304,10 +354,7 @@ page 10 (
         )
 
         column TYP (
-            type: plainText
-            heading {
-                heading: Typ
-            }
+            type: hidden
             layout {
                 sequence: 45
             }
@@ -317,9 +364,21 @@ page 10 (
             type: plainText
             heading {
                 heading: Status
+                alignment: center
             }
             layout {
-                sequence: 55
+                sequence: 5
+                columnAlignment: center
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #STATUS_ICON#" title="#STATUS#" aria-label="#STATUS#" style="font-size:16px"></span>
+            }
+        )
+
+        column STATUS_ICON (
+            type: hidden
+            layout {
+                sequence: 56
             }
         )
 
@@ -334,10 +393,7 @@ page 10 (
         )
 
         column KUND_UID_NUMMER (
-            type: plainText
-            heading {
-                heading: UID-Nr.
-            }
+            type: hidden
             layout {
                 sequence: 70
             }
@@ -350,6 +406,20 @@ page 10 (
             }
             layout {
                 sequence: 80
+            }
+        )
+
+        column PLZ_AT (
+            type: hidden
+            layout {
+                sequence: 85
+            }
+        )
+
+        column BUNDESLAND (
+            type: hidden
+            layout {
+                sequence: 86
             }
         )
 
@@ -383,6 +453,13 @@ page 10 (
             }
         )
 
+        column SEIT_JAHR (
+            type: hidden
+            layout {
+                sequence: 126
+            }
+        )
+
         column KUND_KUNDE_SEIT (
             type: plainText
             heading {
@@ -400,7 +477,7 @@ page 10 (
 
     button up (
         buttonName: UP
-        label: Zurück zur Startseite
+        label: Zurück zum Dashboard
         layout {
             sequence: 10
             region: @breadcrumb

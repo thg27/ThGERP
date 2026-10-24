@@ -12,11 +12,27 @@
 :root,
 body:has([data-mandant="EDV"]) {
   --thg-primaer: #108024;   /* THG-EDV GmbH: Gruen */
+  --thg-primaer-dunkel: #0b5c1a;
   --thg-fokus: #e7f3e9;     /* helles Gruen fuer aktive Eingabefelder */
 }
 body:has([data-mandant="HOLDING"]) {
   --thg-primaer: #003096;   /* Thomas Gesslbauer GmbH: Blau */
+  --thg-primaer-dunkel: #00226b;
   --thg-fokus: #e6ecf7;     /* helles Blau */
+}
+/* Schrift auf der hellen Mandantenfarbe (Regionstitel, Badges, Registerkarten) */
+body {
+  --thg-fokus-schrift: var(--thg-primaer-dunkel);
+}
+/* Dunkler Stil (Vita - Dark): Mandantenfarbe als dunkle Toenung, Schrift hell */
+body.apex-theme-vita-dark,
+body.apex-theme-vita-dark:has([data-mandant="EDV"]) {
+  --thg-fokus: #173a1f;
+  --thg-fokus-schrift: #7fd18f;
+}
+body.apex-theme-vita-dark:has([data-mandant="HOLDING"]) {
+  --thg-fokus: #1c2c50;
+  --thg-fokus-schrift: #8cacea;
 }
 
 /* Header (Banner ganz oben) in allen Theme-Stilen in der Mandantenfarbe mit weisser Schrift.
@@ -162,3 +178,168 @@ body .t-Header .t-NavigationBar-item .t-Button {
 /* Popup LOV (Inline-Popup): Mindestbreite fuer mehrspaltige Wertelisten, z. B. Artikel mit Gruppe / Artikelnummer / Name
    – ohne diese Regel ist das Popup nur so breit wie das Feld bzw. die Rasterspalte */
 .ui-dialog.ui-dialog-popuplov { min-width: min(640px, 95vw); }
+
+/* ===== Kundenstamm (20020), uebernommen aus dem Projekt Marchler ===== */
+
+/* Kundenliste (Seite 10): Facette "PLZ von – bis" – Felder schmal, nebeneinander, Inhalt zentriert
+   (APEX stellt Zahlenbereiche sonst untereinander in voller Breite dar: .a-FS-range--number) */
+.thg-plz-bereich .a-FS-range--number {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+.thg-plz-bereich .a-FS-range--number .apex-item-text {
+    --a-fs-control-inline-size: 5.5em;
+    --a-fs-control-input-max-width: 5.5em;
+    text-align: center;
+}
+.thg-plz-bereich .a-FS-range--number .a-FS-rangeTo {
+    margin-block: 0;
+    margin-inline: 8px;
+    font-size: 0;            /* APEX-Systemtext "to" ausblenden ... */
+}
+.thg-plz-bereich .a-FS-range--number .a-FS-rangeTo::after {
+    content: "–";           /* ... und durch einen Strich ersetzen */
+    font-size: 14px;
+}
+/* keine Plus/Minus-Pfeile (Spin-Buttons) im Zahlenfeld */
+.thg-plz-bereich input::-webkit-outer-spin-button,
+.thg-plz-bereich input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.thg-plz-bereich input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+/* Systemtext "Go" auf dem Anwenden-Button durch das Aktualisierungs-Icon ersetzen */
+.thg-plz-bereich .a-FS-range--number .a-Button.js-ctrlApply {
+    margin-block-start: 0;
+    margin-inline-start: 8px;
+    font-size: 0;
+    min-inline-size: 32px;
+}
+.thg-plz-bereich .a-FS-range--number .a-Button.js-ctrlApply::before {
+    content: "\f021";
+    font-family: "Font APEX Small";
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* Kundenliste (Seite 10): Kundennummer umrahmt */
+.thg-kundennr {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Kundendetail (Seite 11): Kundenname in der hellen Mandantenfarbe hervorheben
+   (Klasse am Feld-Container: nur das Feld selbst einfaerben, nicht den Rand um das Feld) */
+.thg-kundenname {
+    background-color: transparent !important;
+}
+.thg-kundenname .t-Form-fieldContainer-inner,
+.thg-kundenname input,
+.thg-kundenname input:focus {
+    background-color: var(--thg-fokus) !important;
+    font-weight: 600;
+}
+
+/* Badge (z.B. "überfällig" im Dashboard); leere Badges ausblenden */
+.thg-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.thg-badge:empty {
+    display: none;
+}
+.thg-badge--UEBERFAELLIG { background-color: var(--ut-palette-danger, #c62828); color: var(--ut-palette-danger-contrast, #fff); }
+.thg-badge--FAELLIG      { background-color: var(--ut-palette-warning, #ef6c00); color: var(--ut-palette-warning-contrast, #fff); }
+.thg-badge--OFFEN        { background-color: var(--thg-fokus); color: var(--thg-fokus-schrift); }
+
+/* Dashboard: Bereich um die Kennzahlen-Karten ohne eigenen (weissen) Hintergrund, Karten mit dezenten Farben,
+   Texte zentriert, ganze Karte klickbar (Link auf die gefilterte Liste) */
+#kennzahlen,
+#kennzahlen .t-Region-body,
+#kennzahlen .t-Region-bodyWrap {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+}
+#kennzahlen {
+    margin-block-end: 48px !important;
+}
+#kennzahlen li:nth-child(1) .t-MetricCard { background-color: rgba(16, 128, 36, 0.09); border-color: rgba(16, 128, 36, 0.25); }
+#kennzahlen li:nth-child(2) .t-MetricCard { background-color: rgba(0, 48, 150, 0.09); border-color: rgba(0, 48, 150, 0.25); }
+#kennzahlen li:nth-child(3) .t-MetricCard { background-color: rgba(239, 108, 0, 0.09); border-color: rgba(239, 108, 0, 0.25); }
+#kennzahlen li:nth-child(4) .t-MetricCard { background-color: rgba(123, 77, 196, 0.09); border-color: rgba(123, 77, 196, 0.25); }
+#kennzahlen li:nth-child(5) .t-MetricCard { background-color: rgba(198, 40, 40, 0.09); border-color: rgba(198, 40, 40, 0.25); }
+#kennzahlen .t-MetricCard,
+#kennzahlen .t-MetricCard-body,
+#kennzahlen .t-MetricCard-content {
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+#kennzahlen .t-MetricCard:hover {
+    filter: brightness(0.97);
+}
+
+/* Regionstitel dezent in der Mandantenfarbe; aktiv in den Apps, die thg.js mit thg-region-farbig markiert */
+.thg-region-farbig .t-Region > .t-Region-header {
+    background-color: var(--thg-fokus);
+    border-bottom-color: color-mix(in srgb, var(--thg-primaer) 25%, transparent);
+}
+.thg-region-farbig .t-Region > .t-Region-header .t-Region-title {
+    color: var(--thg-fokus-schrift);
+}
+
+/* Seiten mit linker Spalte (Facettensuche + Liste): Suchfeld und Listenregion auf gleicher Hoehe */
+.t-PageTemplate--leftCol .t-Body-contentInner {
+    padding-top: 16px !important;
+}
+.t-PageTemplate--leftCol .t-Body-side {
+    padding-top: 16px;
+}
+
+/* Region als Registerkarte (Region Display Selector): Titel steht schon auf der Registerkarte - im Kopf nur die
+   Buttons (rechts) zeigen, ohne Titel und ohne Hintergrund (Region > Appearance > CSS Classes "thg-ohne-titel") */
+.t-Region.thg-ohne-titel > .t-Region-header {
+    background-color: transparent !important;
+    border-bottom: 0;
+}
+.t-Region.thg-ohne-titel > .t-Region-header .t-Region-title {
+    visibility: hidden;
+}
+/* Registerkarten im Slot "Full Width Content" (CSS-Klasse thg-rds): wenig Abstand zum Inhalt, Leiste dezent in der
+   Mandantenfarbe */
+.t-Body:has(.thg-rds) .t-Body-contentInner {
+    padding-block-start: 16px;
+}
+.thg-rds.u-padding-inline-dynamic {
+    padding-inline: 16px;
+}
+.thg-rds {
+    background-color: var(--thg-fokus);
+    border-bottom: 1px solid color-mix(in srgb, var(--thg-primaer) 20%, transparent);
+}
+/* Registerkarte "Alle" (Ebenen-Icon, thg.js): alle Bereiche untereinander, dann mit Ueberschrift */
+body.thg-rds-alle .t-Region.t-Region--removeHeader > .t-Region-header {
+    display: flex;
+}
+body.thg-rds-alle .t-Region.thg-ohne-titel > .t-Region-header .t-Region-title {
+    visibility: visible;
+}
+/* Kennzahlen unter der Titelleiste (Classic Report "Contextual Info", Beschriftung ueber dem Wert) */
+.t-ContextualInfo-label--stacked .t-ContextualInfo-item {
+    align-items: center;
+    text-align: center;
+}

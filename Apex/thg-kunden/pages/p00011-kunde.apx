@@ -38,6 +38,173 @@ page 11 (
         }
     )
 
+    region kopfinfo (
+        name: Kennzahlen
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select k.ANZAHL, k.UMSATZ, k.OFFEN, k.LETZTE, k.LETZTE_URL,
+                       -- aktuelle Kundenbetreuer (Rolle KB, ohne "gueltig bis"), Hauptverantwortlicher zuerst - ausserhalb der
+                       -- Aggregation der Rechnungen (sonst ORA-00937)
+                       nvl((select listagg(m.MITA_NAME, ', ') within group (order by case z.KMIT_IST_HAUPTVERANTW when 'Y' then 0 else 1 end,
+                                                                                   m.MITA_NAME)
+                              from KUND_KUNDEN_MITARBEITER z
+                              join KUND_BETREUUNGSROLLEN r on r.BROL_ID = z.KMIT_BROL_ID and r.BROL_CODE = 'KB'
+                              join ALLG_MITARBEITER m on m.MITA_ID = z.KMIT_MITA_ID
+                             where z.KMIT_KUND_ID = :P11_KUND_ID
+                               and z.KMIT_GUELTIG_BIS is null), '–') as BETREUER
+                  from (select count(*) as ANZAHL,
+                               to_char(nvl(sum(RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as UMSATZ,
+                               to_char(nvl(sum(OFFEN), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as OFFEN,
+                               case when count(*) = 0 then '–'
+                                    else to_char(max(RECH_DATUM), 'DD.MM.YYYY')
+                                         || ' (' || max(RECH_NUMMER) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER) || ')' end as LETZTE,
+                               -- Link auf die letzte Rechnung (App 20050 Seite 11, mit Pruefsumme)
+                               case when count(*) > 0 then
+                                   apex_page.get_url(p_application => '20050', p_page => 11, p_clear_cache => 11, p_items => 'P11_RECH_ID',
+                                                     p_values => max(RECH_ID) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER))
+                               end as LETZTE_URL
+                          from FAKT_RECHNUNGEN_V
+                         where RECH_KUND_ID = :P11_KUND_ID
+                           and RECH_MAND_ID = :MANDANT_ID
+                           and RECH_STATUS in ('OFFEN', 'BEZAHLT')) k
+                ```
+            pageItemsToSubmit: [
+                P11_KUND_ID
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: [
+                #DEFAULT#
+                t-Form--noPadding
+                margin-left-md
+            ]
+        }
+        componentAppearance {
+            template: @/contextual-info
+            templateOptions: [
+                #DEFAULT#
+                t-ContextualInfo-label--stacked
+                t-Report--hideNoPagination
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+        messages {
+            whenNoDataFound: keine Rechnungen
+        }
+
+        column ANZAHL (
+            type: plainText
+            heading {
+                heading: Rechnungen
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column UMSATZ (
+            type: plainText
+            heading {
+                heading: Umsatz (netto)
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column OFFEN (
+            type: plainText
+            heading {
+                heading: Offen
+            }
+            layout {
+                sequence: 22
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LETZTE_URL (
+            type: hidden
+            layout {
+                sequence: 25
+            }
+        )
+
+        column LETZTE (
+            type: plainText
+            heading {
+                heading: Letzte Rechnung
+            }
+            columnFormatting {
+                htmlExpression: <a href="#LETZTE_URL#" title="Letzte Rechnung öffnen">#LETZTE#</a>
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETREUER (
+            type: plainText
+            heading {
+                heading: Kundenbetreuer
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 10
+            slot: fullWidthContent
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: false
+        }
+    )
+
     region kunde (
         name: Kunde
         type: form
@@ -65,6 +232,9 @@ page 11 (
     region stammdaten (
         name: Stammdaten
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
             sequence: 10
             parentRegion: @kunde
@@ -74,6 +244,7 @@ page 11 (
             template: @/standard
             templateOptions: [
                 #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
                 t-Form--slimPadding
             ]
             cssClasses: [
@@ -85,6 +256,9 @@ page 11 (
     region recht-konditionen (
         name: Rechtliches und Konditionen
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
             sequence: 20
             parentRegion: @kunde
@@ -94,6 +268,7 @@ page 11 (
             template: @/standard
             templateOptions: [
                 #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
                 t-Form--slimPadding
             ]
             cssClasses: [
@@ -105,6 +280,9 @@ page 11 (
     region konzern-sonstiges (
         name: Konzern und Sonstiges
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
             sequence: 30
             parentRegion: @kunde
@@ -114,12 +292,1243 @@ page 11 (
             template: @/standard
             templateOptions: [
                 #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
                 t-Form--slimPadding
             ]
             cssClasses: [
                 thg-kompakt
             ]
         }
+    )
+
+    region adressen (
+        name: Adressen
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select s.KSTO_ID,
+                       t.STYP_BEZEICHNUNG as TYP,
+                       ltrim(case s.KSTO_IST_HAUPTSITZ when 'Y' then 'Hauptsitz' end
+                             || case s.KSTO_IST_RECHNUNGSADR when 'Y' then ' · Rechnung' end
+                             || case s.KSTO_IST_LIEFERADR when 'Y' then ' · Lieferung' end, ' ·') as VERWENDUNG,
+                       trim(a.ADRE_STRASSE || ' ' || a.ADRE_HAUSNUMMER || nvl2(a.ADRE_ZUSATZ, ', ' || a.ADRE_ZUSATZ, null)) as STRASSE,
+                       trim(a.ADRE_PLZ || ' ' || a.ADRE_ORT) as ORT,
+                       l.LAND_BEZEICHNUNG as LAND,
+                       -- gueltig, wenn das Systemdatum im Gueltigkeitszeitraum liegt (offene Grenzen gelten als erfuellt)
+                       case when trunc(sysdate) between nvl(s.KSTO_GUELTIG_VON, trunc(sysdate)) and nvl(s.KSTO_GUELTIG_BIS, trunc(sysdate))
+                            then 'fa-check-circle u-success-text' else 'fa-times-circle u-danger-text' end as GUELTIG_ICON,
+                       case when trunc(sysdate) between nvl(s.KSTO_GUELTIG_VON, trunc(sysdate)) and nvl(s.KSTO_GUELTIG_BIS, trunc(sysdate))
+                            then 'gültig' else 'nicht gültig' end
+                       || nvl2(coalesce(s.KSTO_GUELTIG_VON, s.KSTO_GUELTIG_BIS),
+                               ' (' || nvl(to_char(s.KSTO_GUELTIG_VON, 'DD.MM.YYYY'), '…') || ' – '
+                                    || nvl(to_char(s.KSTO_GUELTIG_BIS, 'DD.MM.YYYY'), '…') || ')', null) as GUELTIG
+                  from KUND_STANDORTE s
+                  join KUND_STANDORT_TYPEN t on t.STYP_ID = s.KSTO_STYP_ID
+                  join ALLG_ADRESSEN a on a.ADRE_ID = s.KSTO_ADRE_ID
+                  left join ALLG_LAENDER l on l.LAND_CODE = a.ADRE_LAND_CODE
+                 where s.KSTO_KUND_ID = :P11_KUND_ID
+                 order by case when trunc(sysdate) between nvl(s.KSTO_GUELTIG_VON, trunc(sysdate)) and nvl(s.KSTO_GUELTIG_BIS, trunc(sysdate))
+                               then 0 else 1 end,
+                          -- innerhalb gueltig/nicht gueltig: Hauptsitz, Rechnungsadresse, Lieferadressen, dann der Rest
+                          case t.STYP_BEZEICHNUNG when 'Hauptsitz' then 1 when 'Rechnungsadresse' then 2 when 'Lieferadresse' then 3 else 4 end,
+                          t.STYP_BEZEICHNUNG, a.ADRE_PLZ, a.ADRE_STRASSE
+                ```
+            pageItemsToSubmit: [
+                P11_KUND_ID
+            ]
+        }
+        advanced {
+            regionDisplaySelector: true
+        }
+        layout {
+            sequence: 35
+            parentRegion: @kunde
+            slot: regionBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+            cssClasses: [
+                thg-ohne-titel
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+        messages {
+            whenNoDataFound: Keine Adressen erfasst.
+        }
+
+        column KSTO_ID (
+            type: link
+            heading {
+                heading: Bearbeiten
+                alignment: center
+            }
+            layout {
+                sequence: 10
+                columnAlignment: center
+            }
+            link {
+                target: {
+                    page: 14
+                    items: {
+                        P14_KSTO_ID: #KSTO_ID#
+                    }
+                    clearCache: 14
+                }
+                linkText: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TYP (
+            type: plainText
+            heading {
+                heading: Standorttyp
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VERWENDUNG (
+            type: plainText
+            heading {
+                heading: Verwendung
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column STRASSE (
+            type: plainText
+            heading {
+                heading: Straße
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ORT (
+            type: plainText
+            heading {
+                heading: PLZ / Ort
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LAND (
+            type: plainText
+            heading {
+                heading: Land
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column GUELTIG_ICON (
+            type: hidden
+            layout {
+                sequence: 75
+            }
+        )
+
+        column GUELTIG (
+            type: plainText
+            heading {
+                heading: Gültig
+                alignment: center
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #GUELTIG_ICON#" title="#GUELTIG#" aria-label="#GUELTIG#" style="font-size:16px"></span>
+            }
+            layout {
+                columnAlignment: center
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    button adresse-neu (
+        buttonName: ADRESSE_NEU
+        label: Adresse hinzufügen
+        layout {
+            sequence: 10
+            region: @adressen
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconRight
+                t-Button--small
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 14
+                items: {
+                    P14_KSTO_KUND_ID: &P11_KUND_ID.
+                }
+                clearCache: 14
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+    )
+
+    dynamicAction adressen-nach-dialog (
+        name: Adressen nach dem Dialog aktualisieren
+        execution {
+            sequence: 50
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @adressen
+        }
+
+        action adressen-aktualisieren (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @adressen
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction adressen-nach-hinzufuegen (
+        name: Adressen nach Hinzufügen aktualisieren
+        execution {
+            sequence: 51
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @adresse-neu
+        }
+
+        action adressen-aktualisieren-2 (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @adressen
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    region kontakte (
+        name: Kontakte
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select a.ANSP_ID,
+                       trim(a.ANSP_TITEL || ' ' || a.ANSP_VORNAME || ' ' || a.ANSP_NACHNAME) as NAME,
+                       f.FUNK_BEZEICHNUNG as FUNKTION,
+                       ab.ABTE_BEZEICHNUNG as ABTEILUNG,
+                       (select max(x.AKOM_WERT) keep (dense_rank first order by x.AKOM_IST_BEVORZUGT desc, k.KART_SORTIERUNG, x.AKOM_ID)
+                          from KUND_ANSPRECHPARTNER_KOMMUNIKATION x
+                          join ALLG_KOMMUNIKATIONSARTEN k on k.KART_ID = x.AKOM_KART_ID
+                         where x.AKOM_ANSP_ID = a.ANSP_ID and k.KART_CODE in ('TEL', 'MOBIL')) as TELEFON,
+                       (select max(x.AKOM_WERT) keep (dense_rank first order by x.AKOM_IST_BEVORZUGT desc, x.AKOM_ID)
+                          from KUND_ANSPRECHPARTNER_KOMMUNIKATION x
+                          join ALLG_KOMMUNIKATIONSARTEN k on k.KART_ID = x.AKOM_KART_ID
+                         where x.AKOM_ANSP_ID = a.ANSP_ID and k.KART_CODE = 'EMAIL') as EMAIL,
+                       t.STYP_BEZEICHNUNG || nvl2(ad.ADRE_ORT, ' ' || ad.ADRE_ORT, null) as STANDORT,
+                       case a.ANSP_IST_HAUPTKONTAKT when 'Y' then 'fa-star u-warning-text' end as HAUPT_ICON,
+                       case a.ANSP_IST_HAUPTKONTAKT when 'Y' then 'Hauptkontakt' end as HAUPT
+                  from KUND_ANSPRECHPARTNER a
+                  join KUND_STANDORTE s on s.KSTO_ID = a.ANSP_KSTO_ID
+                  join KUND_STANDORT_TYPEN t on t.STYP_ID = s.KSTO_STYP_ID
+                  left join ALLG_ADRESSEN ad on ad.ADRE_ID = s.KSTO_ADRE_ID
+                  left join KUND_FUNKTIONEN f on f.FUNK_ID = a.ANSP_FUNK_ID
+                  left join KUND_ABTEILUNGEN ab on ab.ABTE_ID = a.ANSP_ABTE_ID
+                 where s.KSTO_KUND_ID = :P11_KUND_ID
+                 order by case a.ANSP_IST_HAUPTKONTAKT when 'Y' then 0 else 1 end, a.ANSP_NACHNAME, a.ANSP_VORNAME
+                ```
+            pageItemsToSubmit: [
+                P11_KUND_ID
+            ]
+        }
+        advanced {
+            regionDisplaySelector: true
+        }
+        layout {
+            sequence: 37
+            parentRegion: @kunde
+            slot: regionBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+            cssClasses: [
+                thg-ohne-titel
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+        messages {
+            whenNoDataFound: Keine Kontakte erfasst.
+        }
+
+        column ANSP_ID (
+            type: link
+            heading {
+                heading: Bearbeiten
+                alignment: center
+            }
+            layout {
+                sequence: 10
+                columnAlignment: center
+            }
+            link {
+                target: {
+                    page: 15
+                    items: {
+                        P15_ANSP_ID: #ANSP_ID#
+                        P15_KUND_ID: &P11_KUND_ID.
+                    }
+                    clearCache: 15
+                }
+                linkText: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column HAUPT_ICON (
+            type: hidden
+            layout {
+                sequence: 14
+            }
+        )
+
+        column HAUPT (
+            type: plainText
+            heading {
+                heading: Haupt&shy;kontakt
+                alignment: center
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #HAUPT_ICON#" title="#HAUPT#" aria-label="#HAUPT#" style="font-size:16px"></span>
+            }
+            layout {
+                columnAlignment: center
+                sequence: 15
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column NAME (
+            type: plainText
+            heading {
+                heading: Name
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column FUNKTION (
+            type: plainText
+            heading {
+                heading: Funktion
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ABTEILUNG (
+            type: plainText
+            heading {
+                heading: Abteilung
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TELEFON (
+            type: plainText
+            heading {
+                heading: Telefon
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column EMAIL (
+            type: plainText
+            heading {
+                heading: E-Mail
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column STANDORT (
+            type: plainText
+            heading {
+                heading: Adresse
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    button kontakt-neu (
+        buttonName: KONTAKT_NEU
+        label: Kontakt hinzufügen
+        layout {
+            sequence: 10
+            region: @kontakte
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconRight
+                t-Button--small
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 15
+                items: {
+                    P15_KUND_ID: &P11_KUND_ID.
+                }
+                clearCache: 15
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+    )
+
+    dynamicAction kontakte-nach-dialog (
+        name: Kontakte nach dem Dialog aktualisieren
+        execution {
+            sequence: 55
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @kontakte
+        }
+
+        action kontakte-aktualisieren (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @kontakte
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction kontakte-nach-hinzufuegen (
+        name: Kontakte nach Hinzufügen aktualisieren
+        execution {
+            sequence: 56
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @kontakt-neu
+        }
+
+        action kontakte-aktualisieren-2 (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @kontakte
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction aenderung-nach-dialog (
+        name: Änderungsinformationen nach Dialog aktualisieren
+        execution {
+            sequence: 60
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }
+
+        action letzte-aenderung-laden (
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    select to_char(from_tz(cast(KUND_CREATED_ON as timestamp), 'UTC') at time zone 'Europe/Vienna',
+                    'DD.MM.YYYY HH24:MI:SS')
+                    into :P11_ANGELEGT_AM
+                    from KUND_KUNDEN
+                    where KUND_ID = :P11_KUND_ID;
+                    for r in (
+                    with k as (select KUND_ID, KUND_CREATED_ON from KUND_KUNDEN where KUND_ID = :P11_KUND_ID),
+                    s as (select x.* from KUND_STANDORTE x join k on x.KSTO_KUND_ID = k.KUND_ID),
+                    p as (select a.* from KUND_ANSPRECHPARTNER a join s on a.ANSP_KSTO_ID = s.KSTO_ID),
+                    alle (AM, VON, NEU) as (
+                    select KUND_UPDATED_ON, KUND_UPDATED_BY, 'N' from KUND_KUNDEN where KUND_ID = :P11_KUND_ID
+                    union all select KSTO_UPDATED_ON, KSTO_UPDATED_BY, 'N' from s
+                    union all select KSTO_CREATED_ON, KSTO_CREATED_BY, 'Y' from s
+                    union all select a.ADRE_UPDATED_ON, a.ADRE_UPDATED_BY, 'N' from ALLG_ADRESSEN a join s on s.KSTO_ADRE_ID = a.ADRE_ID
+                    union all select x.SKOM_UPDATED_ON, x.SKOM_UPDATED_BY, 'N' from KUND_STANDORT_KOMMUNIKATION x join s on x.SKOM_KSTO_ID = s.KSTO_ID
+                    union all select x.SKOM_CREATED_ON, x.SKOM_CREATED_BY, 'Y' from KUND_STANDORT_KOMMUNIKATION x join s on x.SKOM_KSTO_ID = s.KSTO_ID
+                    union all select ANSP_UPDATED_ON, ANSP_UPDATED_BY, 'N' from p
+                    union all select ANSP_CREATED_ON, ANSP_CREATED_BY, 'Y' from p
+                    union all select x.AKOM_UPDATED_ON, x.AKOM_UPDATED_BY, 'N' from KUND_ANSPRECHPARTNER_KOMMUNIKATION x join p on x.AKOM_ANSP_ID = p.ANSP_ID
+                    union all select x.AKOM_CREATED_ON, x.AKOM_CREATED_BY, 'Y' from KUND_ANSPRECHPARTNER_KOMMUNIKATION x join p on x.AKOM_ANSP_ID = p.ANSP_ID
+                    union all select x.KMIT_UPDATED_ON, x.KMIT_UPDATED_BY, 'N' from KUND_KUNDEN_MITARBEITER x join k on x.KMIT_KUND_ID = k.KUND_ID
+                    union all select x.KMIT_CREATED_ON, x.KMIT_CREATED_BY, 'Y' from KUND_KUNDEN_MITARBEITER x join k on x.KMIT_KUND_ID = k.KUND_ID
+                    union all select x.KDOK_UPDATED_ON, x.KDOK_UPDATED_BY, 'N' from KUND_KUNDEN_DOKUMENTE x join k on x.KDOK_KUND_ID = k.KUND_ID where x.KDOK_MAND_ID = :MANDANT_ID
+                    union all select x.KDOK_CREATED_ON, x.KDOK_CREATED_BY, 'Y' from KUND_KUNDEN_DOKUMENTE x join k on x.KDOK_KUND_ID = k.KUND_ID where x.KDOK_MAND_ID = :MANDANT_ID
+                    )
+                    select to_char(from_tz(cast(alle.AM as timestamp), 'UTC') at time zone 'Europe/Vienna',
+                    'DD.MM.YYYY HH24:MI:SS') as AM, alle.VON
+                    from alle cross join k
+                    where alle.AM is not null
+                    and (alle.NEU = 'N' or alle.AM > k.KUND_CREATED_ON + interval '1' minute)
+                    order by alle.AM desc
+                    fetch first 1 row only)
+                    loop
+                    :P11_GEAENDERT_AM := r.AM;
+                    :P11_GEAENDERT_VON := r.VON;
+                    end loop;
+                    ```
+                itemsToSubmit: [
+                    P11_KUND_ID
+                ]
+                itemsToReturn: [
+                    P11_GEAENDERT_AM
+                    P11_GEAENDERT_VON
+                ]
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    region dokumente (
+        name: Dokumente
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select d.KDOK_ID,
+                       a.DART_BEZEICHNUNG as DOKUMENTART,
+                       d.KDOK_BEZEICHNUNG as BEZEICHNUNG,
+                       d.KDOK_DATEINAME,
+                       d.KDOK_MIME_TYPE,
+                       d.KDOK_ID as DOWNLOAD,
+                       -- im Browser darstellbar (PDF, Bilder, Text): Anzeige im Modalfenster (Seite 18)
+                       case when d.KDOK_MIME_TYPE = 'application/pdf'
+                                 or d.KDOK_MIME_TYPE in ('image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp')
+                                 or d.KDOK_MIME_TYPE like 'text/plain%'
+                            then 'fa-eye' else 'u-hidden' end as ANZEIGEN_ICON,
+                       d.KDOK_ID as ANZEIGEN,
+                       apex_util.filesize_mask(d.KDOK_GROESSE) as GROESSE,
+                       -- Zeitstempel sind Serverzeit (UTC) - Anzeige in Wiener Zeit
+                       to_char(from_tz(cast(d.KDOK_CREATED_ON as timestamp), 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI')
+                       || ' ' || lower(d.KDOK_CREATED_BY) as HOCHGELADEN,
+                       d.KDOK_BESCHREIBUNG as BESCHREIBUNG
+                  from KUND_KUNDEN_DOKUMENTE d
+                  join KUND_DOKUMENTARTEN a on a.DART_ID = d.KDOK_DART_ID
+                 where d.KDOK_KUND_ID = :P11_KUND_ID
+                   and d.KDOK_MAND_ID = :MANDANT_ID   -- nur Dokumente des im Portal gewaehlten Mandanten
+                 order by d.KDOK_CREATED_ON desc
+                ```
+            pageItemsToSubmit: [
+                P11_KUND_ID
+            ]
+        }
+        advanced {
+            regionDisplaySelector: true
+        }
+        layout {
+            sequence: 39
+            parentRegion: @kunde
+            slot: regionBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+            cssClasses: [
+                thg-ohne-titel
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+        messages {
+            whenNoDataFound: Keine Dokumente hinterlegt.
+        }
+
+        column KDOK_ID (
+            type: link
+            heading {
+                heading: Bearbeiten
+                alignment: center
+            }
+            layout {
+                sequence: 10
+                columnAlignment: center
+            }
+            link {
+                target: {
+                    page: 16
+                    items: {
+                        P16_KDOK_ID: #KDOK_ID#
+                        P16_KUND_ID: &P11_KUND_ID.
+                    }
+                    clearCache: 16
+                }
+                linkText: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column DOKUMENTART (
+            type: plainText
+            heading {
+                heading: Dokumentart
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BEZEICHNUNG (
+            type: plainText
+            heading {
+                heading: Bezeichnung
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column DOWNLOAD (
+            type: link
+            heading {
+                heading: Download
+                alignment: center
+            }
+            layout {
+                sequence: 12
+                columnAlignment: center
+            }
+            link {
+                target: {
+                    page: 17
+                    items: {
+                        P17_KDOK_ID: #KDOK_ID#
+                        P17_INLINE: N
+                    }
+                    clearCache: 17
+                }
+                linkText: <span role="img" aria-label="Herunterladen" class="fa fa-download" title="Herunterladen"></span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+        column ANZEIGEN (
+            type: link
+            heading {
+                heading: Anzeigen
+                alignment: center
+            }
+            layout {
+                sequence: 14
+                columnAlignment: center
+            }
+            link {
+                target: {
+                    page: 18
+                    items: {
+                        P18_KDOK_ID: #KDOK_ID#
+                    }
+                    clearCache: 18
+                }
+                linkText: <span role="img" aria-label="Anzeigen" class="fa #ANZEIGEN_ICON#" title="Anzeigen"></span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ANZEIGEN_ICON (
+            type: hidden
+            layout {
+                sequence: 13
+            }
+        )
+
+        column KDOK_DATEINAME (
+            type: plainText
+            heading {
+                heading: Datei
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column KDOK_MIME_TYPE (
+            type: hidden
+            layout {
+                sequence: 45
+            }
+        )
+
+        column GROESSE (
+            type: plainText
+            heading {
+                heading: Größe
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column HOCHGELADEN (
+            type: plainText
+            heading {
+                heading: Hochgeladen
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BESCHREIBUNG (
+            type: plainText
+            heading {
+                heading: Beschreibung
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    button dokument-neu (
+        buttonName: DOKUMENT_NEU
+        label: Dokument hinzufügen
+        layout {
+            sequence: 10
+            region: @dokumente
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconRight
+                t-Button--small
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 16
+                items: {
+                    P16_KUND_ID: &P11_KUND_ID.
+                }
+                clearCache: 16
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+    )
+
+    dynamicAction dokumente-nach-dialog (
+        name: Dokumente nach dem Dialog aktualisieren
+        execution {
+            sequence: 57
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @dokumente
+        }
+
+        action dokumente-aktualisieren (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @dokumente
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction dokumente-nach-hinzufuegen (
+        name: Dokumente nach Hinzufügen aktualisieren
+        execution {
+            sequence: 58
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @dokument-neu
+        }
+
+        action dokumente-aktualisieren-2 (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @dokumente
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    region kommunikation (
+        name: Kommunikation
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select c.SKOM_ID,
+                       k.KART_BEZEICHNUNG as ART,
+                       c.SKOM_WERT as WERT,
+                       c.SKOM_BEZEICHNUNG as BEZEICHNUNG,
+                       case c.SKOM_IST_BEVORZUGT when 'Y' then 'fa-star u-warning-text' end as BEVORZUGT_ICON,
+                       case c.SKOM_IST_BEVORZUGT when 'Y' then 'bevorzugt' end as BEVORZUGT,
+                       t.STYP_BEZEICHNUNG || nvl2(a.ADRE_ORT, ' ' || a.ADRE_ORT, null)
+                       || case when trunc(sysdate) not between nvl(s.KSTO_GUELTIG_VON, trunc(sysdate)) and nvl(s.KSTO_GUELTIG_BIS, trunc(sysdate))
+                               then ' (nicht gültig)' end as ADRESSE
+                  from KUND_STANDORT_KOMMUNIKATION c
+                  join KUND_STANDORTE s on s.KSTO_ID = c.SKOM_KSTO_ID
+                  join KUND_STANDORT_TYPEN t on t.STYP_ID = s.KSTO_STYP_ID
+                  left join ALLG_ADRESSEN a on a.ADRE_ID = s.KSTO_ADRE_ID
+                  join ALLG_KOMMUNIKATIONSARTEN k on k.KART_ID = c.SKOM_KART_ID
+                 where s.KSTO_KUND_ID = :P11_KUND_ID
+                 order by case s.KSTO_IST_HAUPTSITZ when 'Y' then 0 else 1 end, s.KSTO_ID, k.KART_SORTIERUNG,
+                          case c.SKOM_IST_BEVORZUGT when 'Y' then 0 else 1 end, c.SKOM_ID
+                ```
+            pageItemsToSubmit: [
+                P11_KUND_ID
+            ]
+        }
+        advanced {
+            regionDisplaySelector: true
+        }
+        layout {
+            sequence: 15
+            parentRegion: @kunde
+            slot: regionBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+            cssClasses: [
+                thg-ohne-titel
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+        messages {
+            whenNoDataFound: Keine Telefonnummern, E-Mail-Adressen oder Homepage erfasst.
+        }
+
+        column SKOM_ID (
+            type: link
+            heading {
+                heading: Bearbeiten
+                alignment: center
+            }
+            layout {
+                sequence: 10
+                columnAlignment: center
+            }
+            link {
+                target: {
+                    page: 19
+                    items: {
+                        P19_SKOM_ID: #SKOM_ID#
+                        P19_KUND_ID: &P11_KUND_ID.
+                    }
+                    clearCache: 19
+                }
+                linkText: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ART (
+            type: plainText
+            heading {
+                heading: Art
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column WERT (
+            type: plainText
+            heading {
+                heading: Telefon / E-Mail / Homepage
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BEZEICHNUNG (
+            type: plainText
+            heading {
+                heading: Bezeichnung
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BEVORZUGT_ICON (
+            type: hidden
+            layout {
+                sequence: 45
+            }
+        )
+
+        column BEVORZUGT (
+            type: plainText
+            heading {
+                heading: Bevorzugt
+                alignment: center
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #BEVORZUGT_ICON#" title="#BEVORZUGT#" aria-label="#BEVORZUGT#" style="font-size:16px"></span>
+            }
+            layout {
+                columnAlignment: center
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ADRESSE (
+            type: plainText
+            heading {
+                heading: Adresse
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    button kommunikation-neu (
+        buttonName: KOMMUNIKATION_NEU
+        label: Kommunikation hinzufügen
+        layout {
+            sequence: 10
+            region: @kommunikation
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconRight
+                t-Button--small
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 19
+                items: {
+                    P19_KUND_ID: &P11_KUND_ID.
+                }
+                clearCache: 19
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+    )
+
+    dynamicAction kommunikation-nach-dialog (
+        name: Kommunikation nach dem Dialog aktualisieren
+        execution {
+            sequence: 52
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: region
+            region: @kommunikation
+        }
+
+        action kommunikation-aktualisieren (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @kommunikation
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction kommunikation-nach-hinzufuegen (
+        name: Kommunikation nach Hinzufügen aktualisieren
+        execution {
+            sequence: 53
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @kommunikation-neu
+        }
+
+        action kommunikation-aktualisieren-2 (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @kommunikation
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
     )
 
     region audit (
@@ -205,43 +1614,27 @@ page 11 (
     )
 
     pageItem P11_KUND_TYP (
-        type: radioGroup
-        label {
-            label: Typ
-            alignment: left
-        }
+        type: hidden
         layout {
             sequence: 20
             region: @stammdaten
             slot: regionBody
-            alignment: left
-            startNewRow: false
-            columnSpan: 2
-        }
-        appearance {
-            template: @/required-floating
-            templateOptions: #DEFAULT#
-            cssClasses: [
-                thg-horizontal
-            ]
-        }
-        validation {
-            valueRequired: true
         }
         source {
             formRegion: @kunde
             column: KUND_TYP
             dataType: varchar2
         }
-        lov {
-            type: sharedComponent
-            lov: @lov-kunden-typ
-            displayNullValue: false
-            displayExtraValues: false
-        }
         default {
             type: static
             staticValue: FIRMA
+        }
+        comments {
+            comments:
+                ```
+                Derzeit ausgeblendet (Anwender 2026-10-22): alle Kunden sind Firmen. Fuer Privatkunden wieder als
+                Radio Group (LOV_KUNDEN_TYP) anzeigen; die Dynamic Actions fuer Firma/Privat bleiben aktiv.
+                ```
         }
     )
 
@@ -300,11 +1693,45 @@ page 11 (
         appearance {
             template: @/optional-floating
             templateOptions: #DEFAULT#
+            cssClasses: [
+                thg-kundenname
+            ]
         }
         source {
             formRegion: @kunde
             column: KUND_FIRMENNAME
             dataType: varchar2
+        }
+    )
+
+    pageItem P11_KUND_KURZNAME (
+        type: textField
+        label {
+            label: Kurzname
+            alignment: left
+        }
+        layout {
+            sequence: 41
+            region: @stammdaten
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @kunde
+            column: KUND_KURZNAME
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 50
+        }
+        help {
+            helpText: Eindeutiger Kurzname / Suchbegriff des Kunden (optional); wird beim Speichern auf Eindeutigkeit geprüft.
         }
     )
 
@@ -629,6 +2056,37 @@ page 11 (
         }
     )
 
+    pageItem P11_KUNDENBETREUER (
+        type: selectMany
+        label {
+            label: Kundenbetreuer
+            alignment: left
+        }
+        layout {
+            sequence: 38
+            region: @stammdaten
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-mitarbeiter
+        }
+        multipleValues {
+            type: delimitedList
+            separator: :
+        }
+        help {
+            helpText: Interne Mitarbeiter, die den Kunden betreuen (Rolle Kundenbetreuer); einer oder mehrere (KUND_KUNDEN_MITARBEITER, entfernte Betreuer bleiben mit "gültig bis" erhalten).
+        }
+    )
+
     pageItem P11_KUND_DSGVO_MARKETING_AM (
         type: datePicker
         label {
@@ -654,7 +2112,7 @@ page 11 (
         }
     )
 
-    pageItem P11_KUND_CREATED_ON (
+    pageItem P11_ANGELEGT_AM (
         type: displayOnly
         label {
             label: Angelegt am
@@ -671,10 +2129,8 @@ page 11 (
             template: @/optional-floating
             templateOptions: #DEFAULT#
         }
-        source {
-            formRegion: @kunde
-            column: KUND_CREATED_ON
-            dataType: timestamp
+        settings {
+            sendOnPageSubmit: false
         }
     )
 
@@ -703,7 +2159,7 @@ page 11 (
         }
     )
 
-    pageItem P11_KUND_UPDATED_ON (
+    pageItem P11_GEAENDERT_AM (
         type: displayOnly
         label {
             label: Geändert am
@@ -721,14 +2177,12 @@ page 11 (
             template: @/optional-floating
             templateOptions: #DEFAULT#
         }
-        source {
-            formRegion: @kunde
-            column: KUND_UPDATED_ON
-            dataType: timestamp
+        settings {
+            sendOnPageSubmit: false
         }
     )
 
-    pageItem P11_KUND_UPDATED_BY (
+    pageItem P11_GEAENDERT_VON (
         type: displayOnly
         label {
             label: Geändert von
@@ -746,34 +2200,8 @@ page 11 (
             template: @/optional-floating
             templateOptions: #DEFAULT#
         }
-        source {
-            formRegion: @kunde
-            column: KUND_UPDATED_BY
-            dataType: varchar2
-        }
-    )
-
-    button cancel (
-        buttonName: CANCEL
-        label: Abbrechen
-        layout {
-            sequence: 10
-            region: @breadcrumb
-            slot: next
-        }
-        appearance {
-            buttonTemplate: @/text
-            templateOptions: [
-                #DEFAULT#
-                t-Button--noUI
-            ]
-        }
-        behavior {
-            action: redirectThisApp
-            target: {
-                page: 10
-            }
-            warnOnUnsavedChanges: doNotCheck
+        settings {
+            sendOnPageSubmit: false
         }
     )
 
@@ -1034,6 +2462,123 @@ page 11 (
         }
     )
 
+    process kundenbetreuer-laden (
+        name: Kundenbetreuer laden
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- aktuelle Kundenbetreuer (Rolle KB, ohne "gueltig bis")
+                select listagg(z.KMIT_MITA_ID, ':') within group (order by z.KMIT_GUELTIG_VON, z.KMIT_ID)
+                  into :P11_KUNDENBETREUER
+                  from KUND_KUNDEN_MITARBEITER z
+                  join KUND_BETREUUNGSROLLEN r on r.BROL_ID = z.KMIT_BROL_ID and r.BROL_CODE = 'KB'
+                 where z.KMIT_KUND_ID = :P11_KUND_ID
+                   and z.KMIT_GUELTIG_BIS is null;
+                ```
+        }
+        execution {
+            sequence: 31
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+    )
+
+    process letzte-aenderung (
+        name: Letzte Änderung am Kunden und seinen Detaildaten
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Angelegt am in Wiener Zeit (Zeitstempel sind Serverzeit UTC)
+                select to_char(from_tz(cast(KUND_CREATED_ON as timestamp), 'UTC') at time zone 'Europe/Vienna',
+                               'DD.MM.YYYY HH24:MI:SS')
+                  into :P11_ANGELEGT_AM
+                  from KUND_KUNDEN
+                 where KUND_ID = :P11_KUND_ID;
+                -- juengste Aenderung (geaendert oder neu angelegt) am Kunden und an allen Detaildaten;
+                -- Detaildaten, die zusammen mit dem Kunden angelegt wurden, zaehlen nicht als Aenderung
+                for r in (
+                    with k as (select KUND_ID, KUND_CREATED_ON from KUND_KUNDEN where KUND_ID = :P11_KUND_ID),
+                    s as (select x.* from KUND_STANDORTE x join k on x.KSTO_KUND_ID = k.KUND_ID),
+                    p as (select a.* from KUND_ANSPRECHPARTNER a join s on a.ANSP_KSTO_ID = s.KSTO_ID),
+                    alle (AM, VON, NEU) as (
+                        select KUND_UPDATED_ON, KUND_UPDATED_BY, 'N' from KUND_KUNDEN where KUND_ID = :P11_KUND_ID
+                        union all select KSTO_UPDATED_ON, KSTO_UPDATED_BY, 'N' from s
+                        union all select KSTO_CREATED_ON, KSTO_CREATED_BY, 'Y' from s
+                        union all select a.ADRE_UPDATED_ON, a.ADRE_UPDATED_BY, 'N' from ALLG_ADRESSEN a join s on s.KSTO_ADRE_ID = a.ADRE_ID
+                        union all select x.SKOM_UPDATED_ON, x.SKOM_UPDATED_BY, 'N' from KUND_STANDORT_KOMMUNIKATION x join s on x.SKOM_KSTO_ID = s.KSTO_ID
+                        union all select x.SKOM_CREATED_ON, x.SKOM_CREATED_BY, 'Y' from KUND_STANDORT_KOMMUNIKATION x join s on x.SKOM_KSTO_ID = s.KSTO_ID
+                        union all select ANSP_UPDATED_ON, ANSP_UPDATED_BY, 'N' from p
+                        union all select ANSP_CREATED_ON, ANSP_CREATED_BY, 'Y' from p
+                        union all select x.AKOM_UPDATED_ON, x.AKOM_UPDATED_BY, 'N' from KUND_ANSPRECHPARTNER_KOMMUNIKATION x join p on x.AKOM_ANSP_ID = p.ANSP_ID
+                        union all select x.AKOM_CREATED_ON, x.AKOM_CREATED_BY, 'Y' from KUND_ANSPRECHPARTNER_KOMMUNIKATION x join p on x.AKOM_ANSP_ID = p.ANSP_ID
+                        union all select x.KMIT_UPDATED_ON, x.KMIT_UPDATED_BY, 'N' from KUND_KUNDEN_MITARBEITER x join k on x.KMIT_KUND_ID = k.KUND_ID
+                        union all select x.KMIT_CREATED_ON, x.KMIT_CREATED_BY, 'Y' from KUND_KUNDEN_MITARBEITER x join k on x.KMIT_KUND_ID = k.KUND_ID
+                        -- Dokumente nur des angemeldeten Mandanten
+                        union all select x.KDOK_UPDATED_ON, x.KDOK_UPDATED_BY, 'N' from KUND_KUNDEN_DOKUMENTE x join k on x.KDOK_KUND_ID = k.KUND_ID where x.KDOK_MAND_ID = :MANDANT_ID
+                        union all select x.KDOK_CREATED_ON, x.KDOK_CREATED_BY, 'Y' from KUND_KUNDEN_DOKUMENTE x join k on x.KDOK_KUND_ID = k.KUND_ID where x.KDOK_MAND_ID = :MANDANT_ID
+                    )
+                    -- Zeitstempel sind Serverzeit (UTC) - Anzeige in Wiener Zeit
+                    select to_char(from_tz(cast(alle.AM as timestamp), 'UTC') at time zone 'Europe/Vienna',
+                                   'DD.MM.YYYY HH24:MI:SS') as AM, alle.VON
+                      from alle cross join k
+                     where alle.AM is not null
+                       and (alle.NEU = 'N' or alle.AM > k.KUND_CREATED_ON + interval '1' minute)
+                     order by alle.AM desc
+                     fetch first 1 row only)
+                loop
+                    :P11_GEAENDERT_AM  := r.AM;
+                    :P11_GEAENDERT_VON := r.VON;
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 33
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_KUND_ID
+        }
+    )
+
+    process kurzname-pruefen (
+        name: Kurzname auf Eindeutigkeit prüfen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Kurzname eindeutig (ohne Gross-/Kleinschreibung; in der Datenbank zusaetzlich KUND_KURZNAME_UK)
+                declare
+                    l_anz pls_integer;
+                begin
+                    :P11_KUND_KURZNAME := trim(:P11_KUND_KURZNAME);
+                    select count(*)
+                      into l_anz
+                      from KUND_KUNDEN
+                     where upper(KUND_KURZNAME) = upper(:P11_KUND_KURZNAME)
+                       and (:P11_KUND_ID is null or KUND_ID <> :P11_KUND_ID)
+                       and :P11_KUND_KURZNAME is not null;
+                    if l_anz > 0 then
+                        raise_application_error(-20126, 'Der Kurzname „' || :P11_KUND_KURZNAME
+                                                        || '“ ist bereits bei einem anderen Kunden vergeben.');
+                    end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
     process process-form-kunde (
         name: Formular Kunde verarbeiten
         type: formAutoRowProcessing
@@ -1043,6 +2588,59 @@ page 11 (
         }
         successMessage {
             successMessage: Kunde gespeichert.
+        }
+    )
+
+    process kundenbetreuer-speichern (
+        name: Kundenbetreuer speichern
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Mehrfachauswahl mit KUND_KUNDEN_MITARBEITER (Rolle KB) abgleichen, mit Historie:
+                -- entfernte Betreuer erhalten "gueltig bis" heute, neue beginnen heute; genau ein Hauptverantwortlicher
+                declare
+                    l_kb number;
+                begin
+                    select BROL_ID into l_kb from KUND_BETREUUNGSROLLEN where BROL_CODE = 'KB';
+                    update KUND_KUNDEN_MITARBEITER
+                       set KMIT_GUELTIG_BIS = trunc(sysdate), KMIT_IST_HAUPTVERANTW = 'N'
+                     where KMIT_KUND_ID = :P11_KUND_ID and KMIT_BROL_ID = l_kb and KMIT_GUELTIG_BIS is null
+                       and KMIT_MITA_ID not in (select column_value from table(apex_string.split_numbers(:P11_KUNDENBETREUER, ':')));
+                    for m in (select column_value as MITA_ID from table(apex_string.split_numbers(:P11_KUNDENBETREUER, ':'))
+                               where column_value not in (select KMIT_MITA_ID from KUND_KUNDEN_MITARBEITER
+                                                           where KMIT_KUND_ID = :P11_KUND_ID and KMIT_BROL_ID = l_kb
+                                                             and KMIT_GUELTIG_BIS is null))
+                    loop
+                        -- heute beendet und wieder gewaehlt: Zuordnung wieder oeffnen, sonst neu ab heute
+                        update KUND_KUNDEN_MITARBEITER
+                           set KMIT_GUELTIG_BIS = null
+                         where KMIT_KUND_ID = :P11_KUND_ID and KMIT_MITA_ID = m.MITA_ID and KMIT_BROL_ID = l_kb
+                           and KMIT_GUELTIG_VON = trunc(sysdate);
+                        if sql%rowcount = 0 then
+                            insert into KUND_KUNDEN_MITARBEITER (KMIT_KUND_ID, KMIT_MITA_ID, KMIT_BROL_ID, KMIT_IST_HAUPTVERANTW,
+                                                                 KMIT_GUELTIG_VON)
+                            values (:P11_KUND_ID, m.MITA_ID, l_kb, 'N', trunc(sysdate));
+                        end if;
+                    end loop;
+                    -- ohne Hauptverantwortlichen: der am laengsten zugeordnete Betreuer
+                    update KUND_KUNDEN_MITARBEITER
+                       set KMIT_IST_HAUPTVERANTW = 'Y'
+                     where KMIT_ID = (select min(KMIT_ID) keep (dense_rank first order by KMIT_GUELTIG_VON, KMIT_ID)
+                                        from KUND_KUNDEN_MITARBEITER
+                                       where KMIT_KUND_ID = :P11_KUND_ID and KMIT_BROL_ID = l_kb and KMIT_GUELTIG_BIS is null)
+                       and not exists (select 1 from KUND_KUNDEN_MITARBEITER
+                                        where KMIT_KUND_ID = :P11_KUND_ID and KMIT_BROL_ID = l_kb and KMIT_GUELTIG_BIS is null
+                                          and KMIT_IST_HAUPTVERANTW = 'Y');
+                end;
+                ```
+        }
+        execution {
+            sequence: 16
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
         }
     )
 
