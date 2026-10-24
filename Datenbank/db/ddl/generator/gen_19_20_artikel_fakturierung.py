@@ -68,9 +68,6 @@ ARTIKEL = [
     ('ARTI_ERLOESKONTO', 'varchar2(20 char)', 'Y', None, 'Erloeskonto fuer die Buchhaltung'),
     ('ARTI_AUFGENOMMEN_AM', 'date', 'N', "trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))", 'Datum der Aufnahme in den Artikelstamm'),
     ('ARTI_KOMMENTAR', 'clob', 'Y', None, 'Interner Kommentar (nicht auf Belegen)'),
-    ('ARTI_BILD', 'blob', 'Y', None, 'Artikelbild'),
-    ('ARTI_BILD_MIMETYPE', 'varchar2(100 char)', 'Y', None, 'MIME-Typ des Artikelbildes'),
-    ('ARTI_BILD_DATEINAME', 'varchar2(255 char)', 'Y', None, 'Dateiname des Artikelbildes'),
     flag('ARTI', 'IST_AKTIV', 'Y', 'Y = in Belegen auswaehlbar (Artikel nie loeschen)'),
     ('ARTI_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill Product.ID), fuer die Datenuebernahme'),
   ], [('ARTI_NUMMER_UK', 'U', 'ARTI_NUMMER'), ('ARTI_ALT_ID_UK', 'U', 'ARTI_ALT_ID'),
@@ -81,35 +78,6 @@ ARTIKEL = [
       ('ARTI_MWST_FK', 'R', 'ARTI_MWST_ID references ALLG_MWST_SAETZE (MWST_ID)')],
   [('ARTI_AGRP_I', 'ARTI_AGRP_ID'), ('ARTI_EINH_I', 'ARTI_EINH_ID'), ('ARTI_MWST_I', 'ARTI_MWST_ID'),
    ('ARTI_NAME_I', 'upper(ARTI_NAME)')], ''),
-
- ('ARTI_ZUSATZFELDER', 'ZUSF', 'Definition der Zusatzfelder am Artikel (Kingbill: Feldnamen aendern)', [
-    PK('ZUSF'),
-    ('ZUSF_NUMMER', 'number(2)', 'N', None, 'Feldnummer 1–10 (Reihenfolge in der Maske)'),
-    ('ZUSF_BEZEICHNUNG', 'varchar2(100 char)', 'N', None, 'Feldname in der Maske'),
-    flag('ZUSF', 'IST_AKTIV', 'Y', 'Y = in der Maske angezeigt'),
-  ], [('ZUSF_NUMMER_UK', 'U', 'ZUSF_NUMMER'), flag_ck('ZUSF', 'IST_AKTIV')], [], ''),
-
- ('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW', 'Werte der Zusatzfelder je Artikel', [
-    PK('AZUW'),
-    ('AZUW_ARTI_ID', 'number', 'N', None, 'FK: Artikel'),
-    ('AZUW_ZUSF_ID', 'number', 'N', None, 'FK: Zusatzfeld'),
-    ('AZUW_WERT', 'varchar2(4000 char)', 'Y', None, 'Wert'),
-  ], [('AZUW_UK', 'U', 'AZUW_ARTI_ID, AZUW_ZUSF_ID'),
-      ('AZUW_ARTI_FK', 'R', 'AZUW_ARTI_ID references ARTI_ARTIKEL (ARTI_ID)'),
-      ('AZUW_ZUSF_FK', 'R', 'AZUW_ZUSF_ID references ARTI_ZUSATZFELDER (ZUSF_ID)')],
-  [('AZUW_ZUSF_I', 'AZUW_ZUSF_ID')], ''),
-
- ('ARTI_ARTIKEL_DATEIEN', 'ADAT', 'Dateien (Anhaenge) zum Artikel', [
-    PK('ADAT'),
-    ('ADAT_ARTI_ID', 'number', 'N', None, 'FK: Artikel'),
-    ('ADAT_DATEINAME', 'varchar2(255 char)', 'N', None, 'Dateiname'),
-    ('ADAT_MIMETYPE', 'varchar2(100 char)', 'Y', None, 'MIME-Typ'),
-    ('ADAT_INHALT', 'blob', 'N', None, 'Dateiinhalt'),
-    ('ADAT_GROESSE', 'number', 'Y', None, 'Groesse in Bytes'),
-    ('ADAT_BEMERKUNG', 'varchar2(500 char)', 'Y', None, 'Bemerkung'),
-  ], [('ADAT_ARTI_FK', 'R', 'ADAT_ARTI_ID references ARTI_ARTIKEL (ARTI_ID)')],
-  [('ADAT_ARTI_I', 'ADAT_ARTI_ID')],
-  '\n  :new.ADAT_GROESSE := dbms_lob.getlength(:new.ADAT_INHALT);'),
 ]
 
 grund_artikel = []
@@ -120,23 +88,15 @@ for i, (code, bez) in enumerate((('Stk.', 'Stück'), ('Std.', 'Stunde'), ('Pausc
                                  ('m²', 'Quadratmeter'), ('lfm', 'Laufmeter')), start=1):
     grund_artikel.append(insert_wenn_fehlt('ALLG_EINHEITEN', ['EINH_CODE', 'EINH_BEZEICHNUNG', 'EINH_SORTIERUNG'],
                                            [f"'{code}'", f"'{bez}'", str(i * 10)], 'EINH_CODE'))
-for nr in range(1, 11):
-    grund_artikel.append(insert_wenn_fehlt('ARTI_ZUSATZFELDER', ['ZUSF_NUMMER', 'ZUSF_BEZEICHNUNG'],
-                                           [str(nr), f"'Zusatzfeld {nr}'"], 'ZUSF_NUMMER'))
-
-# Portal-Kachel fuer die App THG-ARTIKEL (20040)
-grund_artikel.append("""insert into ADMIN_APPLIKATIONEN (APPL_APEX_APP_ID, APPL_APEX_ALIAS, APPL_BEZEICHNUNG, APPL_BESCHREIBUNG, APPL_ZIELSEITE, APPL_ICON, APPL_SORTIERUNG)
-  select 20040, 'THG-ARTIKEL', 'Artikelstamm', 'Artikel (Waren und Dienstleistungen), Artikelgruppen, Zusatzfelder', 'HOME', 'fa-cube', 30
-    from dual
-   where not exists (select 1 from ADMIN_APPLIKATIONEN where APPL_APEX_APP_ID = 20040);""")
+# (Zusatzfelder, Artikeldateien, Artikelbild und die eigene App THG-ARTIKEL entfallen seit 2026-10-24, siehe Skript 29)
 
 (DDL / '19_artikelstamm.sql').write_text(render('''
 -- =====================================================================
 -- ThGERP (Gruppen ARTI, ALLG)
--- 19 – Artikelstamm (Modul THG-ARTIKEL), abgeleitet aus der Kingbill-Artikelmaske:
---      neu: ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN,
---           ARTI_ARTIKELGRUPPEN, ARTI_ARTIKEL, ARTI_ZUSATZFELDER, ARTI_ARTIKEL_ZUSATZWERTE, ARTI_ARTIKEL_DATEIEN
---      Grunddaten: MwSt.-Saetze 0/10/20 % (Standard 20), Einheiten, Zusatzfelder 1–10, Portal-Kachel THG-ARTIKEL
+-- 19 – Artikelstamm (in der App THG-FINANZ), abgeleitet aus der Kingbill-Artikelmaske:
+--      neu: ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN, ARTI_ARTIKELGRUPPEN, ARTI_ARTIKEL
+--      Grunddaten: MwSt.-Saetze 0/10/20 % (Standard 20), Einheiten
+--      (Zusatzfelder, Artikeldateien und Artikelbild 2026-10-24 entfernt – bestehende Schemas: Skript 29)
 -- GENERIERT mit generator/gen_19_20_artikel_fakturierung.py – nicht von Hand bearbeiten
 -- Erzeugt: 2026-09-26
 -- Wiederholbar (DDL_UTIL; Grunddaten nur fehlende Zeilen).

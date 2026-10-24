@@ -36,5 +36,6 @@ whenever sqlerror exit failure rollback
 @@26_haupt_unterpositionen.sql
 @@27_kunden_dokumente.sql
 @@28_artikel_in_finanz.sql
+@@29_artikel_ohne_zusatzfelder_dateien_bild.sql
 
 prompt Installation abgeschlossen.

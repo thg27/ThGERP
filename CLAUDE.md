@@ -6,10 +6,11 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
 ## Status / offene Entscheidungen
 - Workspace `THGERP`, Schema `WKSP_THGERP`, SQLcl-Verbindung `wksp_thgerp@pdbthg` (Host dbthgprod, für ERP-Entwicklung freigegeben).
 - App-IDs ab 20000: 20000 THG-PORTAL, 20010 THG-ALLGEMEIN, 20020 THG-KUNDEN, 20030 THG-ADMIN, 20050 THG-FINANZ (Fakturierung, Tabellen FAKT_*, mit Artikelstamm ARTI_*).
-  Die App 20040 THG-ARTIKEL ist seit 2026-10-24 aufgelöst (nur Rechnungen verwenden Artikel): Artikel in THG-FINANZ Seiten 20/21/22,
-  Wertelisten Artikelgruppen 120/121 und Zusatzfelder 130/131 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
+  Die App 20040 THG-ARTIKEL ist seit 2026-10-24 aufgelöst (nur Rechnungen verwenden Artikel): Artikel in THG-FINANZ Seiten 20/21,
+  Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
+  Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–28 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–29 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -40,7 +41,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   offene, überfällige, Entwürfe; Liste offene Rechnungen; Umsatz je Monat mit Vorjahr, Top 10 Kunden – Klick öffnet die gefilterte Liste), Seite 10 Rechnungsliste mit
   Facettensuche (Status, Überfällig, Jahr, Monat, Kunde; Nummer umrahmt als Link) – beide aus `Apex/generator/finanz_dashboard_liste.py`;
   Seite 11 Registerkarten direkt unter der Titelleiste (`thg-rds`, „Alle“ als Icon, Regionen ohne Kopf), Artikel Seite 20 Liste mit Facetten (Aktiv, Gruppe, Einheit, MwSt.),
-  Seite 21 Registerkarten Stammdaten/Kommentar/Zusatzfelder/Dokumente/Dateien und Änderungsinformationen. Regionstitel in Mandantenfarbe (`thg.js`: 20020, 20050).
+  Seite 21 Registerkarten Stammdaten/Kommentar und Änderungsinformationen. Rechnungsliste zeigt nur Netto (Brutto und Hinweis ausgeblendet). Regionstitel in Mandantenfarbe (`thg.js`: 20020, 20050).
 - Rechnungsdruck: Button „Rechnung drucken“ auf Seite 11 (ab Status OFFEN) → Seite 13 (PDF-Anzeige, Drucken/Herunterladen), Paket `FAKT_RECHNUNG_PDF` (DDL 24),
   Layout wie die Kingbill-Rechnungen in `Vorlagen/Ausgangsrechnungen` (Hauptposition ohne Unterpositionen wie eine Kingbill-Position mit Einzelpreis/Menge/Einheit, „Art.-Nr.“).
 - Rechnungen EDV 2026 - 1 bis 13 aus Kingbill übernommen (2026-10-24, `Vorlagen/Access Datenbank Migration/access_rechnungen.py`, mit Zahlungen, alle bezahlt;

@@ -959,20 +959,9 @@ def rechnungsliste():
         )
 
         column RECH_SUMME_BRUTTO (
-            type: plainText
-            heading {
-                heading: Brutto
-                alignment: end
-            }
-            appearance {
-                formatMask: FML999G999G990D00
-            }
+            type: hidden
             layout {
                 sequence: 80
-                columnAlignment: end
-            }
-            sorting {
-                sortable: false
             }
         )
 
@@ -1018,18 +1007,9 @@ def rechnungsliste():
         )
 
         column UEBERFAELLIG_TEXT (
-            type: plainText
-            heading {
-                heading: Hinweis
-            }
-            columnFormatting {
-                htmlExpression: <span class="thg-badge thg-badge--UEBERFAELLIG">#UEBERFAELLIG_TEXT#</span>
-            }
+            type: hidden
             layout {
                 sequence: 110
-            }
-            sorting {
-                sortable: false
             }
         )
 

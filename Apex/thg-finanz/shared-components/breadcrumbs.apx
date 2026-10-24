@@ -125,20 +125,4 @@ breadcrumb breadcrumb (
             }
         }
     )
-
-    entry werteliste-130 (
-        name: Zusatzfelder
-        pageNumber: 130
-        execution {
-            sequence: 130
-        }
-        appearance {
-            parentEntry: @wertelisten
-        }
-        link {
-            target: {
-                page: 130
-            }
-        }
-    )
 )

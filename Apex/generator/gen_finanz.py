@@ -4,8 +4,8 @@
 Seiten: 1 Dashboard, 10 Rechnungen (Liste mit Facettensuche; beide aus finanz_dashboard_liste.py), 11 Rechnung (Allgemein, Kunde mit Anschrift und Lieferadresse,
 Vortext, Positionen als Baum aus Haupt- und Unterpositionen mit Detailfeldern und Summen je Steuersatz,
 Schlusstext, Zahlungen),
-12/13 Rechnung als PDF, 14 Unterposition (Dialog), 20 Artikel, 21 Artikel bearbeiten, 22 Datei (Dialog),
-100 Wertelisten, 110/111 Nummernkreise, 120/121 Artikelgruppen, 130/131 Zusatzfelder.
+12/13 Rechnung als PDF, 14 Unterposition (Dialog), 20 Artikel, 21 Artikel bearbeiten,
+100 Wertelisten, 110/111 Nummernkreise, 120/121 Artikelgruppen.
 Der Artikelstamm (vorher eigene App THG-ARTIKEL 20040) gehoert seit 2026-10-24 zur Finanz-App, da nur Rechnungen
 Artikel verwenden; die Artikelseiten erzeugt gen_artikel.py (umnummeriert mit ga.in_finanz).
 Logik in der Datenbank: Package FAKT_RECHNUNG (21_finanz.sql).
@@ -2803,7 +2803,6 @@ def listen(lists_apx):
             pages: [
                 20
                 21
-                22
             ]
         }
     )
@@ -2829,8 +2828,6 @@ def listen(lists_apx):
                 111
                 120
                 121
-                130
-                131
             ]
         }
     )""" + s[j:]
@@ -3028,7 +3025,6 @@ if __name__ == "__main__":
     # Artikelstamm (Seiten aus gen_artikel.py, umnummeriert 10/11/12 -> 20/21/22)
     (FIN / "pages" / "p00020-artikel.apx").write_text(ga.in_finanz(ga.seite_10()), encoding="utf-8")
     (FIN / "pages" / "p00021-artikel-bearbeiten.apx").write_text(ga.in_finanz(ga.seite_11()), encoding="utf-8")
-    (FIN / "pages" / "p00022-datei.apx").write_text(ga.in_finanz(ga.seite_12()), encoding="utf-8")
     (FIN / "pages" / "p00100-wertelisten.apx").write_text(
         wl.uebersicht("wertelisten-finanz", "Wertelisten Finanz"), encoding="utf-8")
     ga.wl_seiten(FIN, WL_FINANZ + ga.WL_ARTIKEL)

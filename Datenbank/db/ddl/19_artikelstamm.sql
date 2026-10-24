@@ -1,9 +1,9 @@
 -- =====================================================================
 -- ThGERP (Gruppen ARTI, ALLG)
--- 19 – Artikelstamm (Modul THG-ARTIKEL), abgeleitet aus der Kingbill-Artikelmaske:
---      neu: ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN,
---           ARTI_ARTIKELGRUPPEN, ARTI_ARTIKEL, ARTI_ZUSATZFELDER, ARTI_ARTIKEL_ZUSATZWERTE, ARTI_ARTIKEL_DATEIEN
---      Grunddaten: MwSt.-Saetze 0/10/20 % (Standard 20), Einheiten, Zusatzfelder 1–10, Portal-Kachel THG-ARTIKEL
+-- 19 – Artikelstamm (in der App THG-FINANZ), abgeleitet aus der Kingbill-Artikelmaske:
+--      neu: ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN, ARTI_ARTIKELGRUPPEN, ARTI_ARTIKEL
+--      Grunddaten: MwSt.-Saetze 0/10/20 % (Standard 20), Einheiten
+--      (Zusatzfelder, Artikeldateien und Artikelbild 2026-10-24 entfernt – bestehende Schemas: Skript 29)
 -- GENERIERT mit generator/gen_19_20_artikel_fakturierung.py – nicht von Hand bearbeiten
 -- Erzeugt: 2026-09-26
 -- Wiederholbar (DDL_UTIL; Grunddaten nur fehlende Zeilen).
@@ -160,9 +160,6 @@ begin
   ARTI_ERLOESKONTO varchar2(20 char),
   ARTI_AUFGENOMMEN_AM date default trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) not null,
   ARTI_KOMMENTAR clob,
-  ARTI_BILD blob,
-  ARTI_BILD_MIMETYPE varchar2(100 char),
-  ARTI_BILD_DATEINAME varchar2(255 char),
   ARTI_IST_AKTIV varchar2(1 char) default 'Y' not null,
   ARTI_ALT_ID number,
   ARTI_CREATED_ON timestamp not null,
@@ -186,9 +183,6 @@ begin
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_ERLOESKONTO', 'varchar2(20 char)', 'Y');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_AUFGENOMMEN_AM', 'date', 'N', q'~trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))~');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_KOMMENTAR', 'clob', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_BILD', 'blob', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_BILD_MIMETYPE', 'varchar2(100 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_BILD_DATEINAME', 'varchar2(255 char)', 'Y');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_IST_AKTIV', 'varchar2(1 char)', 'N', q'~'Y'~');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_ALT_ID', 'number', 'Y');
     DDL_UTIL.spalte('ARTI_ARTIKEL', 'ARTI_CREATED_ON', 'timestamp', 'N');
@@ -205,96 +199,6 @@ begin
 end;
 /
 
--- ARTI_ZUSATZFELDER (ZUSF): Definition der Zusatzfelder am Artikel (Kingbill: Feldnamen aendern)
-begin
-    DDL_UTIL.tabelle('ARTI_ZUSATZFELDER', q'~create table ARTI_ZUSATZFELDER (
-  ZUSF_ID number not null,
-  ZUSF_NUMMER number(2) not null,
-  ZUSF_BEZEICHNUNG varchar2(100 char) not null,
-  ZUSF_IST_AKTIV varchar2(1 char) default 'Y' not null,
-  ZUSF_CREATED_ON timestamp not null,
-  ZUSF_CREATED_BY varchar2(255 char) not null,
-  ZUSF_UPDATED_ON timestamp,
-  ZUSF_UPDATED_BY varchar2(255 char),
-  ZUSF_ROW_VERSION number not null,
-  constraint ZUSF_PK primary key (ZUSF_ID)
-)~');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_ID', 'number', 'N');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_NUMMER', 'number(2)', 'N');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_BEZEICHNUNG', 'varchar2(100 char)', 'N');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_IST_AKTIV', 'varchar2(1 char)', 'N', q'~'Y'~');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_CREATED_ON', 'timestamp', 'N');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_CREATED_BY', 'varchar2(255 char)', 'N');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_UPDATED_ON', 'timestamp', 'Y');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_UPDATED_BY', 'varchar2(255 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ZUSATZFELDER', 'ZUSF_ROW_VERSION', 'number', 'N');
-    DDL_UTIL.constraint_('ARTI_ZUSATZFELDER', 'ZUSF_PK', 'P', 'ZUSF_ID');
-    DDL_UTIL.constraint_('ARTI_ZUSATZFELDER', 'ZUSF_NUMMER_UK', 'U', q'~ZUSF_NUMMER~');
-    DDL_UTIL.constraint_('ARTI_ZUSATZFELDER', 'ZUSF_IST_AKTIV_CK', 'C', q'~ZUSF_IST_AKTIV in ('Y', 'N')~');
-end;
-/
-
--- ARTI_ARTIKEL_ZUSATZWERTE (AZUW): Werte der Zusatzfelder je Artikel
-begin
-    DDL_UTIL.tabelle('ARTI_ARTIKEL_ZUSATZWERTE', q'~create table ARTI_ARTIKEL_ZUSATZWERTE (
-  AZUW_ID number not null,
-  AZUW_ARTI_ID number not null,
-  AZUW_ZUSF_ID number not null,
-  AZUW_WERT varchar2(4000 char),
-  AZUW_CREATED_ON timestamp not null,
-  AZUW_CREATED_BY varchar2(255 char) not null,
-  AZUW_UPDATED_ON timestamp,
-  AZUW_UPDATED_BY varchar2(255 char),
-  AZUW_ROW_VERSION number not null,
-  constraint AZUW_PK primary key (AZUW_ID)
-)~');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_ID', 'number', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_ARTI_ID', 'number', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_ZUSF_ID', 'number', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_WERT', 'varchar2(4000 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_CREATED_ON', 'timestamp', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_CREATED_BY', 'varchar2(255 char)', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_UPDATED_ON', 'timestamp', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_UPDATED_BY', 'varchar2(255 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_ROW_VERSION', 'number', 'N');
-    DDL_UTIL.constraint_('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_PK', 'P', 'AZUW_ID');
-    DDL_UTIL.constraint_('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_UK', 'U', q'~AZUW_ARTI_ID, AZUW_ZUSF_ID~');
-end;
-/
-
--- ARTI_ARTIKEL_DATEIEN (ADAT): Dateien (Anhaenge) zum Artikel
-begin
-    DDL_UTIL.tabelle('ARTI_ARTIKEL_DATEIEN', q'~create table ARTI_ARTIKEL_DATEIEN (
-  ADAT_ID number not null,
-  ADAT_ARTI_ID number not null,
-  ADAT_DATEINAME varchar2(255 char) not null,
-  ADAT_MIMETYPE varchar2(100 char),
-  ADAT_INHALT blob not null,
-  ADAT_GROESSE number,
-  ADAT_BEMERKUNG varchar2(500 char),
-  ADAT_CREATED_ON timestamp not null,
-  ADAT_CREATED_BY varchar2(255 char) not null,
-  ADAT_UPDATED_ON timestamp,
-  ADAT_UPDATED_BY varchar2(255 char),
-  ADAT_ROW_VERSION number not null,
-  constraint ADAT_PK primary key (ADAT_ID)
-)~');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_ID', 'number', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_ARTI_ID', 'number', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_DATEINAME', 'varchar2(255 char)', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_MIMETYPE', 'varchar2(100 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_INHALT', 'blob', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_GROESSE', 'number', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_BEMERKUNG', 'varchar2(500 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_CREATED_ON', 'timestamp', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_CREATED_BY', 'varchar2(255 char)', 'N');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_UPDATED_ON', 'timestamp', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_UPDATED_BY', 'varchar2(255 char)', 'Y');
-    DDL_UTIL.spalte('ARTI_ARTIKEL_DATEIEN', 'ADAT_ROW_VERSION', 'number', 'N');
-    DDL_UTIL.constraint_('ARTI_ARTIKEL_DATEIEN', 'ADAT_PK', 'P', 'ADAT_ID');
-end;
-/
-
 -- Fremdschluessel, FK-Indizes und fachliche Indizes
 begin
     DDL_UTIL.index_('ALLG_MWST_SAETZE', 'MWST_STANDARD_UI', q'~case when MWST_IST_STANDARD = 'Y' then 'Y' end~', true);
@@ -306,11 +210,6 @@ begin
     DDL_UTIL.index_('ARTI_ARTIKEL', 'ARTI_EINH_I', q'~ARTI_EINH_ID~');
     DDL_UTIL.index_('ARTI_ARTIKEL', 'ARTI_MWST_I', q'~ARTI_MWST_ID~');
     DDL_UTIL.index_('ARTI_ARTIKEL', 'ARTI_NAME_I', q'~upper(ARTI_NAME)~');
-    DDL_UTIL.constraint_('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_ARTI_FK', 'R', 'AZUW_ARTI_ID references ARTI_ARTIKEL (ARTI_ID)');
-    DDL_UTIL.constraint_('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_ZUSF_FK', 'R', 'AZUW_ZUSF_ID references ARTI_ZUSATZFELDER (ZUSF_ID)');
-    DDL_UTIL.index_('ARTI_ARTIKEL_ZUSATZWERTE', 'AZUW_ZUSF_I', q'~AZUW_ZUSF_ID~');
-    DDL_UTIL.constraint_('ARTI_ARTIKEL_DATEIEN', 'ADAT_ARTI_FK', 'R', 'ADAT_ARTI_ID references ARTI_ARTIKEL (ARTI_ID)');
-    DDL_UTIL.index_('ARTI_ARTIKEL_DATEIEN', 'ADAT_ARTI_I', q'~ADAT_ARTI_ID~');
 end;
 /
 
@@ -449,88 +348,6 @@ begin
 end ARTI_BIU;
 /
 
-begin
-    DDL_UTIL.trigger_pruefen('ZUSF_BIU', 'ARTI_ZUSATZFELDER');
-end;
-/
-
-create or replace trigger ZUSF_BIU
-  before insert or update on ARTI_ZUSATZFELDER
-  for each row
-begin
-  if inserting then
-    :new.ZUSF_ID := coalesce(:new.ZUSF_ID, to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'));
-    :new.ZUSF_CREATED_ON  := systimestamp;
-    :new.ZUSF_CREATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
-    :new.ZUSF_UPDATED_ON  := null;
-    :new.ZUSF_UPDATED_BY  := null;
-    :new.ZUSF_ROW_VERSION := 1;
-  elsif updating then
-    :new.ZUSF_ID          := :old.ZUSF_ID;  -- Primaerschluessel ist unveraenderlich
-    :new.ZUSF_CREATED_ON  := :old.ZUSF_CREATED_ON;
-    :new.ZUSF_CREATED_BY  := :old.ZUSF_CREATED_BY;
-    :new.ZUSF_UPDATED_ON  := systimestamp;
-    :new.ZUSF_UPDATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
-    :new.ZUSF_ROW_VERSION := nvl(:old.ZUSF_ROW_VERSION, 0) + 1;
-  end if;
-end ZUSF_BIU;
-/
-
-begin
-    DDL_UTIL.trigger_pruefen('AZUW_BIU', 'ARTI_ARTIKEL_ZUSATZWERTE');
-end;
-/
-
-create or replace trigger AZUW_BIU
-  before insert or update on ARTI_ARTIKEL_ZUSATZWERTE
-  for each row
-begin
-  if inserting then
-    :new.AZUW_ID := coalesce(:new.AZUW_ID, to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'));
-    :new.AZUW_CREATED_ON  := systimestamp;
-    :new.AZUW_CREATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
-    :new.AZUW_UPDATED_ON  := null;
-    :new.AZUW_UPDATED_BY  := null;
-    :new.AZUW_ROW_VERSION := 1;
-  elsif updating then
-    :new.AZUW_ID          := :old.AZUW_ID;  -- Primaerschluessel ist unveraenderlich
-    :new.AZUW_CREATED_ON  := :old.AZUW_CREATED_ON;
-    :new.AZUW_CREATED_BY  := :old.AZUW_CREATED_BY;
-    :new.AZUW_UPDATED_ON  := systimestamp;
-    :new.AZUW_UPDATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
-    :new.AZUW_ROW_VERSION := nvl(:old.AZUW_ROW_VERSION, 0) + 1;
-  end if;
-end AZUW_BIU;
-/
-
-begin
-    DDL_UTIL.trigger_pruefen('ADAT_BIU', 'ARTI_ARTIKEL_DATEIEN');
-end;
-/
-
-create or replace trigger ADAT_BIU
-  before insert or update on ARTI_ARTIKEL_DATEIEN
-  for each row
-begin
-  if inserting then
-    :new.ADAT_ID := coalesce(:new.ADAT_ID, to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'));
-    :new.ADAT_CREATED_ON  := systimestamp;
-    :new.ADAT_CREATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
-    :new.ADAT_UPDATED_ON  := null;
-    :new.ADAT_UPDATED_BY  := null;
-    :new.ADAT_ROW_VERSION := 1;
-  elsif updating then
-    :new.ADAT_ID          := :old.ADAT_ID;  -- Primaerschluessel ist unveraenderlich
-    :new.ADAT_CREATED_ON  := :old.ADAT_CREATED_ON;
-    :new.ADAT_CREATED_BY  := :old.ADAT_CREATED_BY;
-    :new.ADAT_UPDATED_ON  := systimestamp;
-    :new.ADAT_UPDATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
-    :new.ADAT_ROW_VERSION := nvl(:old.ADAT_ROW_VERSION, 0) + 1;
-  end if;
-  :new.ADAT_GROESSE := dbms_lob.getlength(:new.ADAT_INHALT);
-end ADAT_BIU;
-/
-
 comment on table ALLG_EINHEITEN is 'Mengeneinheiten (Stk., Std., Pauschale …) fuer Artikel und Belegpositionen [Alias EINH]';
 comment on column ALLG_EINHEITEN.EINH_ID is 'Primaerschluessel (SYS_GUID)';
 comment on column ALLG_EINHEITEN.EINH_CODE is 'Kuerzel, wie auf dem Beleg angedruckt, z.B. Stk., Std.';
@@ -596,9 +413,6 @@ comment on column ARTI_ARTIKEL.ARTI_EAN is 'Barcode EAN/GTIN';
 comment on column ARTI_ARTIKEL.ARTI_ERLOESKONTO is 'Erloeskonto fuer die Buchhaltung';
 comment on column ARTI_ARTIKEL.ARTI_AUFGENOMMEN_AM is 'Datum der Aufnahme in den Artikelstamm';
 comment on column ARTI_ARTIKEL.ARTI_KOMMENTAR is 'Interner Kommentar (nicht auf Belegen)';
-comment on column ARTI_ARTIKEL.ARTI_BILD is 'Artikelbild';
-comment on column ARTI_ARTIKEL.ARTI_BILD_MIMETYPE is 'MIME-Typ des Artikelbildes';
-comment on column ARTI_ARTIKEL.ARTI_BILD_DATEINAME is 'Dateiname des Artikelbildes';
 comment on column ARTI_ARTIKEL.ARTI_IST_AKTIV is 'Y = in Belegen auswaehlbar (Artikel nie loeschen)';
 comment on column ARTI_ARTIKEL.ARTI_ALT_ID is 'ID im Altsystem (Kingbill Product.ID), fuer die Datenuebernahme';
 comment on column ARTI_ARTIKEL.ARTI_CREATED_ON is 'Audit: angelegt am';
@@ -606,42 +420,6 @@ comment on column ARTI_ARTIKEL.ARTI_CREATED_BY is 'Audit: angelegt von';
 comment on column ARTI_ARTIKEL.ARTI_UPDATED_ON is 'Audit: zuletzt geaendert am';
 comment on column ARTI_ARTIKEL.ARTI_UPDATED_BY is 'Audit: zuletzt geaendert von';
 comment on column ARTI_ARTIKEL.ARTI_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
-
-comment on table ARTI_ZUSATZFELDER is 'Definition der Zusatzfelder am Artikel (Kingbill: Feldnamen aendern) [Alias ZUSF]';
-comment on column ARTI_ZUSATZFELDER.ZUSF_ID is 'Primaerschluessel (SYS_GUID)';
-comment on column ARTI_ZUSATZFELDER.ZUSF_NUMMER is 'Feldnummer 1–10 (Reihenfolge in der Maske)';
-comment on column ARTI_ZUSATZFELDER.ZUSF_BEZEICHNUNG is 'Feldname in der Maske';
-comment on column ARTI_ZUSATZFELDER.ZUSF_IST_AKTIV is 'Y = in der Maske angezeigt';
-comment on column ARTI_ZUSATZFELDER.ZUSF_CREATED_ON is 'Audit: angelegt am';
-comment on column ARTI_ZUSATZFELDER.ZUSF_CREATED_BY is 'Audit: angelegt von';
-comment on column ARTI_ZUSATZFELDER.ZUSF_UPDATED_ON is 'Audit: zuletzt geaendert am';
-comment on column ARTI_ZUSATZFELDER.ZUSF_UPDATED_BY is 'Audit: zuletzt geaendert von';
-comment on column ARTI_ZUSATZFELDER.ZUSF_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
-
-comment on table ARTI_ARTIKEL_ZUSATZWERTE is 'Werte der Zusatzfelder je Artikel [Alias AZUW]';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_ID is 'Primaerschluessel (SYS_GUID)';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_ARTI_ID is 'FK: Artikel';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_ZUSF_ID is 'FK: Zusatzfeld';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_WERT is 'Wert';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_CREATED_ON is 'Audit: angelegt am';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_CREATED_BY is 'Audit: angelegt von';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_UPDATED_ON is 'Audit: zuletzt geaendert am';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_UPDATED_BY is 'Audit: zuletzt geaendert von';
-comment on column ARTI_ARTIKEL_ZUSATZWERTE.AZUW_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
-
-comment on table ARTI_ARTIKEL_DATEIEN is 'Dateien (Anhaenge) zum Artikel [Alias ADAT]';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_ID is 'Primaerschluessel (SYS_GUID)';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_ARTI_ID is 'FK: Artikel';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_DATEINAME is 'Dateiname';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_MIMETYPE is 'MIME-Typ';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_INHALT is 'Dateiinhalt';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_GROESSE is 'Groesse in Bytes';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_BEMERKUNG is 'Bemerkung';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_CREATED_ON is 'Audit: angelegt am';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_CREATED_BY is 'Audit: angelegt von';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_UPDATED_ON is 'Audit: zuletzt geaendert am';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_UPDATED_BY is 'Audit: zuletzt geaendert von';
-comment on column ARTI_ARTIKEL_DATEIEN.ADAT_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
 
 -- Grunddaten: nur fehlende Zeilen
 insert into ALLG_MWST_SAETZE (MWST_PROZENT, MWST_BEZEICHNUNG, MWST_IST_STANDARD, MWST_SORTIERUNG)
@@ -671,40 +449,6 @@ insert into ALLG_EINHEITEN (EINH_CODE, EINH_BEZEICHNUNG, EINH_SORTIERUNG)
 insert into ALLG_EINHEITEN (EINH_CODE, EINH_BEZEICHNUNG, EINH_SORTIERUNG)
   select 'lfm', 'Laufmeter', 60 from dual
    where not exists (select 1 from ALLG_EINHEITEN where EINH_CODE = 'lfm');
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 1, 'Zusatzfeld 1' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 1);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 2, 'Zusatzfeld 2' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 2);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 3, 'Zusatzfeld 3' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 3);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 4, 'Zusatzfeld 4' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 4);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 5, 'Zusatzfeld 5' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 5);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 6, 'Zusatzfeld 6' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 6);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 7, 'Zusatzfeld 7' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 7);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 8, 'Zusatzfeld 8' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 8);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 9, 'Zusatzfeld 9' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 9);
-insert into ARTI_ZUSATZFELDER (ZUSF_NUMMER, ZUSF_BEZEICHNUNG)
-  select 10, 'Zusatzfeld 10' from dual
-   where not exists (select 1 from ARTI_ZUSATZFELDER where ZUSF_NUMMER = 10);
-insert into ADMIN_APPLIKATIONEN (APPL_APEX_APP_ID, APPL_APEX_ALIAS, APPL_BEZEICHNUNG, APPL_BESCHREIBUNG, APPL_ZIELSEITE, APPL_ICON, APPL_SORTIERUNG)
-  select 20040, 'THG-ARTIKEL', 'Artikelstamm', 'Artikel (Waren und Dienstleistungen), Artikelgruppen, Zusatzfelder', 'HOME', 'fa-cube', 30
-    from dual
-   where not exists (select 1 from ADMIN_APPLIKATIONEN where APPL_APEX_APP_ID = 20040);
 commit;
 
-prompt ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN, ARTI_ARTIKELGRUPPEN, ARTI_ARTIKEL, ARTI_ZUSATZFELDER, ARTI_ARTIKEL_ZUSATZWERTE, ARTI_ARTIKEL_DATEIEN installiert bzw. abgeglichen.
+prompt ALLG_EINHEITEN, ALLG_MWST_SAETZE, ALLG_TEXTVORLAGEN, ARTI_ARTIKELGRUPPEN, ARTI_ARTIKEL installiert bzw. abgeglichen.

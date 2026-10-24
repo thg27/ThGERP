@@ -38,9 +38,6 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | ALLG | ALLG_TEXTVORLAGEN | TXVL | Textvorlagen für Belege (Zahlungsbedingungen, Vor-/Schlusstext) |
 | ARTI | ARTI_ARTIKELGRUPPEN | AGRP | Artikelgruppen |
 | ARTI | ARTI_ARTIKEL | ARTI | Artikelstamm |
-| ARTI | ARTI_ZUSATZFELDER | ZUSF | Definition der Zusatzfelder am Artikel |
-| ARTI | ARTI_ARTIKEL_ZUSATZWERTE | AZUW | Werte der Zusatzfelder je Artikel |
-| ARTI | ARTI_ARTIKEL_DATEIEN | ADAT | Dateien (Anhänge) zum Artikel |
 | FAKT | FAKT_NUMMERNKREISE | NKRS | Nummernkreise je Mandant, Belegart, Jahr |
 | FAKT | FAKT_RECHNUNGEN | RECH | Ausgangsrechnungen (Kopf) |
 | FAKT | FAKT_RECHNUNGSPOSITIONEN | RPOS | Rechnungspositionen |

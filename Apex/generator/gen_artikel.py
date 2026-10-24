@@ -3,9 +3,9 @@
 
 Die eigene App THG-ARTIKEL (20040) ist seit 2026-10-24 aufgeloest – nur Rechnungen verwenden Artikel. Die Seiten
 werden hier mit den urspruenglichen Nummern erzeugt und von gen_finanz.py per in_finanz() umnummeriert:
-  Artikel (Liste) 10 -> 20, Artikel (Maske nach Kingbill: Stammdaten, Beschreibung, Bild, Registerkarten
-  Kommentar / Zusatzfelder / Dokumente / Dateien) 11 -> 21, Datei (Dialog) 12 -> 22;
-  Wertelisten Artikelgruppen 120/121, Zusatzfelder 130/131 (WL_ARTIKEL, Uebersicht Seite 100 der Finanz-App)
+  Artikel (Liste) 10 -> 20, Artikel (Maske: Registerkarten Stammdaten und Kommentar) 11 -> 21;
+  Werteliste Artikelgruppen 120/121 (WL_ARTIKEL, Uebersicht Seite 100 der Finanz-App).
+  Zusatzfelder, Dokumente, Dateien und Artikelbild entfallen seit 2026-10-24 (DDL 29).
 THG-ALLGEMEIN: 140/141 Einheiten, 150/151 MwSt.-Saetze, 160/161 Textvorlagen (Look Up Values)
 LOVs liegen im Portal (20000) und werden abonniert (siehe CLAUDE.md).
 Aufruf:  python3.13 Apex/generator/gen_artikel.py   (nur THG-ALLGEMEIN; Artikelseiten ueber gen_finanz.py)
@@ -20,7 +20,7 @@ APEX = Path(__file__).resolve().parent.parent
 ALLG = APEX / "thg-allgemein"
 
 # Seitennummern der Artikelseiten in THG-FINANZ (erzeugt werden sie mit 10/11/12)
-SEITEN_FINANZ = {10: 20, 11: 21, 12: 22}
+SEITEN_FINANZ = {10: 20, 11: 21}
 
 
 def in_finanz(text):
@@ -40,12 +40,6 @@ WL_ARTIKEL = [
          felder=[("CODE", "Code", "text", True), ("BEZEICHNUNG", "Bezeichnung", "text", True),
                  ("SORTIERUNG", "Sortierung", "number", False), ("IST_AKTIV", "Aktiv", "switch", True)],
          order="AGRP_SORTIERUNG nulls last, AGRP_BEZEICHNUNG"),
-    dict(seite=130, alias="ZUSATZFELDER", titel="Zusatzfelder", einzahl="Zusatzfeld",
-         tabelle="ARTI_ZUSATZFELDER", pfx="ZUSF", icon="fa-list-alt",
-         beschreibung="Feldnamen der Zusatzfelder in der Artikelmaske (1–10)",
-         felder=[("NUMMER", "Feldnummer", "number", True), ("BEZEICHNUNG", "Feldname", "text", True),
-                 ("IST_AKTIV", "In der Maske anzeigen", "switch", True)],
-         order="ZUSF_NUMMER"),
 ]
 WL_ALLG = [
     dict(seite=140, alias="EINHEITEN", titel="Einheiten", einzahl="Einheit",
@@ -569,12 +563,6 @@ def seite_11():
     ohne_kopf = "[\n                #DEFAULT#\n                t-Region--removeHeader js-removeLandmark\n            ]"
     s += region("stammdaten", "Stammdaten", 10, parent="artikel", extra=tab, options=ohne_kopf)
     s += region("tab-kommentar", "Kommentar", 20, parent="artikel", extra=tab, options=ohne_kopf)
-    s += region("tab-zusatzfelder", "Zusatzfelder", 30, parent="artikel", extra=tab, options=ohne_kopf)
-    s += region("tab-dokumente", "Dokumente", 40, parent="artikel", bedingung="P11_ARTI_ID", extra=tab, options=ohne_kopf)
-    # Dateien: Kopf bleibt fuer den Button "Datei hinzufuegen", nur der Titel ist ausgeblendet (thg-ohne-titel)
-    s += region("tab-dateien", "Dateien", 50, parent="artikel", bedingung="P11_ARTI_ID", extra=tab).replace(
-        "            templateOptions: #DEFAULT#\n        }\n",
-        "            templateOptions: #DEFAULT#\n            cssClasses: [\n                thg-ohne-titel\n            ]\n        }\n", 1)
     s += region("audit", "Änderungsinformationen", 90, template="@/collapsible", parent="artikel",
                 bedingung="P11_ARTI_ID",
                 options="[\n                #DEFAULT#\n                is-collapsed\n                t-Region--scrollBody\n"
@@ -635,17 +623,8 @@ def seite_11():
 
 """
     st = "stammdaten"
-    s += item("P11_ARTI_NAME", "textField", "Name", 10, st, col="ARTI_NAME", req=True, maxlen=200, spalten=5)
-    s += item("P11_ARTI_VK_PREIS", "numberField", "Verkaufspreis", 20, st, col="ARTI_VK_PREIS", dtype="number",
-              req=True, neue_zeile=False, spalten=2,
-              extra="        default {\n            type: static\n            staticValue: 0\n        }\n")
-    s += item("P11_ARTI_IST_BRUTTO", "switch", "brutto", 30, st, col="ARTI_IST_BRUTTO", neue_zeile=False, spalten=1,
-              extra=SWITCH("N"))
-    s += item("P11_ARTI_IST_AKTIV", "switch", "Aktiv", 35, st,
-              col="ARTI_IST_AKTIV", neue_zeile=False, spalten=2, extra=SWITCH("Y"))
-    s += item("P11_ARTI_BILD", "imageUpload", "Artikelbild", 40, st, col="ARTI_BILD", dtype="blob",
-              neue_zeile=False, spalten=2)
-    s += item("P11_ARTI_NUMMER", "textField", "Nummer", 50, st, col="ARTI_NUMMER", req=True, maxlen=30, spalten=6,
+    # Artikelnummer ganz oben, daneben Aktiv; darunter Name und Preis
+    s += item("P11_ARTI_NUMMER", "textField", "Nummer", 5, st, col="ARTI_NUMMER", req=True, maxlen=30, spalten=3,
               extra="""        default {
             type: sqlQuerySingleValue
             sqlQuerySingleValue:
@@ -655,9 +634,18 @@ def seite_11():
                 ```
         }
 """)
+    s += item("P11_ARTI_IST_AKTIV", "switch", "Aktiv", 7, st,
+              col="ARTI_IST_AKTIV", neue_zeile=False, spalten=2, extra=SWITCH("Y"))
+    s += item("P11_ARTI_NAME", "textField", "Name", 10, st, col="ARTI_NAME", req=True, maxlen=200, spalten=6)
+    s += item("P11_ARTI_VK_PREIS", "numberField", "Verkaufspreis", 20, st, col="ARTI_VK_PREIS", dtype="number",
+              req=True, neue_zeile=False, spalten=2,
+              extra="        default {\n            type: static\n            staticValue: 0\n        }\n")
+    s += item("P11_ARTI_IST_BRUTTO", "switch", "brutto", 30, st, col="ARTI_IST_BRUTTO", neue_zeile=False, spalten=1,
+              extra=SWITCH("N"))
     s += item("P11_ARTI_EINH_ID", "selectList", "Einheit", 60, st, col="ARTI_EINH_ID", dtype="number",
-              neue_zeile=False, spalten=3, extra=lov("lov-einheiten", "-"))
-    s += item("P11_ARTI_AGRP_ID", "selectList", "Gruppe", 70, st, col="ARTI_AGRP_ID", dtype="number", spalten=6,
+              spalten=3, extra=lov("lov-einheiten", "-"))
+    s += item("P11_ARTI_AGRP_ID", "selectList", "Gruppe", 70, st, col="ARTI_AGRP_ID", dtype="number", spalten=4,
+              neue_zeile=False,
               extra=lov("lov-artikelgruppen", "- keine -"))
     s += item("P11_ARTI_MWST_ID", "selectList", "MwSt. in %", 80, st, col="ARTI_MWST_ID", dtype="number", req=True,
               neue_zeile=False, spalten=3, extra=lov("lov-mwst-saetze") + """        default {
@@ -674,276 +662,6 @@ def seite_11():
     s += item("P11_ARTI_KOMMENTAR", "textarea", "Kommentar (intern)", 10, "tab-kommentar", col="ARTI_KOMMENTAR",
               dtype="clob", spalten=12)
 
-    zf = "tab-zusatzfelder"
-    s += item("P11_ARTI_EAN", "textField", "Barcode EAN", 10, zf, col="ARTI_EAN", maxlen=20, spalten=3)
-    s += item("P11_ARTI_AUFGENOMMEN_AM", "datePicker", "Aufgenommen am", 20, zf, col="ARTI_AUFGENOMMEN_AM",
-              dtype="date", req=True, neue_zeile=False, spalten=3,
-              extra="        default {\n            type: expression\n            language: plsql\n"
-                    "            plsqlExpression: trunc(cast(systimestamp at time zone 'Europe/Vienna' as date))\n        }\n")
-    s += item("P11_ARTI_EK_PREIS", "numberField", "Einkaufspreis netto", 30, zf, col="ARTI_EK_PREIS",
-              dtype="number", neue_zeile=False, spalten=2)
-    s += item("P11_ARTI_ERLOESKONTO", "textField", "Erlöskonto", 40, zf, col="ARTI_ERLOESKONTO", maxlen=20,
-              neue_zeile=False, spalten=2)
-
-    # Zusatzfelder 1-10 (Grid: je aktivem Feld eine Zeile, Wert direkt editierbar)
-    s += f"""    region zusatzwerte (
-        name: Zusatzfelder
-        type: interactiveGrid
-        source {{
-            location: localDatabase
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select z.ZUSF_ID,
-                       z.ZUSF_NUMMER,
-                       z.ZUSF_BEZEICHNUNG,
-                       (select w.AZUW_WERT
-                          from ARTI_ARTIKEL_ZUSATZWERTE w
-                         where w.AZUW_ARTI_ID = :P11_ARTI_ID
-                           and w.AZUW_ZUSF_ID = z.ZUSF_ID) as AZUW_WERT
-                  from ARTI_ZUSATZFELDER z
-                 where z.ZUSF_IST_AKTIV = 'Y'
-                 order by z.ZUSF_NUMMER
-                ```
-            pageItemsToSubmit: [
-                P11_ARTI_ID
-            ]
-        }}
-        layout {{
-            sequence: 60
-            parentRegion: @{zf}
-            slot: subRegions
-        }}
-        appearance {{
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }}
-        edit {{
-            enabled: true
-            allowedOperations: [
-                update
-            ]
-        }}
-        serverSideCondition {{
-            type: itemIsNotNull
-            item: P11_ARTI_ID
-        }}
-
-        savedReport PRIMARY (
-            visibility: primary
-            view {{
-                default: grid
-            }}
-            singleRowView {{
-                displayedColumns: true
-            }}
-
-            displayColumn (
-                column: @ZUSF_BEZEICHNUNG
-                layout {{
-                    sequence: 1
-                }}
-            )
-            displayColumn (
-                column: @AZUW_WERT
-                layout {{
-                    sequence: 2
-                }}
-            )
-        )
-
-        column ZUSF_ID (
-            type: hidden
-            layout {{
-                sequence: 10
-            }}
-            source {{
-                databaseColumn: ZUSF_ID
-                dataType: number
-                primaryKey: true
-            }}
-        )
-
-        column ZUSF_NUMMER (
-            type: hidden
-            layout {{
-                sequence: 20
-            }}
-            source {{
-                databaseColumn: ZUSF_NUMMER
-                dataType: number
-            }}
-        )
-
-        column ZUSF_BEZEICHNUNG (
-            type: displayOnly
-            heading {{
-                heading: Feld
-            }}
-            layout {{
-                sequence: 30
-            }}
-            source {{
-                databaseColumn: ZUSF_BEZEICHNUNG
-                dataType: varchar2
-            }}
-        )
-
-        column AZUW_WERT (
-            type: textField
-            heading {{
-                heading: Wert
-            }}
-            layout {{
-                sequence: 40
-            }}
-            validation {{
-                maxLength: 4000
-            }}
-            source {{
-                databaseColumn: AZUW_WERT
-                dataType: varchar2
-            }}
-        )
-    )
-
-"""
-    # Dokumente: Belege, in denen der Artikel vorkommt (derzeit Rechnungen)
-    s += f"""    region dokumente (
-        name: Dokumente
-        type: interactiveReport
-        source {{
-            location: localDatabase
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select r.RECH_ID,
-                       initcap(r.RECH_STATUS) as STATUS,
-                       'Rechnung' as TYP,
-                       r.RECH_DATUM,
-                       r.RECH_NUMMER,
-                       r.RECH_BETREFF,
-                       k.KUND_NUMMER,
-                       coalesce(k.KUND_FIRMENNAME, k.KUND_NACHNAME || ' ' || k.KUND_VORNAME) as KUNDE,
-                       r.RECH_SUMME_NETTO,
-                       r.RECH_SUMME_BRUTTO
-                  from FAKT_RECHNUNGEN r
-                  join KUND_KUNDEN k on k.KUND_ID = r.RECH_KUND_ID
-                 where exists (select 1 from FAKT_RECHNUNGSPOSITIONEN p
-                                where p.RPOS_RECH_ID = r.RECH_ID and p.RPOS_ARTI_ID = :P11_ARTI_ID)
-                 order by r.RECH_DATUM desc
-                ```
-            pageItemsToSubmit: [
-                P11_ARTI_ID
-            ]
-        }}
-        layout {{
-            sequence: 10
-            parentRegion: @tab-dokumente
-            slot: subRegions
-        }}
-        appearance {{
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }}
-        componentAppearance {{
-            showNullValuesAs: -
-        }}
-        pagination {{
-            type: rowRangesXToY
-        }}
-        messages {{
-            whenNoDataFound: Der Artikel kommt in keinem Beleg vor.
-        }}
-{ir_spalten([("RECH_ID", "ID", "hidden", "NUMBER"), ("STATUS", "Status", "plainText", "STRING"),
-             ("TYP", "Typ", "plainText", "STRING"), ("RECH_DATUM", "Datum", "plainText", "DATE"),
-             ("RECH_NUMMER", "Nummer", "plainText", "STRING"), ("RECH_BETREFF", "Betreff", "plainText", "STRING"),
-             ("KUND_NUMMER", "Kundennummer", "plainText", "STRING"), ("KUNDE", "Kunde", "plainText", "STRING"),
-             ("RECH_SUMME_NETTO", "Summe netto", "plainText", "NUMBER",
-              "            appearance {\n                formatMask: FML999G999G990D00\n            }\n"),
-             ("RECH_SUMME_BRUTTO", "Summe brutto", "plainText", "NUMBER",
-              "            appearance {\n                formatMask: FML999G999G990D00\n            }\n")]).rstrip()}
-
-    )
-
-"""
-    # Dateien
-    s += f"""    region dateien (
-        name: Dateien
-        type: interactiveReport
-        source {{
-            location: localDatabase
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select ADAT_ID,
-                       ADAT_DATEINAME,
-                       dbms_lob.getlength(ADAT_INHALT) as ADAT_INHALT,
-                       ADAT_MIMETYPE,
-                       round(ADAT_GROESSE / 1024, 1) as GROESSE_KB,
-                       ADAT_BEMERKUNG,
-                       ADAT_CREATED_ON,
-                       ADAT_CREATED_BY
-                  from ARTI_ARTIKEL_DATEIEN
-                 where ADAT_ARTI_ID = :P11_ARTI_ID
-                 order by ADAT_CREATED_ON desc
-                ```
-            pageItemsToSubmit: [
-                P11_ARTI_ID
-            ]
-        }}
-        layout {{
-            sequence: 10
-            parentRegion: @tab-dateien
-            slot: subRegions
-        }}
-        appearance {{
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }}
-        link {{
-            linkColumn: customTarget
-            target: {{
-                page: 12
-                items: {{
-                    P12_ADAT_ID: #ADAT_ID#
-                    P12_ADAT_ARTI_ID: &P11_ARTI_ID.
-                }}
-                clearCache: 12
-            }}
-            linkIcon: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
-        }}
-        componentAppearance {{
-            showNullValuesAs: -
-        }}
-        pagination {{
-            type: rowRangesXToY
-        }}
-        messages {{
-            whenNoDataFound: Keine Dateien vorhanden.
-        }}
-{ir_spalten([("ADAT_ID", "ID", "hidden", "NUMBER"), ("ADAT_DATEINAME", "Dateiname", "plainText", "STRING"),
-             ("ADAT_INHALT", "Datei", "downloadBlob", "NUMBER", """            appearance {
-                viewFileAs: attachment
-                downloadText: Herunterladen
-            }
-            blobAttributes {
-                tableName: ARTI_ARTIKEL_DATEIEN
-                blobColumn: ADAT_INHALT
-                primaryKeyColumn1: ADAT_ID
-                mimeTypeColumn: ADAT_MIMETYPE
-                filenameColumn: ADAT_DATEINAME
-                lastUpdatedColumn: ADAT_UPDATED_ON
-            }
-"""),
-             ("ADAT_MIMETYPE", "Typ", "plainText", "STRING"), ("GROESSE_KB", "Größe (KB)", "plainText", "NUMBER"),
-             ("ADAT_BEMERKUNG", "Bemerkung", "plainText", "STRING"),
-             ("ADAT_CREATED_ON", "Hinzugefügt am", "plainText", "TIMESTAMP"),
-             ("ADAT_CREATED_BY", "Hinzugefügt von", "plainText", "STRING")]).rstrip()}
-
-    )
-
-"""
     # Buttons
     # kein Button "Abbrechen": zurueck zur Liste geht es ueber den Pfeil in der Titelleiste
     s += button("save", "SAVE", "Speichern & Schließen", 20, "breadcrumb", "next", hot=True,
@@ -960,47 +678,6 @@ def seite_11():
             }
             warnOnUnsavedChanges: doNotCheck
 """)
-    s += button("datei-hinzufuegen", "DATEI", "Datei hinzufügen", 10, "tab-dateien", "edit", "@/text-with-icon",
-                icon="fa-plus", options="[\n                #DEFAULT#\n                t-Button--iconRight\n                t-Button--small\n            ]",
-                verhalten="""            action: redirectThisApp
-            target: {
-                page: 12
-                items: {
-                    P12_ADAT_ARTI_ID: &P11_ARTI_ID.
-                }
-                clearCache: 12
-            }
-            warnOnUnsavedChanges: doNotCheck
-""")
-    # Dynamic Actions: Dateiliste nach Dialog aktualisieren
-    for sid, sel, ziel in (("dateien-nach-dialog", "region: @dateien", "selectionType: region"),
-                           ("dateien-nach-hinzufuegen", "button: @datei-hinzufuegen", "selectionType: button")):
-        s += f"""    dynamicAction {sid} (
-        name: Dateien nach Dialog aktualisieren
-        execution {{
-            sequence: 10
-        }}
-        when {{
-            event: apexafterclosedialog
-            {ziel}
-            {sel}
-        }}
-
-        action {sid}-refresh (
-            action: refresh
-            affectedElements {{
-                selectionType: region
-                region: @dateien
-            }}
-            execution {{
-                sequence: 10
-                fireOnInit: false
-            }}
-        )
-
-    )
-
-"""
     s += """    validation nummer-eindeutig (
         name: Artikelnummer eindeutig
         execution {
@@ -1070,27 +747,6 @@ def seite_11():
         }
     )
 
-    process zusatzwerte-speichern (
-        name: Zusatzfelder speichern
-        type: executeCode
-        editableRegion: @zusatzwerte
-        source {
-            plsqlCode:
-                ```plsql
-                -- je Zusatzfeld: Wert speichern bzw. leeren Wert entfernen
-                delete from ARTI_ARTIKEL_ZUSATZWERTE
-                 where AZUW_ARTI_ID = :P11_ARTI_ID and AZUW_ZUSF_ID = :ZUSF_ID;
-                if :AZUW_WERT is not null then
-                    insert into ARTI_ARTIKEL_ZUSATZWERTE (AZUW_ARTI_ID, AZUW_ZUSF_ID, AZUW_WERT)
-                    values (:P11_ARTI_ID, :ZUSF_ID, :AZUW_WERT);
-                end if;
-                ```
-        }
-        execution {
-            sequence: 20
-        }
-    )
-
     branch nach-anlegen (
         name: Nach dem Anlegen im Artikel bleiben
         execution {
@@ -1126,245 +782,6 @@ def seite_11():
     return s
 
 
-# --------------------------------------------------------------------------- Seite 12 Datei
-def seite_12():
-    s = KOPF(12, "Datei", "DATEI", modal=True)
-    s += """    region buttons (
-        name: Buttons
-        type: staticContent
-        layout {
-            sequence: 20
-            slot: dialogFooter
-        }
-        appearance {
-            template: @/buttons-container
-            templateOptions: #DEFAULT#
-        }
-        settings {
-            outputAs: text
-        }
-    )
-
-    region datei (
-        name: Datei
-        type: form
-        source {
-            location: localDatabase
-            tableName: ARTI_ARTIKEL_DATEIEN
-        }
-        layout {
-            sequence: 10
-            slot: contentBody
-        }
-        appearance {
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }
-        edit {
-            enabled: true
-            allowedOperations: [
-                update
-                delete
-            ]
-        }
-    )
-
-    pageItem P12_ADAT_ID (
-        type: hidden
-        layout {
-            sequence: 1
-            region: @datei
-            slot: regionBody
-        }
-        source {
-            formRegion: @datei
-            column: ADAT_ID
-            dataType: number
-            primaryKey: true
-        }
-        security {
-            sessionStateProtection: checksumRequiredSessionLevel
-        }
-    )
-
-    pageItem P12_ADAT_ARTI_ID (
-        type: hidden
-        layout {
-            sequence: 2
-            region: @datei
-            slot: regionBody
-        }
-        source {
-            formRegion: @datei
-            column: ADAT_ARTI_ID
-            dataType: number
-        }
-        security {
-            sessionStateProtection: checksumRequiredSessionLevel
-        }
-    )
-
-    pageItem P12_ADAT_DATEINAME (
-        type: displayOnly
-        label {
-            label: Datei
-            alignment: left
-        }
-        layout {
-            sequence: 10
-            region: @datei
-            slot: regionBody
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @datei
-            column: ADAT_DATEINAME
-            dataType: varchar2
-        }
-        serverSideCondition {
-            type: itemIsNotNull
-            item: P12_ADAT_ID
-        }
-    )
-
-    pageItem P12_UPLOAD (
-        type: fileUpload
-        label {
-            label: Datei auswählen
-            alignment: left
-        }
-        layout {
-            sequence: 20
-            region: @datei
-            slot: regionBody
-            alignment: left
-        }
-        appearance {
-            template: @/required-floating
-            templateOptions: #DEFAULT#
-        }
-        display {
-            displayAs: blockDropzone
-            dropzoneTitle: Datei hierher ziehen
-            dropzoneDesc: oder klicken zum Auswählen
-        }
-        storage {
-            type: appTempFiles
-        }
-        validation {
-            valueRequired: true
-        }
-        serverSideCondition {
-            type: itemIsNull
-            item: P12_ADAT_ID
-        }
-    )
-
-"""
-    s += item("P12_ADAT_BEMERKUNG", "textarea", "Bemerkung", 30, "datei", form="datei", col="ADAT_BEMERKUNG", maxlen=500)
-    s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close", verhalten="            action: definedByDynamicAction\n")
-    s += button("delete", "DELETE", "Löschen", 20, "buttons", "delete",
-                options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n            ]",
-                verhalten="""            executeValidations: false
-            warnOnUnsavedChanges: doNotCheck
-            databaseAction: delete
-            requiresConfirmation: true
-""", bedingung=NICHT_NULL("P12_ADAT_ID") + """        confirmation {
-            message: Datei wirklich löschen?
-            style: danger
-        }
-""")
-    s += button("save", "SAVE", "Speichern", 30, "buttons", "next", hot=True,
-                verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
-                bedingung=NICHT_NULL("P12_ADAT_ID"))
-    s += button("hochladen", "HOCHLADEN", "Hochladen", 40, "buttons", "next", hot=True,
-                verhalten="            warnOnUnsavedChanges: doNotCheck\n", bedingung=NULL("P12_ADAT_ID"))
-    s += """    dynamicAction cancel-dialog (
-        name: Dialog abbrechen
-        execution {
-            sequence: 10
-        }
-        when {
-            event: click
-            selectionType: button
-            button: @cancel
-        }
-
-        action native-dialog-cancel (
-            action: cancelDialog
-            execution {
-                sequence: 10
-                fireOnInit: false
-            }
-        )
-
-    )
-
-    process initialize-form-datei (
-        name: Formular Datei initialisieren
-        type: formInitialization
-        formRegion: @datei
-        execution {
-            sequence: 10
-            point: beforeHeader
-        }
-    )
-
-    process datei-hochladen (
-        name: Datei hochladen
-        type: executeCode
-        source {
-            plsqlCode:
-                ```plsql
-                insert into ARTI_ARTIKEL_DATEIEN (ADAT_ARTI_ID, ADAT_DATEINAME, ADAT_MIMETYPE, ADAT_INHALT, ADAT_BEMERKUNG)
-                select :P12_ADAT_ARTI_ID, filename, mime_type, blob_content, :P12_ADAT_BEMERKUNG
-                  from apex_application_temp_files
-                 where name = :P12_UPLOAD;
-                ```
-        }
-        execution {
-            sequence: 10
-        }
-        serverSideCondition {
-            whenButtonPressed: @hochladen
-        }
-    )
-
-    process process-form-datei (
-        name: Formular Datei verarbeiten
-        type: formAutoRowProcessing
-        formRegion: @datei
-        execution {
-            sequence: 20
-        }
-        serverSideCondition {
-            type: requestIsContainedInValue
-            value: SAVE,DELETE
-        }
-    )
-
-    process close-dialog (
-        name: Dialog schließen
-        type: closeDialog
-        execution {
-            sequence: 50
-        }
-        serverSideCondition {
-            type: requestIsContainedInValue
-            value: HOCHLADEN,SAVE,DELETE
-        }
-    )
-
-)
-"""
-    return s
-
-
-# --------------------------------------------------------------------------- Startseite, Listen, Breadcrumbs
 def startseite():
     return """page 1 (
     name: Startseite
