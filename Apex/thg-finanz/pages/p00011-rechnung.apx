@@ -2659,30 +2659,6 @@ page 11 (
 
     )
 
-    button cancel (
-        buttonName: CANCEL
-        label: Zur Liste
-        layout {
-            sequence: 10
-            region: @breadcrumb
-            slot: next
-        }
-        appearance {
-            buttonTemplate: @/text
-            templateOptions: [
-                #DEFAULT#
-                t-Button--noUI
-            ]
-        }
-        behavior {
-            action: redirectThisApp
-            target: {
-                page: 10
-            }
-            warnOnUnsavedChanges: doNotCheck
-        }
-    )
-
     button delete (
         buttonName: DELETE
         label: Rechnung löschen

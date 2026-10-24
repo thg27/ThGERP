@@ -1213,12 +1213,7 @@ def seite_11():
 
     # ------------------------------------------------ Buttons
     grau = "[\n                #DEFAULT#\n                t-Button--noUI\n            ]"
-    s += button("cancel", "CANCEL", "Zur Liste", 10, "breadcrumb", "next", options=grau, verhalten="""            action: redirectThisApp
-            target: {
-                page: 10
-            }
-            warnOnUnsavedChanges: doNotCheck
-""")
+    # kein Button "Zur Liste": zurueck geht es ueber den Pfeil in der Titelleiste
     entwurf = """        serverSideCondition {
             type: expression
             language: plsql

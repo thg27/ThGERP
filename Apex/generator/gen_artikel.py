@@ -945,13 +945,7 @@ def seite_11():
 
 """
     # Buttons
-    s += button("cancel", "CANCEL", "Abbrechen", 10, "breadcrumb", "next", options="[\n                #DEFAULT#\n                t-Button--noUI\n            ]",
-                verhalten="""            action: redirectThisApp
-            target: {
-                page: 10
-            }
-            warnOnUnsavedChanges: doNotCheck
-""")
+    # kein Button "Abbrechen": zurueck zur Liste geht es ueber den Pfeil in der Titelleiste
     s += button("save", "SAVE", "Speichern & Schließen", 20, "breadcrumb", "next", hot=True,
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
                 bedingung=NICHT_NULL("P11_ARTI_ID"))
