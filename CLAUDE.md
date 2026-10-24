@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–32 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–33 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -46,7 +46,10 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   teilbezahlte Rechnungen zählen als offen/überfällig und zum Umsatz.
 - „Rechnung kopieren“ (Button im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,
   Haupt-/Unterpositionen; ohne Nummer, Datum, Fälligkeit, Betreff, Zahlungen) und öffnet ihn.
-- Rechnungsdruck: Button „Rechnung drucken“ auf Seite 11 (ab Status OFFEN) → Seite 13 (PDF-Anzeige, Drucken/Herunterladen), Paket `FAKT_RECHNUNG_PDF` (DDL 24),
+- Drucken: im Entwurf „Rechnungsvorschau“ (PDF mit Wasserzeichen VORSCHAU, beliebig oft, bleibt Entwurf) und „Rechnung drucken“ (= abschließen: Nummer und
+  Rechnungsdatum, danach öffnet das PDF automatisch – Branch mit `P11_PDF_OEFFNEN`, DA `pdf-oeffnen`); abgeschlossen „Rechnung drucken“ → PDF.
+- Historie (Registerkarte nach Zahlungen): `FAKT_RECHNUNG_HISTORIE` (DDL 33), Trigger auf Rechnung/Positionen/Zahlungen + Druck (Seite 12) protokollieren wer/wann/was.
+- Rechnungsdruck: Seite 13 (PDF-Anzeige, Drucken/Herunterladen), Paket `FAKT_RECHNUNG_PDF` (DDL 24),
   Layout wie die Kingbill-Rechnungen in `Vorlagen/Ausgangsrechnungen` (Hauptposition ohne Unterpositionen wie eine Kingbill-Position mit Einzelpreis/Menge/Einheit, „Art.-Nr.“).
 - Rechnungen EDV 2026 - 1 bis 13 aus Kingbill übernommen (2026-10-24, `Vorlagen/Access Datenbank Migration/access_rechnungen.py`, mit Zahlungen, alle bezahlt;
   `RECH_ALT_ID` = Kingbill-ID); vorher alle Test-Rechnungen gelöscht.

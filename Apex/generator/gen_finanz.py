@@ -993,6 +993,27 @@ def seite_11():
         }
     )
 
+    pageItem P11_PDF_OEFFNEN (
+        type: hidden
+        layout {
+            sequence: 5
+            region: @kunde
+            slot: regionBody
+        }
+    )
+
+    pageItem P11_PDF_URL (
+        type: hidden
+        layout {
+            sequence: 6
+            region: @kunde
+            slot: regionBody
+        }
+        settings {
+            valueProtected: false
+        }
+    )
+
 """
     a = "allgemein"
     # Rechnungsnummer und Rechnungsdatum (beide vergibt "Rechnung abschliessen") nur Anzeige,
@@ -1211,6 +1232,83 @@ def seite_11():
        .replace("            template: @/standard\n            templateOptions: #DEFAULT#\n",
                 "            template: @/standard\n            templateOptions: " + OHNE_KOPF + "\n", 1)
 
+    # Historie (nach Zahlungen): wer hat wann was geaendert (FAKT_RECHNUNG_HISTORIE, Trigger aus Skript 33)
+    s += """    region historie (
+        name: Historie
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Zeitpunkt in Wiener Zeit (Server UTC), neueste Eintraege zuerst
+                select to_char(from_tz(RHIS_ZEITPUNKT, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as ZEITPUNKT,
+                       RHIS_BENUTZER as BENUTZER,
+                       RHIS_AKTION as AKTION,
+                       RHIS_DETAIL as DETAIL
+                  from FAKT_RECHNUNG_HISTORIE
+                 where RHIS_RECH_ID = :P11_RECH_ID
+                 order by RHIS_ZEITPUNKT desc, RHIS_ID desc
+                ```
+            pageItemsToSubmit: [
+                P11_RECH_ID
+            ]
+        }
+        advanced {
+            regionDisplaySelector: true
+            htmlDomId: historie
+        }
+        layout {
+            sequence: 70
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: """ + OHNE_KOPF + """
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+        messages {
+            whenNoDataFound: Noch keine Einträge.
+        }
+
+""" + "".join(f"""        column {c} (
+            type: plainText
+            heading {{
+                heading: {h}
+            }}
+            layout {{
+                sequence: {i * 10}
+            }}
+            sorting {{
+                sortable: false
+            }}
+        )
+
+""" for i, (c, h) in enumerate((("ZEITPUNKT", "Zeitpunkt"), ("BENUTZER", "Benutzer"), ("AKTION", "Aktion"),
+                                ("DETAIL", "Änderungen")), start=1)) + """    )
+
+"""
+
     # ------------------------------------------------ Buttons
     grau = "[\n                #DEFAULT#\n                t-Button--noUI\n            ]"
     # kein Button "Zur Liste": zurueck geht es ueber den Pfeil in der Titelleiste
@@ -1290,12 +1388,25 @@ def seite_11():
             plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS <> 'ENTWURF'
         }
 """)
-    s += button("abschliessen", "ABSCHLIESSEN", "Rechnung abschließen", 25, "breadcrumb", "next", hot=True,
+    # Rechnungsvorschau (nur Entwurf): PDF mit Wasserzeichen "VORSCHAU", beliebig oft, Rechnung bleibt Entwurf
+    s += button("vorschau", "VORSCHAU", "Rechnungsvorschau", 17, "breadcrumb", "next", "@/text-with-icon",
+                icon="fa-eye", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 13
+                items: {
+                    P13_RECH_ID: &P11_RECH_ID.
+                }
+            }
+""", bedingung=entwurf)
+    # "Rechnung drucken" im Entwurf: speichern, abschliessen (Nummer, Rechnungsdatum) und danach das PDF oeffnen
+    s += button("abschliessen", "ABSCHLIESSEN", "Rechnung drucken", 25, "breadcrumb", "next", "@/text-with-icon",
+                hot=True, icon="fa-file-pdf-o", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
                 verhalten="""            warnOnUnsavedChanges: doNotCheck
             databaseAction: update
             requiresConfirmation: true
 """, bedingung=entwurf + """        confirmation {
-            message: Rechnung abschließen? Die Rechnungsnummer wird vergeben und kann nicht mehr geändert werden.
+            message: Rechnung drucken? Die Rechnung wird abgeschlossen – Rechnungsnummer und Rechnungsdatum werden vergeben und können nicht mehr geändert werden. Zum Prüfen vorher die Rechnungsvorschau verwenden.
             style: warning
         }
 """)
@@ -1327,7 +1438,35 @@ def seite_11():
                   "window.thgPositionen.schnelleingabe();")
     s += da_klick("zeile-detail", "Zeile Detail: Unterposition im Dialog erfassen", 40, "zeile-detail",
                   "window.thgPositionen.detail();")
-    s += """    dynamicAction anschrift-vorschau (
+    s += """    dynamicAction pdf-oeffnen (
+        name: Nach dem Abschließen das PDF öffnen
+        execution {
+            sequence: 5
+        }
+        when {
+            event: ready
+        }
+        clientSideCondition {
+            type: itemIsNotNull
+            item: P11_PDF_URL
+        }
+
+        action pdf-dialog (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.navigation.redirect($v("P11_PDF_URL"));
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    dynamicAction anschrift-vorschau (
         name: Anschrift-Vorschau wie am Ausdruck
         execution {
             sequence: 20
@@ -1438,6 +1577,25 @@ def seite_11():
         }
         successMessage {
             successMessage: Rechnung zur Bearbeitung freigegeben.
+        }
+    )
+
+    process pdf-oeffnen-vorbereiten (
+        name: PDF nach dem Abschließen öffnen (einmalig)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Dialog-URL (javascript:apex.navigation.dialog …) fuer die Dynamic Action beim Laden; Merker zuruecksetzen
+                :P11_PDF_URL := case when :P11_PDF_OEFFNEN = 'Y' and :P11_RECH_ID is not null then
+                                    apex_page.get_url(p_page => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
+                                end;
+                :P11_PDF_OEFFNEN := null;
+                ```
+        }
+        execution {
+            sequence: 2
+            point: beforeHeader
         }
     )
 
@@ -2269,6 +2427,25 @@ def seite_11():
         }
     )
 
+    branch nach-abschliessen-drucken (
+        name: Nach dem Abschließen die Rechnung drucken (PDF öffnen)
+        execution {
+            sequence: 6
+        }
+        behavior {
+            target: {
+                page: 11
+                items: {
+                    P11_RECH_ID: &P11_RECH_ID.
+                    P11_PDF_OEFFNEN: Y
+                }
+            }
+        }
+        serverSideCondition {
+            whenButtonPressed: @abschliessen
+        }
+    )
+
     process kopieren (
         name: Rechnung kopieren
         type: executeCode
@@ -3044,6 +3221,14 @@ def pdf_seiten():
         ("title: Kundenstammblatt", "title: Rechnung"),
         ('title="Kundenstammblatt"', 'title="Rechnung"'),
         ("Kundenstammblatt konnte nicht", "Rechnung konnte nicht"),
+        # jeder Druck in die Historie (Vorschau im Entwurf, sonst Rechnung)
+        ("l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);\n                begin\n",
+         "l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);\n                begin\n"
+         "                    for r in (select RECH_STATUS, RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P12_RECH_ID) loop\n"
+         "                        FAKT_HISTORIE.protokoll(:P12_RECH_ID, case r.RECH_STATUS when 'ENTWURF' then 'Vorschau gedruckt'\n"
+         "                                                                   else 'Rechnung gedruckt' end, r.RECH_NUMMER);\n"
+         "                    end loop;\n"
+         "                    commit;\n"),
     ]
     for nr, datei in ((12, "p00012-kundenstammblatt.apx"), (13, "p00013-kundenstammblatt-anzeigen.apx")):
         s = (APEX / "thg-kunden" / "pages" / datei).read_text(encoding="utf-8")

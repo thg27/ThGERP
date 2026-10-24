@@ -331,6 +331,8 @@ create or replace package body FAKT_RECHNUNG as
         delete from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = p_rech_id;
         delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_RECH_ID = p_rech_id;
         delete from FAKT_RECHNUNGEN where RECH_ID = p_rech_id;
+        -- Historie (Skript 33) mitloeschen; dynamisch, da die Tabelle erst nach diesem Skript angelegt wird
+        execute immediate 'delete from FAKT_RECHNUNG_HISTORIE where RHIS_RECH_ID = :1' using p_rech_id;
         if l_rech.RECH_STATUS <> 'ENTWURF' then
             update FAKT_NUMMERNKREISE
                set NKRS_LETZTE_NUMMER = NKRS_LETZTE_NUMMER - 1
@@ -349,6 +351,7 @@ create or replace package body FAKT_RECHNUNG as
         -- ID vorab vergeben (RECH_BIU uebernimmt sie): bei insert … select gibt es kein returning (ORA-03049)
         l_neu   FAKT_RECHNUNGEN.RECH_ID%type := to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
         l_haupt FAKT_RECHNUNGSPOSITIONEN.RPOS_ID%type;
+        l_herkunft varchar2(100);
     begin
         insert into FAKT_RECHNUNGEN (RECH_ID, RECH_MAND_ID, RECH_KUND_ID, RECH_KSTO_ID, RECH_ANSP_ID, RECH_MITA_ID, RECH_ZBED_ID,
                                      RECH_EMPF_LAND_CODE, RECH_STATUS, RECH_LEISTUNGSZEITRAUM, RECH_LEISTUNG_VON,
@@ -392,6 +395,9 @@ create or replace package body FAKT_RECHNUNG as
              where RPOS_HAUPT_RPOS_ID = h.RPOS_ID;
         end loop;
         summen_berechnen(l_neu);
+        -- Herkunft in der Historie der Kopie (Skript 33; dynamisch, siehe loeschen)
+        select 'aus Rechnung ' || nvl(RECH_NUMMER, 'Entwurf') into l_herkunft from FAKT_RECHNUNGEN where RECH_ID = p_rech_id;
+        execute immediate 'begin FAKT_HISTORIE.protokoll(:1, :2, :3); end;' using l_neu, 'Kopiert', l_herkunft;
         return l_neu;
     end kopieren;
 

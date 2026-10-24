@@ -921,6 +921,27 @@ page 11 (
         }
     )
 
+    pageItem P11_PDF_OEFFNEN (
+        type: hidden
+        layout {
+            sequence: 5
+            region: @kunde
+            slot: regionBody
+        }
+    )
+
+    pageItem P11_PDF_URL (
+        type: hidden
+        layout {
+            sequence: 6
+            region: @kunde
+            slot: regionBody
+        }
+        settings {
+            valueProtected: false
+        }
+    )
+
     pageItem P11_RECH_NUMMER (
         type: displayOnly
         label {
@@ -2659,6 +2680,121 @@ page 11 (
 
     )
 
+    region historie (
+        name: Historie
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Zeitpunkt in Wiener Zeit (Server UTC), neueste Eintraege zuerst
+                select to_char(from_tz(RHIS_ZEITPUNKT, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as ZEITPUNKT,
+                       RHIS_BENUTZER as BENUTZER,
+                       RHIS_AKTION as AKTION,
+                       RHIS_DETAIL as DETAIL
+                  from FAKT_RECHNUNG_HISTORIE
+                 where RHIS_RECH_ID = :P11_RECH_ID
+                 order by RHIS_ZEITPUNKT desc, RHIS_ID desc
+                ```
+            pageItemsToSubmit: [
+                P11_RECH_ID
+            ]
+        }
+        advanced {
+            regionDisplaySelector: true
+            htmlDomId: historie
+        }
+        layout {
+            sequence: 70
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+        messages {
+            whenNoDataFound: Noch keine Einträge.
+        }
+
+        column ZEITPUNKT (
+            type: plainText
+            heading {
+                heading: Zeitpunkt
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BENUTZER (
+            type: plainText
+            heading {
+                heading: Benutzer
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AKTION (
+            type: plainText
+            heading {
+                heading: Aktion
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column DETAIL (
+            type: plainText
+            heading {
+                heading: Änderungen
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
     button delete (
         buttonName: DELETE
         label: Rechnung löschen
@@ -2810,18 +2946,54 @@ page 11 (
         }
     )
 
+    button vorschau (
+        buttonName: VORSCHAU
+        label: Rechnungsvorschau
+        layout {
+            sequence: 17
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-eye
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 13
+                items: {
+                    P13_RECH_ID: &P11_RECH_ID.
+                }
+            }
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'ENTWURF'
+        }
+    )
+
     button abschliessen (
         buttonName: ABSCHLIESSEN
-        label: Rechnung abschließen
+        label: Rechnung drucken
         layout {
             sequence: 25
             region: @breadcrumb
             slot: next
         }
         appearance {
-            buttonTemplate: @/text
+            buttonTemplate: @/text-with-icon
             hot: true
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-file-pdf-o
         }
         behavior {
             warnOnUnsavedChanges: doNotCheck
@@ -2834,7 +3006,7 @@ page 11 (
             plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'ENTWURF'
         }
         confirmation {
-            message: Rechnung abschließen? Die Rechnungsnummer wird vergeben und kann nicht mehr geändert werden.
+            message: Rechnung drucken? Die Rechnung wird abgeschlossen – Rechnungsnummer und Rechnungsdatum werden vergeben und können nicht mehr geändert werden. Zum Prüfen vorher die Rechnungsvorschau verwenden.
             style: warning
         }
     )
@@ -2987,6 +3159,34 @@ page 11 (
 
     )
 
+    dynamicAction pdf-oeffnen (
+        name: Nach dem Abschließen das PDF öffnen
+        execution {
+            sequence: 5
+        }
+        when {
+            event: ready
+        }
+        clientSideCondition {
+            type: itemIsNotNull
+            item: P11_PDF_URL
+        }
+
+        action pdf-dialog (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.navigation.redirect($v("P11_PDF_URL"));
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
     dynamicAction anschrift-vorschau (
         name: Anschrift-Vorschau wie am Ausdruck
         execution {
@@ -3098,6 +3298,25 @@ page 11 (
         }
         successMessage {
             successMessage: Rechnung zur Bearbeitung freigegeben.
+        }
+    )
+
+    process pdf-oeffnen-vorbereiten (
+        name: PDF nach dem Abschließen öffnen (einmalig)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Dialog-URL (javascript:apex.navigation.dialog …) fuer die Dynamic Action beim Laden; Merker zuruecksetzen
+                :P11_PDF_URL := case when :P11_PDF_OEFFNEN = 'Y' and :P11_RECH_ID is not null then
+                                    apex_page.get_url(p_page => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
+                                end;
+                :P11_PDF_OEFFNEN := null;
+                ```
+        }
+        execution {
+            sequence: 2
+            point: beforeHeader
         }
     )
 
@@ -3926,6 +4145,25 @@ page 11 (
         }
         successMessage {
             successMessage: Rechnung abgeschlossen.
+        }
+    )
+
+    branch nach-abschliessen-drucken (
+        name: Nach dem Abschließen die Rechnung drucken (PDF öffnen)
+        execution {
+            sequence: 6
+        }
+        behavior {
+            target: {
+                page: 11
+                items: {
+                    P11_RECH_ID: &P11_RECH_ID.
+                    P11_PDF_OEFFNEN: Y
+                }
+            }
+        }
+        serverSideCondition {
+            whenButtonPressed: @abschliessen
         }
     )
 

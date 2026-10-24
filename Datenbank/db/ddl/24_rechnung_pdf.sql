@@ -20,7 +20,7 @@ as
     -- Rechnung als PDF
     function pdf(p_rech_id in number) return blob;
 
-    -- Dateiname fuer den Download, z.B. "Rechnung 2026 - 12.pdf" (Entwurf: "Rechnungsentwurf.pdf")
+    -- Dateiname fuer den Download, z.B. "Rechnung 2026 - 12.pdf" (Entwurf: "Rechnungsvorschau.pdf")
     function dateiname(p_rech_id in number) return varchar2;
 end FAKT_RECHNUNG_PDF;
 /
@@ -45,6 +45,7 @@ as
     g_normal    pls_integer;
     g_fett      pls_integer;
     g_y         number;
+    g_vorschau  boolean;                             -- Entwurf: Rechnungsvorschau mit Wasserzeichen
 
     type t_zeile is record (txt varchar2(4000), fett boolean, punkt boolean);
     type t_zeilen is table of t_zeile index by pls_integer;
@@ -171,6 +172,11 @@ as
         as_pdf.new_page;
         -- Linie ueber dem Fuss hier statt per p_page_proc (as_pdf 4.0.3 vertauscht dort Linienbreite und -farbe)
         as_pdf.horizontal_line(c_links, 86, c_rechts - c_links, 0.6, '000000');
+        if g_vorschau then
+            -- Wasserzeichen quer ueber die Seite, damit die Vorschau nicht als Rechnung verwendet wird
+            as_pdf.put_txt(110, 230, 'VORSCHAU', p_degrees_rotation => 45, p_font_index => g_fett, p_fontsize => 110,
+                           p_color => 'c8c8c8', p_alpha => 0.45);
+        end if;
         g_y := c_oben_f2;
     end neue_seite;
 
@@ -217,7 +223,7 @@ as
         l_nr FAKT_RECHNUNGEN.RECH_NUMMER%type;
     begin
         select RECH_NUMMER into l_nr from FAKT_RECHNUNGEN where RECH_ID = p_rech_id;
-        return coalesce('Rechnung ' || l_nr, 'Rechnungsentwurf') || '.pdf';
+        return case when l_nr is null then 'Rechnungsvorschau' else 'Rechnung ' || l_nr end || '.pdf';
     end dateiname;
 
     -- ---------------------------------------------------------------- Teile der Rechnung
@@ -311,7 +317,7 @@ as
         -- Rechnungsnummer, Datum, Bearbeiter
         -- rechts: Datum, Leistungszeitraum, Bearbeiter untereinander (Faelligkeit steht unter den Summen)
         g_y := 569;
-        txt(c_links, case when p_r.RECH_NUMMER is null then 'Rechnungsentwurf' else 'Rechnung ' || p_r.RECH_NUMMER end,
+        txt(c_links, case when p_r.RECH_NUMMER is null then 'Rechnungsvorschau' else 'Rechnung ' || p_r.RECH_NUMMER end,
             g_fett, 13);
         g_y := 571;
         txt_r(c_rechts, 'Datum: ' || coalesce(to_char(p_r.RECH_DATUM, 'DD.MM.YYYY'), '-'), g_normal, 10);
@@ -539,6 +545,7 @@ as
         l_r FAKT_RECHNUNGEN%rowtype;
     begin
         select * into l_r from FAKT_RECHNUNGEN where RECH_ID = p_rech_id;
+        g_vorschau := l_r.RECH_STATUS = 'ENTWURF';
         as_pdf.init;
         as_pdf.set_page_format('A4');
         as_pdf.set_margins(p_top => 30, p_left => c_links, p_bottom => 30, p_right => 595 - c_rechts, p_unit => 'pt');

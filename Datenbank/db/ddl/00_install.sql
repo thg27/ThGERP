@@ -40,5 +40,6 @@ whenever sqlerror exit failure rollback
 @@30_alt_id_je_mandant.sql
 @@31_zahlungsstatus_trigger.sql
 @@32_status_teilbezahlt.sql
+@@33_rechnung_historie.sql
 
 prompt Installation abgeschlossen.

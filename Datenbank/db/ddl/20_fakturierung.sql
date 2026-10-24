@@ -136,7 +136,6 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_UPDATED_BY', 'varchar2(255 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_ROW_VERSION', 'number', 'N');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_PK', 'P', 'RECH_ID');
-    DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_ALT_ID_UK', 'U', q'~RECH_MAND_ID, RECH_ALT_ID~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_STATUS_CK', 'C', q'~RECH_STATUS in ('ENTWURF', 'OFFEN', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT')~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_DATUM_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_DATUM is not null~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_NUMMER_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null~');

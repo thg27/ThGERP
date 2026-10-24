@@ -45,6 +45,11 @@ page 12 (
                 declare
                     l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);
                 begin
+                    for r in (select RECH_STATUS, RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P12_RECH_ID) loop
+                        FAKT_HISTORIE.protokoll(:P12_RECH_ID, case r.RECH_STATUS when 'ENTWURF' then 'Vorschau gedruckt'
+                                                                   else 'Rechnung gedruckt' end, r.RECH_NUMMER);
+                    end loop;
+                    commit;
                     apex_http.download(
                         p_blob         => l_pdf,
                         p_content_type => 'application/pdf',

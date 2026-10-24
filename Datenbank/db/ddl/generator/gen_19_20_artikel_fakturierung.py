@@ -156,7 +156,7 @@ FAKT = [
     ('RECH_SUMME_MWST', BETRAG, 'N', '0', 'Summe Umsatzsteuer'),
     ('RECH_SUMME_BRUTTO', BETRAG, 'N', '0', 'Gesamtbetrag'),
     ('RECH_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill DokumentRechnung.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme'),
-  ], [('RECH_ALT_ID_UK', 'U', 'RECH_MAND_ID, RECH_ALT_ID'),
+  ], [  # Eindeutigkeit von RECH_ALT_ID je Mandant: Unique-Index RECH_ALT_ID_UI in Skript 30
       ('RECH_STATUS_CK', 'C', "RECH_STATUS in ('ENTWURF', 'OFFEN', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT')"),
       ('RECH_DATUM_CK', 'C', "RECH_STATUS = 'ENTWURF' or RECH_DATUM is not null"),
       ('RECH_NUMMER_CK', 'C', "RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null"),
