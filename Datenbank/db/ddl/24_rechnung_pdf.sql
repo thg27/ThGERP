@@ -45,7 +45,7 @@ as
     g_normal    pls_integer;
     g_fett      pls_integer;
     g_y         number;
-    g_vorschau  boolean;                             -- Entwurf: Rechnungsvorschau mit Wasserzeichen
+    g_wasserzeichen varchar2(20);                    -- VORSCHAU (Entwurf) bzw. STORNIERT
 
     type t_zeile is record (txt varchar2(4000), fett boolean, punkt boolean);
     type t_zeilen is table of t_zeile index by pls_integer;
@@ -172,10 +172,11 @@ as
         as_pdf.new_page;
         -- Linie ueber dem Fuss hier statt per p_page_proc (as_pdf 4.0.3 vertauscht dort Linienbreite und -farbe)
         as_pdf.horizontal_line(c_links, 86, c_rechts - c_links, 0.6, '000000');
-        if g_vorschau then
-            -- Wasserzeichen quer ueber die Seite, damit die Vorschau nicht als Rechnung verwendet wird
-            as_pdf.put_txt(110, 230, 'VORSCHAU', p_degrees_rotation => 45, p_font_index => g_fett, p_fontsize => 110,
-                           p_color => 'c8c8c8', p_alpha => 0.45);
+        if g_wasserzeichen is not null then
+            -- Wasserzeichen quer ueber die Seite: Vorschau bzw. stornierte Rechnung nicht als gueltige Rechnung verwenden
+            as_pdf.put_txt(case g_wasserzeichen when 'VORSCHAU' then 110 else 95 end, 230, g_wasserzeichen,
+                           p_degrees_rotation => 45, p_font_index => g_fett, p_fontsize => 110,
+                           p_color => case g_wasserzeichen when 'VORSCHAU' then 'c8c8c8' else 'e08080' end, p_alpha => 0.45);
         end if;
         g_y := c_oben_f2;
     end neue_seite;
@@ -545,7 +546,7 @@ as
         l_r FAKT_RECHNUNGEN%rowtype;
     begin
         select * into l_r from FAKT_RECHNUNGEN where RECH_ID = p_rech_id;
-        g_vorschau := l_r.RECH_STATUS = 'ENTWURF';
+        g_wasserzeichen := case l_r.RECH_STATUS when 'ENTWURF' then 'VORSCHAU' when 'STORNIERT' then 'STORNIERT' end;
         as_pdf.init;
         as_pdf.set_page_format('A4');
         as_pdf.set_margins(p_top => 30, p_left => c_links, p_bottom => 30, p_right => 595 - c_rechts, p_unit => 'pt');

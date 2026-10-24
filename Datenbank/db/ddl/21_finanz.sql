@@ -119,6 +119,9 @@ create or replace package FAKT_RECHNUNG as
     -- Unterpositionen); nicht uebernommen: Nummer, Datum, Faelligkeit, Betreff, Zahlungen, Altsystem-ID.
     -- Liefert die ID der neuen Rechnung.
     function kopieren(p_rech_id in number) return number;
+    -- Rechnung stornieren: nur abgeschlossene, offene Rechnungen ohne Zahlung; Grund ist Pflicht. Die Rechnung behaelt
+    -- Nummer und Datum, zaehlt nicht mehr zum Umsatz und ist gesperrt; der Grund steht in der Historie.
+    procedure stornieren(p_rech_id in number, p_grund in varchar2);
     -- TRUE nur waehrend das Package Nummern vergibt/zuruecksetzt (Trigger sperren manuelle Aenderungen)
     g_intern boolean := false;
 end FAKT_RECHNUNG;
@@ -346,6 +349,27 @@ create or replace package body FAKT_RECHNUNG as
             g_intern := false;
             raise;
     end loeschen;
+
+    procedure stornieren(p_rech_id in number, p_grund in varchar2) is
+        l_rech  FAKT_RECHNUNGEN%rowtype;
+        l_anz   pls_integer;
+    begin
+        select * into l_rech from FAKT_RECHNUNGEN where RECH_ID = p_rech_id for update;
+        if trim(p_grund) is null then
+            raise_application_error(-20240, 'Bitte den Grund für das Storno angeben.');
+        end if;
+        if l_rech.RECH_STATUS <> 'OFFEN' then
+            raise_application_error(-20241, 'Nur abgeschlossene, offene Rechnungen können storniert werden (Status '
+                                            || l_rech.RECH_STATUS || ').');
+        end if;
+        select count(*) into l_anz from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = p_rech_id;
+        if l_anz > 0 then
+            raise_application_error(-20242, 'Zu dieser Rechnung sind Zahlungen erfasst – bitte zuerst die Zahlungen entfernen.');
+        end if;
+        update FAKT_RECHNUNGEN set RECH_STATUS = 'STORNIERT' where RECH_ID = p_rech_id;
+        -- Grund in die Historie (Skript 33; dynamisch, siehe loeschen)
+        execute immediate 'begin FAKT_HISTORIE.protokoll(:1, :2, :3); end;' using p_rech_id, 'Stornogrund', trim(p_grund);
+    end stornieren;
 
     function kopieren(p_rech_id in number) return number is
         -- ID vorab vergeben (RECH_BIU uebernimmt sie): bei insert … select gibt es kein returning (ORA-03049)

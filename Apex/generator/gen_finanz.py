@@ -1321,6 +1321,115 @@ def seite_11():
 
 """
 
+    # Storno-Dialog (Inline-Dialog): Grund ist Pflicht, Stornieren schickt die Seite mit Request STORNIEREN ab
+    s += """    region storno-dialog (
+        name: Rechnung stornieren
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Die Rechnung &P11_RECH_NUMMER. wird storniert. Sie behält Nummer und Datum, zählt nicht mehr zum Umsatz
+                und kann danach nicht mehr geändert werden.</p>
+                ```
+        }
+        layout {
+            sequence: 90
+            slot: body
+        }
+        appearance {
+            template: @/inline-dialog
+            templateOptions: [
+                #DEFAULT#
+                js-dialog-autoheight
+                js-dialog-size480x320
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'OFFEN'
+        }
+    )
+
+    pageItem P11_STORNO_GRUND (
+        type: textarea
+        label {
+            label: Grund für das Storno
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @storno-dialog
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            maxLength: 1000
+        }
+    )
+
+"""
+    s += button("storno-abbrechen", "STORNO_ABBRECHEN", "Abbrechen", 10, "storno-dialog", "close",
+                verhalten="            action: definedByDynamicAction\n")
+    s += button("stornieren-ausfuehren", "STORNIEREN", "Stornieren", 20, "storno-dialog", "next",
+                options="[\n                #DEFAULT#\n                t-Button--danger\n            ]",
+                verhalten="""            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+""")   # ohne Seitenvalidierungen (Positionsfelder); den Grund prueft FAKT_RECHNUNG.stornieren
+    s += """    dynamicAction storno-dialog-oeffnen (
+        name: Storno-Dialog öffnen
+        execution {
+            sequence: 8
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @stornieren
+        }
+
+        action storno-dialog-auf (
+            action: openRegion
+            affectedElements {
+                selectionType: region
+                region: @storno-dialog
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    dynamicAction storno-dialog-schliessen (
+        name: Storno-Dialog schließen
+        execution {
+            sequence: 9
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @storno-abbrechen
+        }
+
+        action storno-dialog-zu (
+            action: closeRegion
+            affectedElements {
+                selectionType: region
+                region: @storno-dialog
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+"""
+
     # ------------------------------------------------ Buttons
     grau = "[\n                #DEFAULT#\n                t-Button--noUI\n            ]"
     # kein Button "Zur Liste": zurueck geht es ueber den Pfeil in der Titelleiste
@@ -1361,11 +1470,20 @@ def seite_11():
 """, bedingung="""        serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS not in ('ENTWURF', 'STORNIERT') and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
         }
         confirmation {
             message: Die Rechnung &P11_RECH_NUMMER. ist abgeschlossen. Wirklich ändern? Rechnungsnummer und Rechnungsdatum bleiben unverändert.
             style: warning
+        }
+""")
+    # Rechnung stornieren (nur OFFEN ohne Zahlung): oeffnet den Storno-Dialog
+    s += button("stornieren", "STORNO", "Rechnung stornieren", 14, "breadcrumb", "next", "@/text-with-icon",
+                icon="fa-ban", options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n                t-Button--iconLeft\n            ]",
+                verhalten="            action: definedByDynamicAction\n", bedingung="""        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'OFFEN' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
         }
 """)
     # Rechnung 1:1 als neuen Entwurf kopieren (FAKT_RECHNUNG.kopieren), danach die Kopie oeffnen
@@ -2519,6 +2637,37 @@ def seite_11():
         }
         serverSideCondition {
             whenButtonPressed: @abschliessen
+        }
+    )
+
+    process stornieren (
+        name: Rechnung stornieren
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    FAKT_RECHNUNG.stornieren(:P11_RECH_ID, :P11_STORNO_GRUND);
+                    :P11_STORNO_GRUND := null;
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 65
+        }
+        serverSideCondition {
+            whenButtonPressed: @stornieren-ausfuehren
+        }
+        successMessage {
+            successMessage: Rechnung storniert.
         }
     )
 

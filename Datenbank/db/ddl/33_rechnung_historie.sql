@@ -184,6 +184,7 @@ begin
   end if;
   l_aktion := case
                 when :old.RECH_STATUS = 'ENTWURF' and :new.RECH_STATUS = 'OFFEN' then 'Abgeschlossen'
+                when :new.RECH_STATUS = 'STORNIERT' and :old.RECH_STATUS <> 'STORNIERT' then 'Storniert'
                 when :old.RECH_STATUS <> :new.RECH_STATUS and :new.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
                      and :old.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT') then 'Zahlungsstatus'
                 else 'Geändert'

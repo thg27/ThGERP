@@ -42,7 +42,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Facettensuche (Status, Überfällig, Jahr, Monat, Kunde; Nummer umrahmt als Link) – beide aus `Apex/generator/finanz_dashboard_liste.py`;
   Seite 11 Registerkarten direkt unter der Titelleiste (`thg-rds`, „Alle“ als Icon, Regionen ohne Kopf), Artikel Seite 20 Liste mit Facetten (Aktiv, Gruppe, Einheit, MwSt.),
   Seite 21 Registerkarten Stammdaten/Kommentar und Änderungsinformationen. Rechnungsliste zeigt nur Netto (Brutto und Hinweis ausgeblendet). Regionstitel in Mandantenfarbe (`thg.js`: 20020, 20050).
-- Rechnungsstatus: ENTWURF → OFFEN (beim Abschließen) → TEILBEZAHLT / BEZAHLT automatisch aus den Zahlungen (Trigger ZAHL_STATUS_AIUD, DDL 31/32), STORNIERT;
+- Rechnungsstatus: ENTWURF → OFFEN (beim Abschließen) → TEILBEZAHLT / BEZAHLT automatisch aus den Zahlungen (Trigger ZAHL_STATUS_AIUD, DDL 31/32);
+  STORNIERT über Button „Rechnung stornieren“ (Inline-Dialog mit Pflicht-Grund, `FAKT_RECHNUNG.stornieren`; nur OFFEN ohne Zahlung, behält Nummer/Datum,
+  gesperrt, PDF mit Wasserzeichen STORNIERT, Grund in der Historie). Löschen nur Entwurf bzw. letzte vergebene Rechnung.
   teilbezahlte Rechnungen zählen als offen/überfällig und zum Umsatz.
 - „Rechnung kopieren“ (Button im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,
   Haupt-/Unterpositionen; ohne Nummer, Datum, Fälligkeit, Betreff, Zahlungen) und öffnet ihn.
