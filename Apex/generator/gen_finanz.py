@@ -1002,6 +1002,18 @@ def seite_11():
         }
     )
 
+    pageItem P11_SELBST_URL (
+        type: hidden
+        layout {
+            sequence: 7
+            region: @kunde
+            slot: regionBody
+        }
+        settings {
+            valueProtected: false
+        }
+    )
+
     pageItem P11_PDF_URL (
         type: hidden
         layout {
@@ -1438,6 +1450,66 @@ def seite_11():
                   "window.thgPositionen.schnelleingabe();")
     s += da_klick("zeile-detail", "Zeile Detail: Unterposition im Dialog erfassen", 40, "zeile-detail",
                   "window.thgPositionen.detail();")
+    s += """    dynamicAction nach-pdf-neu-laden (
+        name: Nach dem Schließen des PDF die Rechnung neu laden
+        execution {
+            sequence: 6
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }
+
+        action neu-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    // nur nach dem PDF-Dialog (Seite 13 schliesst mit { pdf: 'Y' }): Maske mit Nummer, Datum, Status und
+                    // Historie aus der Datenbank laden (der Druck wird erst beim Laden des PDF protokolliert)
+                    if (this.data && this.data.pdf === "Y" && $v("P11_SELBST_URL")) {
+                        apex.navigation.redirect($v("P11_SELBST_URL"));
+                    }
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+"""
+    # Historie nach dem Schliessen eines Dialogs (PDF-Anzeige, Unterposition) aktualisieren - der Druck wird erst
+    # beim Laden des PDF protokolliert (Seite 12), die Seite ist dann schon aufgebaut
+    for sid, ereignis in (("historie-nach-dialog", "apexafterclosedialog"), ("historie-nach-dialog-abbruch", "apexafterclosecanceldialog")):
+        s += f"""    dynamicAction {sid} (
+        name: Historie nach Dialog aktualisieren ({ereignis})
+        execution {{
+            sequence: 7
+        }}
+        when {{
+            event: {ereignis}
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }}
+
+        action {sid}-refresh (
+            action: refresh
+            affectedElements {{
+                selectionType: region
+                region: @historie
+            }}
+            execution {{
+                sequence: 10
+                fireOnInit: false
+            }}
+        )
+
+    )
+
+"""
     s += """    dynamicAction pdf-oeffnen (
         name: Nach dem Abschließen das PDF öffnen
         execution {
@@ -1591,6 +1663,10 @@ def seite_11():
                                     apex_page.get_url(p_page => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
                                 end;
                 :P11_PDF_OEFFNEN := null;
+                -- eigene URL (mit Pruefsumme, ohne P11_PDF_OEFFNEN) zum Neuladen nach dem Schliessen des PDF-Dialogs
+                :P11_SELBST_URL := case when :P11_RECH_ID is not null then
+                                       apex_page.get_url(p_page => 11, p_items => 'P11_RECH_ID', p_values => :P11_RECH_ID)
+                                   end;
                 ```
         }
         execution {
@@ -3221,6 +3297,12 @@ def pdf_seiten():
         ("title: Kundenstammblatt", "title: Rechnung"),
         ('title="Kundenstammblatt"', 'title="Rechnung"'),
         ("Kundenstammblatt konnte nicht", "Rechnung konnte nicht"),
+        # Schliessen mit Kennung: Seite 11 laedt danach neu (Nummer, Datum, Status, Historie aktuell)
+        ("apex.navigation.dialog.cancel(true);",
+         "// Rechnungsmaske (Seite 11) direkt neu laden – auch wenn der Dialog nach dem Abschliessen ohne\n"
+         "                            // ausloesenden Button geoeffnet wurde (dann kommt kein Dialog-Ereignis an der Seite an)\n"
+         "                            var neu = parent.apex && parent.apex.item('P11_SELBST_URL').getValue();\n"
+         "                            if (neu) { parent.apex.navigation.redirect(neu); } else { apex.navigation.dialog.close(true, { pdf: 'Y' }); }"),
         # jeder Druck in die Historie (Vorschau im Entwurf, sonst Rechnung)
         ("l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);\n                begin\n",
          "l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);\n                begin\n"

@@ -132,7 +132,7 @@ page 18 (
 
                     // Datei holen und als Blob-URL anzeigen (Frame-Sperre der App greift fuer blob: nicht);
                     // Viewer ohne Werkzeugleiste und Seitenvorschau
-                    fetch(f.dataset.src, { credentials: 'same-origin' })
+                    fetch(f.dataset.src, { credentials: 'same-origin', cache: 'no-store' })   // nie aus dem Browser-Cache (Vorschau -> Rechnung)
                         .then(function (r) {
                             if (!r.ok) { throw new Error('HTTP ' + r.status); }
                             return r.blob();

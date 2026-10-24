@@ -930,6 +930,18 @@ page 11 (
         }
     )
 
+    pageItem P11_SELBST_URL (
+        type: hidden
+        layout {
+            sequence: 7
+            region: @kunde
+            slot: regionBody
+        }
+        settings {
+            valueProtected: false
+        }
+    )
+
     pageItem P11_PDF_URL (
         type: hidden
         layout {
@@ -3159,6 +3171,86 @@ page 11 (
 
     )
 
+    dynamicAction nach-pdf-neu-laden (
+        name: Nach dem Schließen des PDF die Rechnung neu laden
+        execution {
+            sequence: 6
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }
+
+        action neu-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    // nur nach dem PDF-Dialog (Seite 13 schliesst mit { pdf: 'Y' }): Maske mit Nummer, Datum, Status und
+                    // Historie aus der Datenbank laden (der Druck wird erst beim Laden des PDF protokolliert)
+                    if (this.data && this.data.pdf === "Y" && $v("P11_SELBST_URL")) {
+                        apex.navigation.redirect($v("P11_SELBST_URL"));
+                    }
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    dynamicAction historie-nach-dialog (
+        name: Historie nach Dialog aktualisieren (apexafterclosedialog)
+        execution {
+            sequence: 7
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }
+
+        action historie-nach-dialog-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @historie
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction historie-nach-dialog-abbruch (
+        name: Historie nach Dialog aktualisieren (apexafterclosecanceldialog)
+        execution {
+            sequence: 7
+        }
+        when {
+            event: apexafterclosecanceldialog
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }
+
+        action historie-nach-dialog-abbruch-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @historie
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
     dynamicAction pdf-oeffnen (
         name: Nach dem Abschließen das PDF öffnen
         execution {
@@ -3312,6 +3404,10 @@ page 11 (
                                     apex_page.get_url(p_page => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
                                 end;
                 :P11_PDF_OEFFNEN := null;
+                -- eigene URL (mit Pruefsumme, ohne P11_PDF_OEFFNEN) zum Neuladen nach dem Schliessen des PDF-Dialogs
+                :P11_SELBST_URL := case when :P11_RECH_ID is not null then
+                                       apex_page.get_url(p_page => 11, p_items => 'P11_RECH_ID', p_values => :P11_RECH_ID)
+                                   end;
                 ```
         }
         execution {
