@@ -94,6 +94,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - Gemeinsame Bausteine in `thg.css`/`thg.js` (aus Marchler): Registerkarten `thg-rds` (Alle-Icon, erste Karte beim Öffnen), `thg-ohne-titel`, `thg-kundenname`,
   `thg-kundennr`, `thg-badge`, Kennzahlen `#kennzahlen`, PLZ-Facette `thg-plz-bereich`, Regionstitel in Mandantenfarbe (`thg-region-farbig`, App-Liste in `thg.js`, derzeit 20020),
   inaktive LOV-Einträge („ – inaktiv“) werden ausgeblendet, Dialoge übernehmen den Mandanten der aufrufenden Seite.
+- **Als App installierbar (PWA):** nur das Portal 20000 (`progressiveWebApp` in `thg-portal/application.apx`, Scope `/ords/r/thgerp/` – deckt alle ThGERP-Apps
+  inkl. Anmeldung ab und ist genauer als der Scope `/ords/` der SIPA-App auf demselben Host). Icons `app-icon-*.png` (aus `Apex/workspace-files/thg-app-icon.svg`,
+  192 randlos/maskable) in allen Apps unter `shared-components/static-files/icons/`.
 - **Navigationsmenü** in allen Apps standardmäßig aufgeklappt (Template-Option `js-defaultCollapsed` entfernt, `thg.js` setzt die gemerkte Vorgabe je Seite zurück).
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).

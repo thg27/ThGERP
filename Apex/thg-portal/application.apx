@@ -35,6 +35,19 @@ app THG-PORTAL (
         globalPage: 0
         addBuiltWithApexToFooter: false
     }
+    progressiveWebApp {
+        installable: true
+        display: standalone
+        screenOrientation: any
+        themeColor: #262f33
+        backgroundColor: #ffffff
+        customManifest:
+            ```
+            {
+                "scope": "/ords/r/thgerp/"
+            }
+            ```
+    }
     appFormatMasks {
         date: DS
         timestamp: DS
