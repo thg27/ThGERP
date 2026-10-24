@@ -1273,7 +1273,6 @@ page 11 (
             type: sqlQuery
             sqlQuery:
                 ```sql
-                -- Anzeigetext des Status (Offen – gedruckt …), gespeichert bleibt der Code
                 select FAKT_RECHNUNG.status_text(column_value) d, column_value r
                   from table(sys.odcivarchar2list('ENTWURF', 'GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT'))
                 ```
@@ -3716,7 +3715,7 @@ page 11 (
                 -- bewusste Aktion "Rechnung bearbeiten": Maske und Positionen fuer diese Rechnung wieder aenderbar
                 :P11_BEARBEITEN := 'Y';
                 FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Zur Bearbeitung geöffnet',
-                                        'Rechnung ' || :P11_RECH_NUMMER || ' (Status ' || :P11_RECH_STATUS || ')');
+                                        'Rechnung ' || :P11_RECH_NUMMER || ' (Status ' || FAKT_RECHNUNG.status_text(:P11_RECH_STATUS) || ')');
                 ```
         }
         execution {

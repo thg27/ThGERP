@@ -1070,6 +1070,8 @@ def seite_11():
               extra=SWITCH("N"), **f)
     s += item("P11_RECH_IST_FAELLIGKEIT_ANZEIGEN", "switch", "Fälligkeit anzeigen", 100, a,
               col="RECH_IST_FAELLIGKEIT_ANZEIGEN", neue_zeile=False, spalten=3, extra=SWITCH("N"), **f)
+    # Status als Anzeigetext (FAKT_RECHNUNG.status_text), gespeichert bleibt der Code. Die LOV-Abfrage muss mit select
+    # beginnen – ein fuehrender Kommentar laesst APEX sie als PL/SQL ausfuehren (PLS-00428)
     s += item("P11_RECH_STATUS", "displayOnly", "Status", 120, a, col="RECH_STATUS", neue_zeile=False, spalten=3,
               extra="""        settings {
             basedOn: lov
@@ -1078,7 +1080,6 @@ def seite_11():
             type: sqlQuery
             sqlQuery:
                 ```sql
-                -- Anzeigetext des Status (Offen – gedruckt …), gespeichert bleibt der Code
                 select FAKT_RECHNUNG.status_text(column_value) d, column_value r
                   from table(sys.odcivarchar2list('ENTWURF', 'GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT'))
                 ```
@@ -1870,7 +1871,7 @@ def seite_11():
                 -- bewusste Aktion "Rechnung bearbeiten": Maske und Positionen fuer diese Rechnung wieder aenderbar
                 :P11_BEARBEITEN := 'Y';
                 FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Zur Bearbeitung geöffnet',
-                                        'Rechnung ' || :P11_RECH_NUMMER || ' (Status ' || :P11_RECH_STATUS || ')');
+                                        'Rechnung ' || :P11_RECH_NUMMER || ' (Status ' || FAKT_RECHNUNG.status_text(:P11_RECH_STATUS) || ')');
                 ```
         }
         execution {
