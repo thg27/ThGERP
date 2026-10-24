@@ -1901,6 +1901,12 @@ def seite_11():
                 :P11_PDF_URL := case when :P11_PDF_OEFFNEN = 'Y' and :P11_RECH_ID is not null then
                                     apex_page.get_url(p_page => 13, p_clear_cache => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
                                 end;
+                -- "Rechnung drucken" nach "Rechnung bearbeiten" schliesst die Bearbeitung ab: Rechnung wieder gesperrt,
+                -- Button "Rechnung bearbeiten" wieder sichtbar (Aenderungen sind vorher gespeichert)
+                if :P11_PDF_OEFFNEN = 'Y' and nvl(:P11_BEARBEITEN, 'N') = 'Y' then
+                    :P11_BEARBEITEN := null;
+                    FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Bearbeitung abgeschlossen', 'Rechnung ' || :P11_RECH_NUMMER);
+                end if;
                 :P11_PDF_OEFFNEN := null;
                 -- eigene URL (mit Pruefsumme, ohne P11_PDF_OEFFNEN) zum Neuladen nach dem Schliessen des PDF-Dialogs
                 :P11_SELBST_URL := case when :P11_RECH_ID is not null then
