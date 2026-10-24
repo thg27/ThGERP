@@ -383,6 +383,7 @@ page 21 (
         appearance {
             template: @/required-floating
             templateOptions: #DEFAULT#
+            formatMask: FML999G999G990D00
         }
         source {
             formRegion: @artikel

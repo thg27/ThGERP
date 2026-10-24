@@ -82,7 +82,7 @@ def wl_seiten(ziel, wertelisten):
 
 # --------------------------------------------------------------------------- Bausteine
 def item(name, typ, label, seq, region, form="artikel", col=None, dtype="varchar2", req=False, maxlen=None,
-         extra="", neue_zeile=True, spalten=None, tmpl=None):
+         extra="", neue_zeile=True, spalten=None, tmpl=None, maske=None):
     layout = f"            sequence: {seq}\n            region: @{region}\n            slot: regionBody\n"
     if not neue_zeile:
         layout += "            startNewRow: false\n"
@@ -101,7 +101,7 @@ def item(name, typ, label, seq, region, form="artikel", col=None, dtype="varchar
         appearance {{
             template: {tmpl}
             templateOptions: #DEFAULT#
-        }}
+{f"            formatMask: {maske}{chr(10)}" if maske else ""}        }}
 """
     if col:
         s += f"""        source {{
@@ -637,8 +637,9 @@ def seite_11():
     s += item("P11_ARTI_IST_AKTIV", "switch", "Aktiv", 7, st,
               col="ARTI_IST_AKTIV", neue_zeile=False, spalten=2, extra=SWITCH("Y"))
     s += item("P11_ARTI_NAME", "textField", "Name", 10, st, col="ARTI_NAME", req=True, maxlen=200, spalten=6)
+    # Betrag mit Euro-Zeichen und zwei Nachkommastellen (FML: Waehrungssymbol der Sitzung)
     s += item("P11_ARTI_VK_PREIS", "numberField", "Verkaufspreis", 20, st, col="ARTI_VK_PREIS", dtype="number",
-              req=True, neue_zeile=False, spalten=2,
+              req=True, neue_zeile=False, spalten=2, maske="FML999G999G990D00",
               extra="        default {\n            type: static\n            staticValue: 0\n        }\n")
     s += item("P11_ARTI_IST_BRUTTO", "switch", "brutto", 30, st, col="ARTI_IST_BRUTTO", neue_zeile=False, spalten=1,
               extra=SWITCH("N"))
