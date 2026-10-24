@@ -128,7 +128,7 @@ FAKT = [
     ('RECH_ZBED_ID', 'number', 'Y', None, 'FK: Zahlungsbedingung'),
     ('RECH_EMPF_LAND_CODE', 'varchar2(2 char)', 'Y', None, 'Empfaenger (Kopie beim Anlegen): Land, FK ALLG_LAENDER'),
     ('RECH_NUMMER', 'varchar2(30 char)', 'Y', None, 'Rechnungsnummer (eindeutig je Mandant), vergeben beim Abschliessen'),
-    ('RECH_STATUS', 'varchar2(15 char)', 'N', "'ENTWURF'", 'ENTWURF, OFFEN, TEILBEZAHLT, BEZAHLT, STORNIERT'),
+    ('RECH_STATUS', 'varchar2(15 char)', 'N', "'ENTWURF'", 'ENTWURF, GEDRUCKT, GESENDET, TEILBEZAHLT, BEZAHLT, STORNIERT'),
     ('RECH_BETREFF', 'varchar2(200 char)', 'Y', None, 'Betreff, z.B. Rechnung 2026 - 13'),
     ('RECH_DATUM', 'date', 'Y', None, 'Rechnungsdatum, gesetzt beim Abschliessen zusammen mit der Nummer (Entwurf: leer)'),
     ('RECH_FAELLIG_AM', 'date', 'Y', None, 'Faelligkeitsdatum'),
@@ -157,7 +157,7 @@ FAKT = [
     ('RECH_SUMME_BRUTTO', BETRAG, 'N', '0', 'Gesamtbetrag'),
     ('RECH_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill DokumentRechnung.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme'),
   ], [  # Eindeutigkeit von RECH_ALT_ID je Mandant: Unique-Index RECH_ALT_ID_UI in Skript 30
-      ('RECH_STATUS_CK', 'C', "RECH_STATUS in ('ENTWURF', 'OFFEN', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT')"),
+      ('RECH_STATUS_CK', 'C', "RECH_STATUS in ('ENTWURF', 'GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT')"),
       ('RECH_DATUM_CK', 'C', "RECH_STATUS = 'ENTWURF' or RECH_DATUM is not null"),
       ('RECH_NUMMER_CK', 'C', "RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null"),
       ('RECH_LEISTUNG_CK', 'C', 'RECH_LEISTUNG_BIS is null or RECH_LEISTUNG_VON is null or RECH_LEISTUNG_BIS >= RECH_LEISTUNG_VON'),

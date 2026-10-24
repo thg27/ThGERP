@@ -41,5 +41,7 @@ whenever sqlerror exit failure rollback
 @@31_zahlungsstatus_trigger.sql
 @@32_status_teilbezahlt.sql
 @@33_rechnung_historie.sql
+@@34_status_gedruckt.sql
+@@35_rechnung_dokumente.sql
 
 prompt Installation abgeschlossen.

@@ -1,9 +1,9 @@
 -- =====================================================================
 -- ThGERP (Gruppe FAKT)
 -- 31 – Zahlungsstatus automatisch: nach jeder Aenderung an FAKT_ZAHLUNGEN (Einfuegen, Aendern, Loeschen) wird der
---      Status der betroffenen Rechnungen neu bestimmt (FAKT_RECHNUNG.zahlungsstatus: OFFEN/BEZAHLT aus den Zahlungen).
+--      Status der betroffenen Rechnungen neu bestimmt (FAKT_RECHNUNG.zahlungsstatus: GEDRUCKT/GESENDET/TEILBEZAHLT/BEZAHLT aus den Zahlungen).
 --      Grund: das Raster "Zahlungen" (THG-FINANZ Seite 11) speichert per AJAX ohne die Seitenprozesse – der Status
---      blieb nach einem Zahlungseingang auf OFFEN.
+--      blieb nach einem Zahlungseingang offen.
 --      Compound Trigger: Rechnungen je Zeile merken, Status erst nach der Anweisung setzen (sonst ORA-04091).
 -- Erzeugt: 2026-10-24
 -- Wiederholbar.
@@ -46,7 +46,7 @@ end ZAHL_STATUS_AIUD;
 
 -- bestehende Rechnungen einmal abgleichen
 begin
-    for r in (select RECH_ID from FAKT_RECHNUNGEN where RECH_STATUS in ('OFFEN', 'BEZAHLT')) loop
+    for r in (select RECH_ID from FAKT_RECHNUNGEN where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')) loop
         FAKT_RECHNUNG.zahlungsstatus(r.RECH_ID);
     end loop;
     commit;

@@ -36,6 +36,18 @@ page 12 (
         }
     )
 
+    pageItem P12_RDOK_ID (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @rechnung-pdf
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
     process pdf-herunterladen (
         name: Rechnung als PDF ausliefern (inline, fuer die Vorschau auf Seite 13)
         type: executeCode
@@ -43,17 +55,24 @@ page 12 (
             plsqlCode:
                 ```plsql
                 declare
-                    l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);
+                    l_pdf blob;
                 begin
-                    for r in (select RECH_STATUS, RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P12_RECH_ID) loop
-                        FAKT_HISTORIE.protokoll(:P12_RECH_ID, case r.RECH_STATUS when 'ENTWURF' then 'Vorschau gedruckt'
-                                                                   else 'Rechnung gedruckt' end, r.RECH_NUMMER);
-                    end loop;
-                    commit;
+                    if :P12_RDOK_ID is not null then
+                        select RDOK_DATEI into l_pdf from FAKT_RECHNUNG_DOKUMENTE
+                         where RDOK_ID = :P12_RDOK_ID and RDOK_RECH_ID = :P12_RECH_ID;
+                    else
+                        l_pdf := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);
+                        for r in (select RECH_STATUS, RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P12_RECH_ID) loop
+                            FAKT_HISTORIE.protokoll(:P12_RECH_ID, case r.RECH_STATUS when 'ENTWURF' then 'Vorschau gedruckt'
+                                                                       else 'Rechnung gedruckt' end, r.RECH_NUMMER);
+                        end loop;
+                        FAKT_RECHNUNG_DOKUMENT.ablegen(:P12_RECH_ID, l_pdf);
+                        commit;
+                    end if;
                     apex_http.download(
                         p_blob         => l_pdf,
                         p_content_type => 'application/pdf',
-                        p_filename     => FAKT_RECHNUNG_PDF.dateiname(:P12_RECH_ID),
+                        p_filename     => FAKT_RECHNUNG_DOKUMENT.dateiname(:P12_RECH_ID, :P12_RDOK_ID),
                         p_is_inline    => true);
                 end;
                 ```

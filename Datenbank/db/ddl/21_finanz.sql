@@ -63,8 +63,8 @@ select r.RECH_ID,
        r.RECH_SUMME_MWST,
        r.RECH_SUMME_BRUTTO,
        nvl(z.BEZAHLT, 0) as BEZAHLT,
-       case when r.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT') then r.RECH_SUMME_BRUTTO - nvl(z.BEZAHLT, 0) end as OFFEN,
-       case when r.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT') and r.RECH_FAELLIG_AM < trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) then 'Y' else 'N' end as IST_UEBERFAELLIG,
+       case when r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT') then r.RECH_SUMME_BRUTTO - nvl(z.BEZAHLT, 0) end as OFFEN,
+       case when r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT') and r.RECH_FAELLIG_AM < trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) then 'Y' else 'N' end as IST_UEBERFAELLIG,
        r.RECH_UPDATED_ON,
        r.RECH_UPDATED_BY
   from FAKT_RECHNUNGEN r
@@ -106,10 +106,11 @@ create or replace package FAKT_RECHNUNG as
                                p_rpos_id in number default null) return number;
     -- naechste Belegnummer aus FAKT_NUMMERNKREISE (legt den Nummernkreis des Jahres bei Bedarf an)
     function naechste_nummer(p_mand_id in number, p_belegart in varchar2, p_jahr in number) return varchar2;
-    -- Entwurf abschliessen: Rechnungsdatum = heute, Nummer vergeben (Jahr des Rechnungsdatums), Status OFFEN,
+    -- Entwurf abschliessen: Rechnungsdatum = heute, Nummer vergeben (Jahr des Rechnungsdatums), Status GEDRUCKT,
     -- Betreff/Faelligkeit vorbelegen
     procedure abschliessen(p_rech_id in number);
-    -- Status aus den Zahlungen ableiten: keine Zahlung OFFEN, teilweise TEILBEZAHLT, vollstaendig BEZAHLT
+    -- Status aus den Zahlungen ableiten: keine Zahlung GEDRUCKT bzw. GESENDET (bleibt), teilweise TEILBEZAHLT,
+    -- vollstaendig BEZAHLT
     procedure zahlungsstatus(p_rech_id in number);
     -- Y = Rechnung hat die zuletzt vergebene Nummer ihres Nummernkreises (darf geloescht werden)
     function ist_letzte(p_rech_id in number) return varchar2;
@@ -122,6 +123,8 @@ create or replace package FAKT_RECHNUNG as
     -- Rechnung stornieren: nur abgeschlossene, offene Rechnungen ohne Zahlung; Grund ist Pflicht. Die Rechnung behaelt
     -- Nummer und Datum, zaehlt nicht mehr zum Umsatz und ist gesperrt; der Grund steht in der Historie.
     procedure stornieren(p_rech_id in number, p_grund in varchar2);
+    -- Anzeigetext des Status (ENTWURF -> Entwurf, GEDRUCKT -> Offen – gedruckt, GESENDET -> Offen – gesendet, ...)
+    function status_text(p_status in varchar2) return varchar2 deterministic;
     -- TRUE nur waehrend das Package Nummern vergibt/zuruecksetzt (Trigger sperren manuelle Aenderungen)
     g_intern boolean := false;
 end FAKT_RECHNUNG;
@@ -284,7 +287,7 @@ create or replace package body FAKT_RECHNUNG as
         update FAKT_RECHNUNGEN r
            set RECH_NUMMER     = l_nr,
                RECH_DATUM      = l_datum,
-               RECH_STATUS     = 'OFFEN',
+               RECH_STATUS     = 'GEDRUCKT',
                RECH_BETREFF    = coalesce(RECH_BETREFF, 'Rechnung ' || l_nr),
                RECH_FAELLIG_AM = coalesce(RECH_FAELLIG_AM,
                                           l_datum + nvl((select ZBED_ZIEL_TAGE from ALLG_ZAHLUNGSBEDINGUNGEN
@@ -302,10 +305,11 @@ create or replace package body FAKT_RECHNUNG as
         update FAKT_RECHNUNGEN r
            set RECH_STATUS = (select case when nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0) >= r.RECH_SUMME_BRUTTO then 'BEZAHLT'
                                           when nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0) > 0 then 'TEILBEZAHLT'
-                                          else 'OFFEN' end
+                                          when r.RECH_STATUS = 'GESENDET' then 'GESENDET'
+                                          else 'GEDRUCKT' end
                                 from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = r.RECH_ID)
          where RECH_ID = p_rech_id
-           and RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT');
+           and RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT');
     end zahlungsstatus;
 
     function ist_letzte(p_rech_id in number) return varchar2 is
@@ -358,7 +362,7 @@ create or replace package body FAKT_RECHNUNG as
         if trim(p_grund) is null then
             raise_application_error(-20240, 'Bitte den Grund für das Storno angeben.');
         end if;
-        if l_rech.RECH_STATUS <> 'OFFEN' then
+        if l_rech.RECH_STATUS not in ('GEDRUCKT', 'GESENDET') then
             raise_application_error(-20241, 'Nur abgeschlossene, offene Rechnungen können storniert werden (Status '
                                             || l_rech.RECH_STATUS || ').');
         end if;
@@ -424,6 +428,17 @@ create or replace package body FAKT_RECHNUNG as
         execute immediate 'begin FAKT_HISTORIE.protokoll(:1, :2, :3); end;' using l_neu, 'Kopiert', l_herkunft;
         return l_neu;
     end kopieren;
+
+    function status_text(p_status in varchar2) return varchar2 deterministic is
+    begin
+        return case p_status when 'ENTWURF'     then 'Entwurf'
+                             when 'GEDRUCKT'    then 'Offen – gedruckt'
+                             when 'GESENDET'    then 'Offen – gesendet'
+                             when 'TEILBEZAHLT' then 'Teilweise bezahlt'
+                             when 'BEZAHLT'     then 'Bezahlt'
+                             when 'STORNIERT'   then 'Storniert'
+                             else initcap(p_status) end;
+    end status_text;
 
 end FAKT_RECHNUNG;
 /

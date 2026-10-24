@@ -5,10 +5,14 @@
 -- Voraussetzung: Oracle 12.2+ (Objektnamen > 30 Zeichen), getestet fuer 19c
 -- =====================================================================
 
+drop package FAKT_RECHNUNG_DOKUMENT;
+drop package FAKT_HISTORIE;
 drop package FAKT_RECHNUNG_PDF;
 drop package FAKT_RECHNUNG;
 drop view FAKT_RECHNUNGEN_V;
 drop view FAKT_RECHNUNG_MWST_V;
+drop table FAKT_RECHNUNG_DOKUMENTE cascade constraints purge;
+drop table FAKT_RECHNUNG_HISTORIE cascade constraints purge;
 drop table FAKT_ZAHLUNGEN cascade constraints purge;
 drop table FAKT_RECHNUNGSPOSITIONEN cascade constraints purge;
 drop table FAKT_RECHNUNGEN cascade constraints purge;

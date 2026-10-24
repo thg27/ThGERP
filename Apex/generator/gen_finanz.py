@@ -1071,7 +1071,19 @@ def seite_11():
     s += item("P11_RECH_IST_FAELLIGKEIT_ANZEIGEN", "switch", "Fälligkeit anzeigen", 100, a,
               col="RECH_IST_FAELLIGKEIT_ANZEIGEN", neue_zeile=False, spalten=3, extra=SWITCH("N"), **f)
     s += item("P11_RECH_STATUS", "displayOnly", "Status", 120, a, col="RECH_STATUS", neue_zeile=False, spalten=3,
-              extra="""        default {
+              extra="""        settings {
+            basedOn: lov
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Anzeigetext des Status (Offen – gedruckt …), gespeichert bleibt der Code
+                select FAKT_RECHNUNG.status_text(column_value) d, column_value r
+                  from table(sys.odcivarchar2list('ENTWURF', 'GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT'))
+                ```
+        }
+        default {
             type: static
             staticValue: ENTWURF
         }
@@ -1238,11 +1250,119 @@ def seite_11():
                    """        serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
+            plsqlExpression: :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
         }
 """).replace("            htmlDomId: zahlungen\n", "            htmlDomId: zahlungen\n            regionDisplaySelector: true\n", 1) \
        .replace("            template: @/standard\n            templateOptions: #DEFAULT#\n",
                 "            template: @/standard\n            templateOptions: " + OHNE_KOPF + "\n", 1)
+
+    # Dokumente (nach Zahlungen): abgelegte Rechnungsdrucke (FAKT_RECHNUNG_DOKUMENTE, Skript 35) – jeder Druck nach
+    # "Rechnung bearbeiten" als neue Version, aeltere bleiben; Anzeigen im PDF-Dialog (Seite 13 mit P13_RDOK_ID)
+    s += """    region dokumente (
+        name: Dokumente
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Zeitpunkt in Wiener Zeit (Server UTC), neueste Version zuerst
+                select RDOK_ID,
+                       RDOK_VERSION as VERSION,
+                       RDOK_BEZEICHNUNG as BEZEICHNUNG,
+                       FAKT_RECHNUNG.status_text(RDOK_RECH_STATUS) as STATUS,
+                       to_char(from_tz(RDOK_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as GEDRUCKT_AM,
+                       RDOK_CREATED_BY as GEDRUCKT_VON,
+                       to_char(round(RDOK_GROESSE / 1024), 'FM999G999G990') || ' KB' as GROESSE
+                  from FAKT_RECHNUNG_DOKUMENTE
+                 where RDOK_RECH_ID = :P11_RECH_ID
+                 order by RDOK_VERSION desc
+                ```
+            pageItemsToSubmit: [
+                P11_RECH_ID
+            ]
+        }
+        advanced {
+            regionDisplaySelector: true
+            htmlDomId: dokumente
+        }
+        layout {
+            sequence: 65
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: """ + OHNE_KOPF + """
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+        messages {
+            whenNoDataFound: Noch keine Rechnung gedruckt.
+        }
+
+        column RDOK_ID (
+            type: link
+            heading {
+                heading: Anzeigen
+                alignment: center
+            }
+            layout {
+                sequence: 10
+                columnAlignment: center
+            }
+            link {
+                target: {
+                    page: 13
+                    items: {
+                        P13_RECH_ID: &P11_RECH_ID.
+                        P13_RDOK_ID: #RDOK_ID#
+                    }
+                    clearCache: 13
+                }
+                linkText: <span role="img" aria-label="Anzeigen" class="fa fa-file-pdf-o" title="Anzeigen"></span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+""" + "".join(f"""        column {c} (
+            type: plainText
+            heading {{
+                heading: {h}
+            }}
+            layout {{
+                sequence: {i * 10}
+            }}
+            sorting {{
+                sortable: false
+            }}
+        )
+
+""" for i, (c, h) in enumerate((("VERSION", "Version"), ("BEZEICHNUNG", "Bezeichnung"), ("STATUS", "Status beim Druck"),
+                                ("GEDRUCKT_AM", "Gedruckt am"), ("GEDRUCKT_VON", "Gedruckt von"),
+                                ("GROESSE", "Größe")), start=2)) + """    )
+
+"""
 
     # Historie (nach Zahlungen): wer hat wann was geaendert (FAKT_RECHNUNG_HISTORIE, Trigger aus Skript 33)
     s += """    region historie (
@@ -1321,7 +1441,8 @@ def seite_11():
 
 """
 
-    # Storno-Dialog (Inline-Dialog): Grund ist Pflicht, Stornieren schickt die Seite mit Request STORNIEREN ab
+    # Storno-Dialog (Inline-Dialog): Grund ist Pflicht, Stornieren schickt die Seite mit Request STORNIEREN ab.
+    # Slot dialogsDrawersAndPopups (versteckter Bereich der Seite) – in body blitzt er beim Laden kurz auf
     s += """    region storno-dialog (
         name: Rechnung stornieren
         type: staticContent
@@ -1334,7 +1455,7 @@ def seite_11():
         }
         layout {
             sequence: 90
-            slot: body
+            slot: dialogsDrawersAndPopups
         }
         appearance {
             template: @/inline-dialog
@@ -1347,7 +1468,7 @@ def seite_11():
         serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'OFFEN'
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET')
         }
     )
 
@@ -1477,13 +1598,13 @@ def seite_11():
             style: warning
         }
 """)
-    # Rechnung stornieren (nur OFFEN ohne Zahlung): oeffnet den Storno-Dialog
+    # Rechnung stornieren (nur offen – GEDRUCKT/GESENDET – ohne Zahlung): oeffnet den Storno-Dialog
     s += button("stornieren", "STORNO", "Rechnung stornieren", 14, "breadcrumb", "next", "@/text-with-icon",
                 icon="fa-ban", options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n                t-Button--iconLeft\n            ]",
                 verhalten="            action: definedByDynamicAction\n", bedingung="""        serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'OFFEN' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET') and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
         }
 """)
     # Rechnung 1:1 als neuen Entwurf kopieren (FAKT_RECHNUNG.kopieren), danach die Kopie oeffnen
@@ -1771,7 +1892,7 @@ def seite_11():
                 ```plsql
                 -- Dialog-URL (javascript:apex.navigation.dialog …) fuer die Dynamic Action beim Laden; Merker zuruecksetzen
                 :P11_PDF_URL := case when :P11_PDF_OEFFNEN = 'Y' and :P11_RECH_ID is not null then
-                                    apex_page.get_url(p_page => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
+                                    apex_page.get_url(p_page => 13, p_clear_cache => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
                                 end;
                 :P11_PDF_OEFFNEN := null;
                 -- eigene URL (mit Pruefsumme, ohne P11_PDF_OEFFNEN) zum Neuladen nach dem Schliessen des PDF-Dialogs
@@ -3447,19 +3568,36 @@ def pdf_seiten():
          "                            // ausloesenden Button geoeffnet wurde (dann kommt kein Dialog-Ereignis an der Seite an)\n"
          "                            var neu = parent.apex && parent.apex.item('P11_SELBST_URL').getValue();\n"
          "                            if (neu) { parent.apex.navigation.redirect(neu); } else { apex.navigation.dialog.close(true, { pdf: 'Y' }); }"),
-        # jeder Druck in die Historie (Vorschau im Entwurf, sonst Rechnung)
+        # P12_RDOK_ID gesetzt: abgelegten Druck ausliefern (Registerkarte Dokumente); sonst PDF erzeugen, jeden Druck in
+        # die Historie (Vorschau im Entwurf, sonst Rechnung) und den Rechnungsdruck ablegen (FAKT_RECHNUNG_DOKUMENT)
         ("l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);\n                begin\n",
-         "l_pdf blob := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);\n                begin\n"
-         "                    for r in (select RECH_STATUS, RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P12_RECH_ID) loop\n"
-         "                        FAKT_HISTORIE.protokoll(:P12_RECH_ID, case r.RECH_STATUS when 'ENTWURF' then 'Vorschau gedruckt'\n"
-         "                                                                   else 'Rechnung gedruckt' end, r.RECH_NUMMER);\n"
-         "                    end loop;\n"
-         "                    commit;\n"),
+         "l_pdf blob;\n                begin\n"
+         "                    if :P12_RDOK_ID is not null then\n"
+         "                        select RDOK_DATEI into l_pdf from FAKT_RECHNUNG_DOKUMENTE\n"
+         "                         where RDOK_ID = :P12_RDOK_ID and RDOK_RECH_ID = :P12_RECH_ID;\n"
+         "                    else\n"
+         "                        l_pdf := FAKT_RECHNUNG_PDF.pdf(:P12_RECH_ID);\n"
+         "                        for r in (select RECH_STATUS, RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P12_RECH_ID) loop\n"
+         "                            FAKT_HISTORIE.protokoll(:P12_RECH_ID, case r.RECH_STATUS when 'ENTWURF' then 'Vorschau gedruckt'\n"
+         "                                                                       else 'Rechnung gedruckt' end, r.RECH_NUMMER);\n"
+         "                        end loop;\n"
+         "                        FAKT_RECHNUNG_DOKUMENT.ablegen(:P12_RECH_ID, l_pdf);\n"
+         "                        commit;\n"
+         "                    end if;\n"),
+        ("FAKT_RECHNUNG_PDF.dateiname(:P12_RECH_ID)", "FAKT_RECHNUNG_DOKUMENT.dateiname(:P12_RECH_ID, :P12_RDOK_ID)"),
+        ("FAKT_RECHNUNG_PDF.dateiname(:P13_RECH_ID)", "FAKT_RECHNUNG_DOKUMENT.dateiname(:P13_RECH_ID, :P13_RDOK_ID)"),
+        ("p_items     => 'P12_RECH_ID',\n                                             p_values    => :P13_RECH_ID,",
+         "p_items     => 'P12_RECH_ID,P12_RDOK_ID',\n                                             p_values    => :P13_RECH_ID || ',' || :P13_RDOK_ID,"),
     ]
     for nr, datei in ((12, "p00012-kundenstammblatt.apx"), (13, "p00013-kundenstammblatt-anzeigen.apx")):
         s = (APEX / "thg-kunden" / "pages" / datei).read_text(encoding="utf-8")
         for a, b in ersetzen:
             s = s.replace(a, b)
+        # abgelegter Druck (Registerkarte Dokumente): ID des Dokuments neben der Rechnung
+        rid = f"    pageItem P{nr}_RECH_ID ("
+        blk = s[s.index(rid):s.index("\n    )\n", s.index(rid)) + 7]
+        s = s.replace(blk, blk + "\n" + blk.replace(f"P{nr}_RECH_ID", f"P{nr}_RDOK_ID")
+                      .replace("sequence: 10", "sequence: 20"), 1)
         assert "KUND" not in s and "stammblatt" not in s.lower(), f"Seite {nr}: Reste vom Kundenstammblatt"
         name = "p00012-rechnung-pdf.apx" if nr == 12 else "p00013-rechnung-anzeigen.apx"
         (FIN / "pages" / name).write_text(s, encoding="utf-8")

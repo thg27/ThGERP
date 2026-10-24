@@ -147,12 +147,12 @@ declare
 begin
   if inserting then
     FAKT_HISTORIE.protokoll(:new.RECH_ID, 'Angelegt',
-        'Status: ' || :new.RECH_STATUS || nvl2(:new.RECH_NUMMER, '; Nummer: ' || :new.RECH_NUMMER, null)
+        'Status: ' || FAKT_RECHNUNG.status_text(:new.RECH_STATUS) || nvl2(:new.RECH_NUMMER, '; Nummer: ' || :new.RECH_NUMMER, null)
         || '; Kunde: ' || FAKT_HISTORIE.kunde(:new.RECH_KUND_ID));
     return;
   end if;
   l_det := FAKT_HISTORIE.d('Nummer', :old.RECH_NUMMER, :new.RECH_NUMMER)
-        || FAKT_HISTORIE.d('Status', :old.RECH_STATUS, :new.RECH_STATUS)
+        || FAKT_HISTORIE.d('Status', FAKT_RECHNUNG.status_text(:old.RECH_STATUS), FAKT_RECHNUNG.status_text(:new.RECH_STATUS))
         || FAKT_HISTORIE.d('Rechnungsdatum', :old.RECH_DATUM, :new.RECH_DATUM)
         || FAKT_HISTORIE.d('Fällig am', :old.RECH_FAELLIG_AM, :new.RECH_FAELLIG_AM)
         || FAKT_HISTORIE.d('Kunde', FAKT_HISTORIE.kunde(:old.RECH_KUND_ID), FAKT_HISTORIE.kunde(:new.RECH_KUND_ID))
@@ -183,10 +183,11 @@ begin
     return;
   end if;
   l_aktion := case
-                when :old.RECH_STATUS = 'ENTWURF' and :new.RECH_STATUS = 'OFFEN' then 'Abgeschlossen'
+                when :old.RECH_STATUS = 'ENTWURF' and :new.RECH_STATUS = 'GEDRUCKT' then 'Abgeschlossen'
                 when :new.RECH_STATUS = 'STORNIERT' and :old.RECH_STATUS <> 'STORNIERT' then 'Storniert'
-                when :old.RECH_STATUS <> :new.RECH_STATUS and :new.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT')
-                     and :old.RECH_STATUS in ('OFFEN', 'TEILBEZAHLT', 'BEZAHLT') then 'Zahlungsstatus'
+                when :old.RECH_STATUS = 'GEDRUCKT' and :new.RECH_STATUS = 'GESENDET' then 'Gesendet'
+                when :old.RECH_STATUS <> :new.RECH_STATUS and :new.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                     and :old.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT') then 'Zahlungsstatus'
                 else 'Geändert'
               end;
   FAKT_HISTORIE.protokoll(:new.RECH_ID, l_aktion, l_det);
