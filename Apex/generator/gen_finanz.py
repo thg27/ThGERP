@@ -499,6 +499,12 @@ POS_JS = """    javaScript {
                     $("#pos-felder, #positionen").hide();
                     markieren();
                 };
+                // Gesperrte Felder schickt der Browser nicht mit – der Schalter "Optional" kaeme beim Absenden der Seite
+                // (z. B. "Rechnung drucken" einer abgeschlossenen Rechnung) leer an und scheitert an der Pruefung
+                // "muss Y oder N sein". Vor dem Absenden daher wieder freigeben (gespeichert wird er nur per AJAX).
+                $(window).on("apexbeforepagesubmit", function () {
+                    apex.item("P11_POS_OPTIONAL").enable();
+                });
                 // Antwort von POS_LADEN in die Felder
                 var zeigen = function (d, ohneRaster) {
                     zustand.id = d.id || null;
