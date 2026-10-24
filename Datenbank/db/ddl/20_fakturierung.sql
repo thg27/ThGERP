@@ -136,7 +136,7 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_UPDATED_BY', 'varchar2(255 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_ROW_VERSION', 'number', 'N');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_PK', 'P', 'RECH_ID');
-    DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_ALT_ID_UK', 'U', q'~RECH_ALT_ID~');
+    DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_ALT_ID_UK', 'U', q'~RECH_MAND_ID, RECH_ALT_ID~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_STATUS_CK', 'C', q'~RECH_STATUS in ('ENTWURF', 'OFFEN', 'BEZAHLT', 'STORNIERT')~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_DATUM_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_DATUM is not null~');
     DDL_UTIL.constraint_('FAKT_RECHNUNGEN', 'RECH_NUMMER_CK', 'C', q'~RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null~');
@@ -240,7 +240,6 @@ begin
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_UPDATED_BY', 'varchar2(255 char)', 'Y');
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_ROW_VERSION', 'number', 'N');
     DDL_UTIL.constraint_('FAKT_ZAHLUNGEN', 'ZAHL_PK', 'P', 'ZAHL_ID');
-    DDL_UTIL.constraint_('FAKT_ZAHLUNGEN', 'ZAHL_ALT_ID_UK', 'U', q'~ZAHL_ALT_ID~');
 end;
 /
 
@@ -270,6 +269,7 @@ begin
     DDL_UTIL.index_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ARTI_I', q'~RPOS_ARTI_ID~');
     DDL_UTIL.constraint_('FAKT_ZAHLUNGEN', 'ZAHL_RECH_FK', 'R', 'ZAHL_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)');
     DDL_UTIL.index_('FAKT_ZAHLUNGEN', 'ZAHL_RECH_I', q'~ZAHL_RECH_ID~');
+    DDL_UTIL.index_('FAKT_ZAHLUNGEN', 'ZAHL_ALT_ID_I', q'~ZAHL_ALT_ID~');
 end;
 /
 
@@ -435,7 +435,7 @@ comment on column FAKT_RECHNUNGEN.RECH_WAEHRUNG is 'Waehrung (ISO 4217)';
 comment on column FAKT_RECHNUNGEN.RECH_SUMME_NETTO is 'Summe netto (aus den Positionen, ohne optionale)';
 comment on column FAKT_RECHNUNGEN.RECH_SUMME_MWST is 'Summe Umsatzsteuer';
 comment on column FAKT_RECHNUNGEN.RECH_SUMME_BRUTTO is 'Gesamtbetrag';
-comment on column FAKT_RECHNUNGEN.RECH_ALT_ID is 'ID im Altsystem (Kingbill DokumentRechnung.ID), fuer die Datenuebernahme';
+comment on column FAKT_RECHNUNGEN.RECH_ALT_ID is 'ID im Altsystem (Kingbill DokumentRechnung.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme';
 comment on column FAKT_RECHNUNGEN.RECH_CREATED_ON is 'Audit: angelegt am';
 comment on column FAKT_RECHNUNGEN.RECH_CREATED_BY is 'Audit: angelegt von';
 comment on column FAKT_RECHNUNGEN.RECH_UPDATED_ON is 'Audit: zuletzt geaendert am';
@@ -475,7 +475,7 @@ comment on column FAKT_ZAHLUNGEN.ZAHL_BETRAG is 'Gezahlter Betrag';
 comment on column FAKT_ZAHLUNGEN.ZAHL_SKONTO is 'Abgezogenes Skonto';
 comment on column FAKT_ZAHLUNGEN.ZAHL_MAHNSPESEN is 'Mahnspesen und Verzugszinsen';
 comment on column FAKT_ZAHLUNGEN.ZAHL_BEMERKUNG is 'Bemerkung';
-comment on column FAKT_ZAHLUNGEN.ZAHL_ALT_ID is 'ID im Altsystem (Kingbill Payment.ID), fuer die Datenuebernahme';
+comment on column FAKT_ZAHLUNGEN.ZAHL_ALT_ID is 'ID im Altsystem (Kingbill Payment.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme';
 comment on column FAKT_ZAHLUNGEN.ZAHL_CREATED_ON is 'Audit: angelegt am';
 comment on column FAKT_ZAHLUNGEN.ZAHL_CREATED_BY is 'Audit: angelegt von';
 comment on column FAKT_ZAHLUNGEN.ZAHL_UPDATED_ON is 'Audit: zuletzt geaendert am';

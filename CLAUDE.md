@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–29 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–30 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -45,7 +45,12 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - Rechnungsdruck: Button „Rechnung drucken“ auf Seite 11 (ab Status OFFEN) → Seite 13 (PDF-Anzeige, Drucken/Herunterladen), Paket `FAKT_RECHNUNG_PDF` (DDL 24),
   Layout wie die Kingbill-Rechnungen in `Vorlagen/Ausgangsrechnungen` (Hauptposition ohne Unterpositionen wie eine Kingbill-Position mit Einzelpreis/Menge/Einheit, „Art.-Nr.“).
 - Rechnungen EDV 2026 - 1 bis 13 aus Kingbill übernommen (2026-10-24, `Vorlagen/Access Datenbank Migration/access_rechnungen.py`, mit Zahlungen, alle bezahlt;
-  `RECH_ALT_ID` = Kingbill-ID); vorher alle Test-Rechnungen gelöscht. Nummernkreise 2026: EDV 13, HOLDING 199 (195–199 liegen in Kingbill der Holding).
+  `RECH_ALT_ID` = Kingbill-ID); vorher alle Test-Rechnungen gelöscht.
+- Rechnungen HOLDING ab 01.04.2025 (2025 - 115 … 2026 - 202, 88 Stück) aus der Kingbill-Datenbank der Thomas Geßlbauer GmbH übernommen
+  (2026-10-24, `Vorlagen/Access Datenbank Migration/access_rechnungen_holding.py`, Summen gegen Kingbill abgeglichen; Nummer = Betreff,
+  Kingbill-ID 833 (Duplikat 188) nicht übernommen, 186 als bezahlt, 202 offen); dafür 6 Kunden ohne Kingbill-Stammsatz angelegt
+  (Hohl, Ingenieurbüro Forst/Holz, C.S.M., Elektro ON Balk, Dr. Barbara Lenhard, ThG - edv GmbH). Kingbill-IDs je Mandant eindeutig (DDL 30).
+  Nummernkreise: EDV 2026 = 13, HOLDING 2025 = 171, 2026 = 202.
 - Rechnung (THG-FINANZ Seite 11): Regionen Allgemein, Kunde (mit Anschrift-Vorschau und Lieferadresse), Vortext, Positionen, Schlusstext, Zahlungen;
   darüber eine Tab-Leiste (Region Display Selector, erster Tab „Alle anzeigen“).
 - Rechnungspositionen (THG-FINANZ Seite 11): Haupt- und Unterpositionen in `FAKT_RECHNUNGSPOSITIONEN` (`RPOS_HAUPT_RPOS_ID` leer = Hauptposition;

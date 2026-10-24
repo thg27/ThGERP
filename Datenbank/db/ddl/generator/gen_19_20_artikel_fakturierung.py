@@ -155,8 +155,8 @@ FAKT = [
     ('RECH_SUMME_NETTO', BETRAG, 'N', '0', 'Summe netto (aus den Positionen, ohne optionale)'),
     ('RECH_SUMME_MWST', BETRAG, 'N', '0', 'Summe Umsatzsteuer'),
     ('RECH_SUMME_BRUTTO', BETRAG, 'N', '0', 'Gesamtbetrag'),
-    ('RECH_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill DokumentRechnung.ID), fuer die Datenuebernahme'),
-  ], [('RECH_ALT_ID_UK', 'U', 'RECH_ALT_ID'),
+    ('RECH_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill DokumentRechnung.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme'),
+  ], [('RECH_ALT_ID_UK', 'U', 'RECH_MAND_ID, RECH_ALT_ID'),
       ('RECH_STATUS_CK', 'C', "RECH_STATUS in ('ENTWURF', 'OFFEN', 'BEZAHLT', 'STORNIERT')"),
       ('RECH_DATUM_CK', 'C', "RECH_STATUS = 'ENTWURF' or RECH_DATUM is not null"),
       ('RECH_NUMMER_CK', 'C', "RECH_STATUS = 'ENTWURF' or RECH_NUMMER is not null"),
@@ -218,10 +218,9 @@ FAKT = [
     ('ZAHL_SKONTO', BETRAG, 'Y', None, 'Abgezogenes Skonto'),
     ('ZAHL_MAHNSPESEN', BETRAG, 'Y', None, 'Mahnspesen und Verzugszinsen'),
     ('ZAHL_BEMERKUNG', 'varchar2(500 char)', 'Y', None, 'Bemerkung'),
-    ('ZAHL_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill Payment.ID), fuer die Datenuebernahme'),
-  ], [('ZAHL_ALT_ID_UK', 'U', 'ZAHL_ALT_ID'),
-      ('ZAHL_RECH_FK', 'R', 'ZAHL_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)')],
-  [('ZAHL_RECH_I', 'ZAHL_RECH_ID')], ''),
+    ('ZAHL_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill Payment.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme'),
+  ], [('ZAHL_RECH_FK', 'R', 'ZAHL_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)')],
+  [('ZAHL_RECH_I', 'ZAHL_RECH_ID'), ('ZAHL_ALT_ID_I', 'ZAHL_ALT_ID')], ''),
 ]
 
 # Nummernkreise 2026: zuletzt vergebene Nummern lt. Ausgangsrechnungen (EDV: 2026 - 13, HOLDING: 2026 - 199)
