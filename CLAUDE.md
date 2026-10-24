@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–30 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–31 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung

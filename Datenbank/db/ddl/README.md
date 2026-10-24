@@ -8,7 +8,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 
 | Datei | Inhalt |
 |---|---|
-| 00_install.sql | ruft 01–30 auf (ohne 14 und 25), bricht bei Fehler ab |
+| 00_install.sql | ruft 01–31 auf (ohne 14 und 25), bricht bei Fehler ab |
 | 01_tabellen.sql | Tabellen, PK/UK/Check-Constraints |
 | 02_fremdschluessel.sql | Fremdschlüssel + FK-Indizes |
 | 03_indizes.sql | fachliche Unique-Indizes, Suchindizes |
@@ -38,6 +38,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 28_artikel_in_finanz.sql | Artikelstamm in THG-FINANZ: Portal-Kachel THG-ARTIKEL (20040) entfernt, Kachel Finanz ergänzt; Artikel laut den Kingbill-Rechnungen 2026 angelegt/angepasst (212 Std., 217 3.000 €, neu 218 EDV-Betreuung monatlich, 503 Microsoft Office 365, 600 Apple MacBook Air, Gruppe HARDWARE), Positionen der übernommenen Rechnungen verknüpft; wiederholbar |
 | 29_artikel_ohne_zusatzfelder_dateien_bild.sql | Artikelstamm verschlankt: Tabellen ARTI_ZUSATZFELDER, ARTI_ARTIKEL_ZUSATZWERTE, ARTI_ARTIKEL_DATEIEN und Spalten ARTI_BILD* entfernt (Skript 19 legt sie nicht mehr an); wiederholbar |
 | 30_alt_id_je_mandant.sql | Kingbill-IDs je Mandant (eigene Kingbill-Datenbank je Firma): RECH_ALT_ID_UK auf (RECH_MAND_ID, RECH_ALT_ID), ZAHL_ALT_ID nur indiziert; wiederholbar |
+| 31_zahlungsstatus_trigger.sql | Compound Trigger ZAHL_STATUS_AIUD: nach jeder Änderung an FAKT_ZAHLUNGEN Status der Rechnung (OFFEN/BEZAHLT) neu bestimmen – das Zahlungsraster speichert per AJAX ohne Seitenprozesse; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

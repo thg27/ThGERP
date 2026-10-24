@@ -38,5 +38,6 @@ whenever sqlerror exit failure rollback
 @@28_artikel_in_finanz.sql
 @@29_artikel_ohne_zusatzfelder_dateien_bild.sql
 @@30_alt_id_je_mandant.sql
+@@31_zahlungsstatus_trigger.sql
 
 prompt Installation abgeschlossen.
