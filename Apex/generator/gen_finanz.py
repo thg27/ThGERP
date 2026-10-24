@@ -1408,16 +1408,20 @@ def seite_11():
             settings {
                 jsCode:
                     ```javascript
-                    // Firmenname / z.H. Kontaktperson / Adresse / PLZ Ort / Land / UID – leere Zeilen entfallen
-                    var land = $v("P11_RECH_EMPF_LAND_CODE") ? $("#P11_RECH_EMPF_LAND_CODE option:selected").text().split(" (")[0] : "",   // ohne Ländercode
+                    // wie der Rechnungsdruck: Firmenname / Kontaktperson / Adresse / PLZ Ort / Land / UID – leere Zeilen entfallen
+                    var landFeld = document.getElementById("P11_RECH_EMPF_LAND_CODE"),
+                        // Auswahlliste: Text der gewaehlten Option; schreibgeschuetzt rendert APEX ein Textfeld mit dem Anzeigewert
+                        land = $v("P11_RECH_EMPF_LAND_CODE")
+                               ? (landFeld.tagName === "SELECT" ? $(landFeld).find("option:selected").text() : landFeld.value).split(" (")[0]
+                               : "",   // ohne Ländercode
                         uid  = $v("P11_RECH_EMPF_UID_NUMMER"),
                         kontakt = $v("P11_RECH_EMPF_KONTAKTPERSON"),
                         zeilen = [$v("P11_RECH_EMPF_NAME"),
-                                  kontakt ? "z.H. " + kontakt : "",
+                                  kontakt,
                                   $v("P11_RECH_EMPF_STRASSE"),
                                   ($v("P11_RECH_EMPF_PLZ") + " " + $v("P11_RECH_EMPF_ORT")).trim(),
                                   land,
-                                  uid ? "UID-Nr.: " + uid : ""].filter(Boolean);
+                                  uid].filter(Boolean);
                     $("#P11_ANSCHRIFT_DISPLAY").text(zeilen.join(String.fromCharCode(10)));   // Zeilenumbruch
                     ```
             }

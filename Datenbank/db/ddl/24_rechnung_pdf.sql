@@ -8,7 +8,7 @@
 --      Haupt-/Unterpositionen (Zwischensumme, Rabatt, Pauschale; Beschreibung als Rich Text -> Zeilen,
 --      Aufzaehlungen), Summen je Steuersatz,
 --      Zahlungsbedingungen, Schlusstext; Fuss auf jeder Seite: Firmendaten, Banken, Firmenbuch, Seite x von y
--- Erzeugt: 2026-09-30
+-- Erzeugt: 2026-09-30, Layout an die Kingbill-Rechnungen angeglichen 2026-10-24
 -- Wiederholbar (create or replace).
 -- Voraussetzung: 15 (AS_PDF), 17/18 (Mandanten), 20/21 (Fakturierung)
 -- =====================================================================
@@ -27,8 +27,8 @@ end FAKT_RECHNUNG_PDF;
 
 create or replace package body FAKT_RECHNUNG_PDF
 as
-    c_links     constant number := 57;              -- linker Rand (pt), A4 = 595 x 842 pt
-    c_rechts    constant number := 538;             -- rechter Rand
+    c_links     constant number := 53;              -- linker Rand (pt), A4 = 595 x 842 pt (wie die Kingbill-Rechnungen)
+    c_rechts    constant number := 563;             -- rechter Rand
     c_unten     constant number := 125;             -- darunter Seitenumbruch (Platz fuer den Fuss)
     c_oben_f2   constant number := 780;             -- erste Zeile ab Seite 2
     c_grau      constant varchar2(6) := '808080';
@@ -36,10 +36,10 @@ as
 
     -- Spalten der Positionstabelle
     c_x_pos     constant number := c_links;
-    c_x_text    constant number := c_links + 40;
+    c_x_text    constant number := c_links + 46;
     c_b_text    constant number := 250;              -- Breite der Beschreibung
-    c_x_preis   constant number := 395;              -- rechtsbuendig
-    c_x_menge   constant number := 425;              -- rechtsbuendig (Zahl), Einheit dahinter
+    c_x_preis   constant number := 400;              -- rechtsbuendig
+    c_x_menge   constant number := 444;              -- rechtsbuendig (Zahl), Einheit dahinter
     c_x_summe   constant number := c_rechts;         -- rechtsbuendig
 
     g_normal    pls_integer;
@@ -55,6 +55,13 @@ as
     begin
         return to_char(p_wert, 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''');
     end betrag;
+
+    -- Summenblock wie in den bisherigen Rechnungen: Tausendertrennung mit Leerzeichen (14 155,00)
+    function betrag_summe(p_wert number) return varchar2
+    is
+    begin
+        return to_char(p_wert, 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='', ''');
+    end betrag_summe;
 
     function menge(p_wert number) return varchar2
     is
@@ -143,11 +150,11 @@ as
             l_s := utl_i18n.unescape_reference(l_s);
             l_s := replace(l_s, chr(160), ' ');
         end if;
+        l_s := l_s || chr(10);
         loop
-            l_z := regexp_substr(l_s, '[^' || chr(10) || ']*', 1, l_teil);
-            exit when l_teil > regexp_count(l_s, chr(10)) + 1;
-            l_teil := l_teil + 1;
-            l_z := trim(l_z);
+            exit when l_teil > length(l_s);
+            l_z := trim(substr(l_s, l_teil, instr(l_s, chr(10), l_teil) - l_teil));
+            l_teil := instr(l_s, chr(10), l_teil) + 1;
             if replace(replace(replace(l_z, chr(1)), chr(2)), chr(3)) is not null then
                 l_i := l_i + 1;
                 l_erg(l_i).punkt := instr(l_z, chr(3)) > 0;
@@ -163,7 +170,7 @@ as
     begin
         as_pdf.new_page;
         -- Linie ueber dem Fuss hier statt per p_page_proc (as_pdf 4.0.3 vertauscht dort Linienbreite und -farbe)
-        as_pdf.horizontal_line(c_links, 95, c_rechts - c_links, 0.6, '000000');
+        as_pdf.horizontal_line(c_links, 86, c_rechts - c_links, 0.6, '000000');
         g_y := c_oben_f2;
     end neue_seite;
 
@@ -243,30 +250,30 @@ as
               from apex_workspace_static_files
              where workspace = 'THGERP' and file_name = m.MAND_LOGO_DATEI;
             l_img := as_pdf.load_image(l_logo);
-            as_pdf.put_image(l_img, c_links, 745, p_height => 75);
+            as_pdf.put_image(l_img, c_links + 7, 716, p_height => 90);
         exception
             when no_data_found then
                 null;   -- ohne Logo
         end;
         -- Firma rechts oben
-        g_y := 805;
-        txt_r(c_rechts, m.MAND_NAME, g_fett, 15);
-        g_y := g_y - 14;
+        g_y := 795;
+        txt_r(c_rechts, m.MAND_NAME, g_fett, 14);
+        g_y := g_y - 13;
         txt_r(c_rechts, m.strasse, g_normal, 10);
         g_y := g_y - 12;
         txt_r(c_rechts, trim(m.plz || ' ' || m.ort), g_normal, 10);
-        g_y := g_y - 20;
+        g_y := g_y - 24;
         if m.email is not null then
             txt_r(c_rechts, 'email  ' || m.email, g_normal, 10);
-            g_y := g_y - 12;
+            g_y := g_y - 11.5;
         end if;
         if m.tel is not null then
             txt_r(c_rechts, 'Tel  ' || m.tel, g_normal, 10);
         end if;
-        as_pdf.horizontal_line(c_links, 735, c_rechts - c_links, 0.6, '000000');
+        as_pdf.horizontal_line(c_links, 711, c_rechts - c_links, 0.6, '000000');
 
         -- Absenderzeile (unterstrichen) und Empfaenger
-        g_y := 712;
+        g_y := 689;
         as_pdf.underline('Abs.:' || m.MAND_NAME || ' ' || chr(14844066) || ' ' || m.strasse || ' ' || chr(14844066) || ' '
                          || trim(m.plz || ' ' || m.ort), c_links, g_y, p_font_index => g_normal, p_fontsize => 6.5,
                          p_line_width => 0.3);
@@ -284,7 +291,7 @@ as
             g_y := g_y - 12.5;
         end loop;
         if p_r.RECH_EMPF_KONTAKTPERSON is not null then
-            txt(c_links, 'z.H. ' || p_r.RECH_EMPF_KONTAKTPERSON, g_normal, 10.5);
+            txt(c_links, p_r.RECH_EMPF_KONTAKTPERSON, g_normal, 10.5);
             g_y := g_y - 12.5;
         end if;
         txt(c_links, p_r.RECH_EMPF_STRASSE, g_normal, 10.5);
@@ -298,29 +305,26 @@ as
             g_y := g_y - 12.5;
         end loop;
         if p_r.RECH_EMPF_UID_NUMMER is not null then
-            txt(c_links, 'UID-Nr.: ' || p_r.RECH_EMPF_UID_NUMMER, g_normal, 10.5);
+            txt(c_links, p_r.RECH_EMPF_UID_NUMMER, g_normal, 10);
         end if;
 
         -- Rechnungsnummer, Datum, Bearbeiter
-        g_y := 590;
+        -- rechts: Datum, Leistungszeitraum, Bearbeiter untereinander (Faelligkeit steht unter den Summen)
+        g_y := 569;
         txt(c_links, case when p_r.RECH_NUMMER is null then 'Rechnungsentwurf' else 'Rechnung ' || p_r.RECH_NUMMER end,
-            g_fett, 14);
-        g_y := 594;
+            g_fett, 13);
+        g_y := 571;
         txt_r(c_rechts, 'Datum: ' || coalesce(to_char(p_r.RECH_DATUM, 'DD.MM.YYYY'), '-'), g_normal, 10);
-        g_y := g_y - 12;
+        g_y := g_y - 11;
+        if p_r.RECH_LEISTUNGSZEITRAUM is not null then
+            txt_r(c_rechts, 'Leistungszeitraum: ' || p_r.RECH_LEISTUNGSZEITRAUM, g_normal, 9);
+            g_y := g_y - 10.5;
+        end if;
         for b in (select MITA_NAME from ALLG_MITARBEITER where MITA_ID = p_r.RECH_MITA_ID) loop
             txt_r(c_rechts, 'Bearbeiter: ' || b.MITA_NAME, g_normal, 9);
-            g_y := g_y - 11;
+            g_y := g_y - 10.5;
         end loop;
-        if p_r.RECH_IST_FAELLIGKEIT_ANZEIGEN = 'Y' and p_r.RECH_FAELLIG_AM is not null then
-            txt_r(c_rechts, 'Fällig am: ' || to_char(p_r.RECH_FAELLIG_AM, 'DD.MM.YYYY'), g_normal, 9);
-            g_y := g_y - 11;
-        end if;
-        g_y := least(g_y, 576) - 4;
-        if p_r.RECH_LEISTUNGSZEITRAUM is not null then
-            txt(c_links, 'Leistungszeitraum: ' || p_r.RECH_LEISTUNGSZEITRAUM, g_normal, 9);
-            g_y := g_y - 11;
-        end if;
+        g_y := least(g_y + 10.5, 548) - 12;
         if p_r.RECH_REFERENZ is not null then
             txt(c_links, 'Referenz: ' || p_r.RECH_REFERENZ, g_normal, 9);
             g_y := g_y - 11;
@@ -333,7 +337,9 @@ as
     end kopf;
 
     -- Positionen: Hauptpositionen 1, 2, 3 …; Unterpositionen darunter als 1.10, 1.20 …
-    --   * Hauptposition ohne Unterpositionen: eine Zeile mit Name und Summe (kein Einzelpreis, keine Menge/Einheit)
+    --   * Hauptposition ohne Unterpositionen: wie in den bisherigen Rechnungen Einzelpreis, Menge/Einheit und Summe
+    --     (mit Pauschalsumme nur Name und Summe)
+    --   * unter dem Namen fett "Art.-Nr.: …", wenn eine Artikelnummer erfasst ist
     --   * Hauptposition mit Unterpositionen: Ueberschrift, Unterpositionen immer mit Einzelpreis, Menge, Rabatt und
     --     Summe; danach "Summe Position n", mit Rabatt der Hauptposition zusaetzlich Rabatt und Zwischensumme, mit
     --     Pauschalsumme zusaetzlich "Pauschalsumme Position n" – fett ist der Betrag, der in die Rechnung eingeht
@@ -383,6 +389,12 @@ as
                 txt_r(c_x_summe, summe_txt(p.RPOS_SUMME, p.RPOS_IST_OPTIONAL), g_normal, 9);
             end if;
             block(c_x_text, c_b_text, p.RPOS_NAME || case when p.RPOS_IST_OPTIONAL = 'Y' then ' (optional)' end, g_fett, 9);
+            if p.RPOS_ARTIKELNUMMER is not null then
+                g_y := g_y + 1.5;
+                txt(c_x_text, 'Art.-Nr.: ' || p.RPOS_ARTIKELNUMMER, g_fett, 8.5);
+                g_y := g_y - 12;
+            end if;
+            g_y := g_y - 1.5;
             if p_mit_preis and not p_nur_summe and p.RPOS_RABATT_PROZENT is not null and p.RPOS_RABATT_PROZENT <> 0 then
                 txt(c_x_text, 'abzüglich ' || menge(p.RPOS_RABATT_PROZENT) || ' % Rabatt', g_normal, 8.5);
                 g_y := g_y - 10.5;
@@ -408,7 +420,7 @@ as
         loop
             select count(*) into l_unter from FAKT_RECHNUNGSPOSITIONEN where RPOS_HAUPT_RPOS_ID = h.RPOS_ID;
             if l_unter = 0 then
-                zeile(h, to_char(h.RPOS_POSITION), true, true);
+                zeile(h, to_char(h.RPOS_POSITION), true, h.RPOS_PAUSCHALSUMME is not null);
                 continue;
             end if;
             -- Hauptposition als Ueberschrift
@@ -448,7 +460,7 @@ as
 
     procedure summen(p_r FAKT_RECHNUNGEN%rowtype)
     is
-        c_x_label constant number := 390;
+        c_x_label constant number := 393;
         l_netto   number := 0;
         l_mwst    number := 0;
     begin
@@ -460,30 +472,33 @@ as
             l_mwst  := l_mwst + s.MWST;
         end loop;
         txt(c_x_label, 'Netto', g_normal, 10);
-        txt_r(c_rechts, betrag(l_netto), g_normal, 10);
+        txt_r(c_rechts, betrag_summe(l_netto), g_normal, 10);
         g_y := g_y - 13;
         for s in (select MWST_PROZENT, MWST from FAKT_RECHNUNG_MWST_V where RECH_ID = p_r.RECH_ID order by MWST_PROZENT desc) loop
             txt(c_x_label, menge(s.MWST_PROZENT) || '% MwSt', g_normal, 10);
-            txt_r(c_rechts, betrag(s.MWST), g_normal, 10);
+            txt_r(c_rechts, betrag_summe(s.MWST), g_normal, 10);
             g_y := g_y - 13;
         end loop;
         txt(c_x_label, 'Gesamtbetrag', g_fett, 10);
-        txt_r(c_rechts, betrag(l_netto + l_mwst) || ' €', g_fett, 10);
-        as_pdf.horizontal_line(c_x_label, g_y - 3, c_rechts - c_x_label, 0.6, '000000');
-        as_pdf.horizontal_line(c_x_label, g_y - 5, c_rechts - c_x_label, 0.6, '000000');
+        txt_r(c_rechts, betrag_summe(l_netto + l_mwst), g_fett, 10);
+        as_pdf.horizontal_line(c_x_label - 3, g_y - 4, c_rechts - c_x_label + 3, 1.2, '000000');
         g_y := g_y - 26;
         if p_r.RECH_IST_OHNE_MWST = 'Y' then
             platz(24);
-            block(c_links, c_rechts - c_links,
-                  'Steuerschuldnerschaft des Leistungsempfängers (Reverse Charge)', g_normal, 9);
-            g_y := g_y - 6;
+            txt_r(c_rechts - 2, 'Steuerschuldnerschaft des Leistungsempfängers (Reverse Charge)', g_normal, 9);
+            g_y := g_y - 13;
+        end if;
+        if p_r.RECH_IST_FAELLIGKEIT_ANZEIGEN = 'Y' and p_r.RECH_FAELLIG_AM is not null then
+            platz(16);
+            txt(c_links + 2, 'Fällig am: ' || to_char(p_r.RECH_FAELLIG_AM, 'DD.MM.YYYY'), g_normal, 9);
+            g_y := g_y - 16;
         end if;
     end summen;
 
     -- Fuss auf allen Seiten: Firmendaten, Banken, Firmenbuch, Seite x von y
     procedure fuss(p_mand_id number)
     is
-        l_y    number := 83;
+        l_y    number := 74;
 
         procedure mittig(p_txt varchar2, p_size number default 8)
         is
@@ -514,7 +529,7 @@ as
         end loop;
         l_y := l_y - 8;
         -- Breite mit Beispielwerten messen (die Platzhalter sind laenger als die eingesetzten Zahlen)
-        as_pdf.put_txt((595 - as_pdf.str_len('Seite 1 von 1', g_normal, 7.5)) / 2, l_y, 'Seite #PAGE_NR# von #PAGE_COUNT#',
+        as_pdf.put_txt((595 - as_pdf.str_len('Seite 1 von 1', g_normal, 7.5)) / 2, 24, 'Seite #PAGE_NR# von #PAGE_COUNT#',
                        p_font_index => g_normal, p_fontsize => 7.5, p_page_proc => 1);
     end fuss;
 

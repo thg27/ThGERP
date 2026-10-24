@@ -34,6 +34,10 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Mandantencodes: `EDV` (ThG - edv GmbH, grün) und `HOLDING` (Thomas Geßlbauer GmbH, Eigentümerin der ThG - edv GmbH, blau). Die Bannerfarbe hängt in `thg.css` am Code (`data-mandant`) – bei Codeänderung CSS und Grunddatenskripte 17/18/20 mitziehen.
   Kunden und Artikel sind mandantenübergreifend; Finanz (FAKT_*) ist mandantenabhängig (`RECH_MAND_ID = :MANDANT_ID`).
 - Theme-Stil: Standard Redwood Light; Stilauswahl im Portal speichert den Stil beim Mitarbeiter (`MITA_THEME_STIL`) und setzt ihn per `apex_theme.set_session_style` für die Sitzung in allen Apps (App-Prozess „Theme-Stil“ in jeder App, einmal je Anmeldung). Bannerfarbe kommt in allen Stilen vom Mandanten (`thg.css`).
+- Rechnungsdruck: Button „Rechnung drucken“ auf Seite 11 (ab Status OFFEN) → Seite 13 (PDF-Anzeige, Drucken/Herunterladen), Paket `FAKT_RECHNUNG_PDF` (DDL 24),
+  Layout wie die Kingbill-Rechnungen in `Vorlagen/Ausgangsrechnungen` (Hauptposition ohne Unterpositionen wie eine Kingbill-Position mit Einzelpreis/Menge/Einheit, „Art.-Nr.“).
+- Rechnungen EDV 2026 - 1 bis 13 aus Kingbill übernommen (2026-10-24, `Vorlagen/Access Datenbank Migration/access_rechnungen.py`, mit Zahlungen, alle bezahlt;
+  `RECH_ALT_ID` = Kingbill-ID); vorher alle Test-Rechnungen gelöscht. Nummernkreise 2026: EDV 13, HOLDING 199 (195–199 liegen in Kingbill der Holding).
 - Rechnung (THG-FINANZ Seite 11): Regionen Allgemein, Kunde (mit Anschrift-Vorschau und Lieferadresse), Vortext, Positionen, Schlusstext, Zahlungen;
   darüber eine Tab-Leiste (Region Display Selector, erster Tab „Alle anzeigen“).
 - Rechnungspositionen (THG-FINANZ Seite 11): Haupt- und Unterpositionen in `FAKT_RECHNUNGSPOSITIONEN` (`RPOS_HAUPT_RPOS_ID` leer = Hauptposition;
