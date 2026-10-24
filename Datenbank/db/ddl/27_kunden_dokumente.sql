@@ -1,6 +1,7 @@
 -- =====================================================================
 -- ThGERP-Datenmodell (Gruppe KUND)
--- 27 – Dokumente je Kunde und Mandant: KUND_DOKUMENTARTEN, KUND_KUNDEN_DOKUMENTE
+-- 27 – Dokumente je Kunde und Mandant: KUND_DOKUMENTARTEN, KUND_KUNDEN_DOKUMENTE;
+--      Betreuungsrolle KB (Kundenbetreuer) fuer das Kundendetail
 --      Beliebige Dateien (PDF, Excel, Bilder …) beim Kunden, getrennt je Mandant und einer Dokumentart
 --      zugeordnet. Pflege in App 20020 Seite 11, Registerkarte "Dokumente" (nur die Dokumente des
 --      angemeldeten Mandanten), Bearbeiten in der Schublade Seite 16; Dokumentarten unter Administration >
@@ -179,6 +180,10 @@ insert into KUND_DOKUMENTARTEN (DART_CODE, DART_BEZEICHNUNG, DART_SORTIERUNG)
   select 'KORRESPONDENZ', 'Korrespondenz', 50 from dual where not exists (select 1 from KUND_DOKUMENTARTEN where DART_CODE = 'KORRESPONDENZ');
 insert into KUND_DOKUMENTARTEN (DART_CODE, DART_BEZEICHNUNG, DART_SORTIERUNG)
   select 'SONSTIGES', 'Sonstiges', 90 from dual where not exists (select 1 from KUND_DOKUMENTARTEN where DART_CODE = 'SONSTIGES');
+
+-- Betreuungsrolle Kundenbetreuer (KB): Mehrfachauswahl "Kundenbetreuer" und Kopfinfo im Kundendetail (20020 Seite 11)
+insert into KUND_BETREUUNGSROLLEN (BROL_CODE, BROL_BEZEICHNUNG, BROL_SORTIERUNG)
+  select 'KB', 'Kundenbetreuer', 5 from dual where not exists (select 1 from KUND_BETREUUNGSROLLEN where BROL_CODE = 'KB');
 commit;
 
 prompt KUND_DOKUMENTARTEN, KUND_KUNDEN_DOKUMENTE installiert bzw. abgeglichen.
