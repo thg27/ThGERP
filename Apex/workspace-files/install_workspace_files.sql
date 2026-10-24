@@ -537,9 +537,9 @@ document.addEventListener("input", function (ereignis) {
 }, true);
 
 /* Regionstitel in Mandantenfarbe (thg.css: .thg-region-farbig) – vorerst nur in diesen Apps;
-   fuer weitere Apps die App-ID ergaenzen (20020 = Kundenstammdaten). */
+   fuer weitere Apps die App-ID ergaenzen (20020 = Kundenstammdaten, 20050 = Finanz). */
 document.addEventListener("DOMContentLoaded", function () {
-    var apps = ["20020"];
+    var apps = ["20020", "20050"];
     if (window.apex && apex.env && apps.indexOf(String(apex.env.APP_ID)) >= 0) {
         document.body.classList.add("thg-region-farbig");
     }
@@ -549,9 +549,9 @@ document.addEventListener("DOMContentLoaded", function () {
    Solche Eintraege werden aus der Auswahl entfernt bzw. ausgeblendet - in Auswahllisten (auch in Grids),
    Mehrfachauswahl und Popup-Listen. Ein bereits gespeicherter (ausgewaehlter) inaktiver Wert bleibt sichtbar. */
 (function () {
-    var INAKTIV = "– inaktiv", geplant = false;
-    var bereinigen = '));
-    dbms_lob.append(l_inhalt, to_clob('function () {
+    var INAKTIV = "– inaktiv", geplant = fal'));
+    dbms_lob.append(l_inhalt, to_clob('se;
+    var bereinigen = function () {
         geplant = false;
         document.querySelectorAll("select option").forEach(function (o) {
             if (!o.selected && o.text.indexOf(INAKTIV) >= 0) {
@@ -574,8 +574,8 @@ document.addEventListener("DOMContentLoaded", function () {
     };
     document.addEventListener("DOMContentLoaded", function () {
         bereinigen();
-        new MutationObserver(planen).observe(document.body, { childList: t'));
-    dbms_lob.append(l_inhalt, to_clob('rue, subtree: true });
+        new MutationObserver(planen).observe(docu'));
+    dbms_lob.append(l_inhalt, to_clob('ment.body, { childList: true, subtree: true });
     });
 })();
 
@@ -600,8 +600,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
     } catch (e) {
-        // aufrufende Seit'));
-    dbms_lob.append(l_inhalt, to_clob('e aus anderer Herkunft: Standardfarben
+ '));
+    dbms_lob.append(l_inhalt, to_clob('       // aufrufende Seite aus anderer Herkunft: Standardfarben
     }
 })();
 '));

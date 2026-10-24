@@ -730,15 +730,19 @@ page 11 (
         type: regionDisplaySelector
         layout {
             sequence: 5
-            slot: body
+            slot: fullWidthContent
         }
         appearance {
-            template: @/blank-with-attributes
+            template: @/blank-with-attributes-no-grid
             templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
         }
         settings {
             includeShowAll: true
-            rememberSelection: bySession
+            rememberSelection: false
         }
     )
 
@@ -760,7 +764,10 @@ page 11 (
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
     )
 
@@ -782,7 +789,10 @@ page 11 (
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
     )
 
@@ -835,7 +845,10 @@ page 11 (
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
     )
 
@@ -856,7 +869,10 @@ page 11 (
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
     )
 
@@ -1636,7 +1652,10 @@ page 11 (
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
         serverSideCondition {
             type: itemIsNotNull
@@ -2462,7 +2481,10 @@ page 11 (
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
         edit {
             enabled: true

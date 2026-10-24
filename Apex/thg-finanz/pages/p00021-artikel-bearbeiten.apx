@@ -37,6 +37,27 @@ page 21 (
         }
     )
 
+    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 6
+            slot: fullWidthContent
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: false
+        }
+    )
+
     region artikel (
         name: Artikel
         type: form
@@ -64,6 +85,9 @@ page 21 (
     region stammdaten (
         name: Stammdaten
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
             sequence: 10
             parentRegion: @artikel
@@ -71,63 +95,70 @@ page 21 (
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
-        }
-    )
-
-    region details (
-        name: Details
-        type: staticContent
-        layout {
-            sequence: 20
-            parentRegion: @artikel
-            slot: subRegions
-        }
-        appearance {
-            template: @/tabs-container
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
     )
 
     region tab-kommentar (
         name: Kommentar
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
-            sequence: 10
-            parentRegion: @details
-            slot: tabs
+            sequence: 20
+            parentRegion: @artikel
+            slot: subRegions
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
     )
 
     region tab-zusatzfelder (
         name: Zusatzfelder
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
-            sequence: 20
-            parentRegion: @details
-            slot: tabs
+            sequence: 30
+            parentRegion: @artikel
+            slot: subRegions
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
     )
 
     region tab-dokumente (
         name: Dokumente
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
-            sequence: 30
-            parentRegion: @details
-            slot: tabs
+            sequence: 40
+            parentRegion: @artikel
+            slot: subRegions
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
         }
         serverSideCondition {
             type: itemIsNotNull
@@ -138,18 +169,141 @@ page 21 (
     region tab-dateien (
         name: Dateien
         type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
         layout {
-            sequence: 40
-            parentRegion: @details
-            slot: tabs
+            sequence: 50
+            parentRegion: @artikel
+            slot: subRegions
         }
         appearance {
             template: @/standard
             templateOptions: #DEFAULT#
+            cssClasses: [
+                thg-ohne-titel
+            ]
         }
         serverSideCondition {
             type: itemIsNotNull
             item: P21_ARTI_ID
+        }
+    )
+
+    region audit (
+        name: Änderungsinformationen
+        type: staticContent
+        layout {
+            sequence: 90
+            parentRegion: @artikel
+            slot: subRegions
+        }
+        appearance {
+            template: @/collapsible
+            templateOptions: [
+                #DEFAULT#
+                is-collapsed
+                t-Region--scrollBody
+                t-Form--slimPadding
+            ]
+            cssClasses: [
+                thg-kompakt
+            ]
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P21_ARTI_ID
+        }
+    )
+
+    pageItem P21_ANGELEGT_AM (
+        type: displayOnly
+        label {
+            label: Angelegt am
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @audit
+            slot: regionBody
+            alignment: left
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
+    pageItem P21_ANGELEGT_VON (
+        type: displayOnly
+        label {
+            label: Angelegt von
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @audit
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
+    pageItem P21_GEAENDERT_AM (
+        type: displayOnly
+        label {
+            label: Geändert am
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @audit
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
+    pageItem P21_GEAENDERT_VON (
+        type: displayOnly
+        label {
+            label: Geändert von
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @audit
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            sendOnPageSubmit: false
         }
     )
 
@@ -1226,13 +1380,14 @@ page 21 (
         layout {
             sequence: 10
             region: @tab-dateien
-            slot: next
+            slot: edit
         }
         appearance {
             buttonTemplate: @/text-with-icon
             templateOptions: [
                 #DEFAULT#
-                t-Button--iconLeft
+                t-Button--iconRight
+                t-Button--small
             ]
             icon: fa-plus
         }
@@ -1330,13 +1485,24 @@ page 21 (
     )
 
     process titel-setzen (
-        name: Seitentitel setzen
+        name: Seitentitel und Änderungsinformationen
         type: executeCode
         source {
             plsqlCode:
                 ```plsql
                 :P21_TITEL := case when :P21_ARTI_ID is null then 'Neuer Artikel'
                                    else :P21_ARTI_NUMMER || ' – ' || :P21_ARTI_NAME end;
+                -- angelegt/geaendert in Wiener Zeit (Server = UTC; Umrechnung in der Abfrage, nicht in der Zuweisung)
+                for l in (select to_char(from_tz(ARTI_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as AM_A,
+                                 ARTI_CREATED_BY,
+                                 to_char(from_tz(ARTI_UPDATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as AM_G,
+                                 ARTI_UPDATED_BY
+                            from ARTI_ARTIKEL where ARTI_ID = :P21_ARTI_ID) loop
+                    :P21_ANGELEGT_AM   := l.AM_A;
+                    :P21_ANGELEGT_VON  := l.ARTI_CREATED_BY;
+                    :P21_GEAENDERT_AM  := l.AM_G;
+                    :P21_GEAENDERT_VON := l.ARTI_UPDATED_BY;
+                end loop;
                 ```
         }
         execution {

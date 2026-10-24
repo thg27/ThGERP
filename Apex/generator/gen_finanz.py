@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.13
 """Erzeugt die App THG-FINANZ (20050): Ausgangsrechnungen (Fakturierung, Tabellen FAKT_*).
 
-Seiten: 1 Startseite, 10 Rechnungen (Liste), 11 Rechnung (Allgemein, Kunde mit Anschrift und Lieferadresse,
+Seiten: 1 Dashboard, 10 Rechnungen (Liste mit Facettensuche; beide aus finanz_dashboard_liste.py), 11 Rechnung (Allgemein, Kunde mit Anschrift und Lieferadresse,
 Vortext, Positionen als Baum aus Haupt- und Unterpositionen mit Detailfeldern und Summen je Steuersatz,
 Schlusstext, Zahlungen),
 12/13 Rechnung als PDF, 14 Unterposition (Dialog), 20 Artikel, 21 Artikel bearbeiten, 22 Datei (Dialog),
@@ -16,6 +16,7 @@ import re
 import secrets
 import shutil
 
+import finanz_dashboard_liste as fdl
 import gen_artikel as ga
 import gen_wertelisten_kunden as wl
 from gen_artikel import (BREADCRUMB, KOPF, NICHT_NULL, NULL, SWITCH, button, ir_spalten, item, lov, region)
@@ -51,97 +52,9 @@ def default_sql(sql):
 
 # --------------------------------------------------------------------------- Seite 10 Rechnungen
 def seite_10():
-    s = KOPF(10, "Rechnungen", "RECHNUNGEN") + BREADCRUMB("Rechnungen")
-    s += f"""    region rechnungen (
-        name: Rechnungen &MANDANT_NAME.
-        type: interactiveReport
-        source {{
-            location: localDatabase
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select RECH_ID,
-                       MAND_KURZNAME as MANDANT,
-                       RECH_NUMMER,
-                       initcap(RECH_STATUS) as STATUS,
-                       RECH_DATUM,
-                       RECH_FAELLIG_AM,
-                       KUND_NUMMER,
-                       KUNDE,
-                       RECH_BETREFF,
-                       RECH_LEISTUNGSZEITRAUM,
-                       RECH_SUMME_NETTO,
-                       RECH_SUMME_BRUTTO,
-                       OFFEN,
-                       case IST_UEBERFAELLIG when 'Y' then 'überfällig' end as UEBERFAELLIG
-                  from FAKT_RECHNUNGEN_V
-                 where RECH_MAND_ID = :MANDANT_ID
-                 order by RECH_DATUM desc, RECH_NUMMER desc nulls first
-                ```
-        }}
-        layout {{
-            sequence: 10
-            slot: body
-        }}
-        appearance {{
-            template: @/interactive-report
-            templateOptions: #DEFAULT#
-        }}
-        link {{
-            linkColumn: customTarget
-            target: {{
-                page: 11
-                items: {{
-                    P11_RECH_ID: #RECH_ID#
-                }}
-                clearCache: 11
-            }}
-            linkIcon: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
-        }}
-        componentAppearance {{
-            showNullValuesAs: -
-        }}
-        pagination {{
-            type: rowRangesXToY
-        }}
-        messages {{
-            whenNoDataFound: Keine Rechnungen vorhanden.
-        }}
-{ir_spalten([("RECH_ID", "ID", "hidden", "NUMBER"), ("MANDANT", "Mandant", "hidden", "STRING"),
-             ("RECH_NUMMER", "Nummer", "plainText", "STRING"), ("STATUS", "Status", "plainText", "STRING"),
-             ("RECH_DATUM", "Datum", "plainText", "DATE"), ("RECH_FAELLIG_AM", "Fällig am", "plainText", "DATE"),
-             ("KUND_NUMMER", "Kundennr.", "plainText", "STRING"), ("KUNDE", "Kunde", "plainText", "STRING"),
-             ("RECH_BETREFF", "Betreff", "hidden", "STRING"),
-             ("RECH_LEISTUNGSZEITRAUM", "Leistungszeitraum", "hidden", "STRING"),
-             ("RECH_SUMME_NETTO", "Netto", "plainText", "NUMBER", BETRAG),
-             ("RECH_SUMME_BRUTTO", "Brutto", "plainText", "NUMBER", BETRAG),
-             ("OFFEN", "Offen", "plainText", "NUMBER", BETRAG),
-             ("UEBERFAELLIG", "Überfällig", "plainText", "STRING")]).rstrip()}
-
-    )
-
-"""
-    s += button("reset-report", "RESET_REPORT", "Zurücksetzen", 10, "breadcrumb", "next", "@/text-with-icon",
-                verhalten="""            action: redirectThisApp
-            target: {
-                page: &APP_PAGE_ID.
-                clearCache: &APP_PAGE_ID.
-                action: resetRegions
-            }
-            warnOnUnsavedChanges: doNotCheck
-""", icon="fa-undo-alt", options="[\n                t-Button--noUI\n                t-Button--iconLeft\n                t-Button--gapRight\n            ]")
-    s += button("neue-rechnung", "CREATE", "Neue Rechnung", 20, "breadcrumb", "next", "@/text-with-icon", hot=True,
-                verhalten="""            action: redirectThisApp
-            target: {
-                page: 11
-                clearCache: 11
-            }
-            warnOnUnsavedChanges: doNotCheck
-""", icon="fa-plus", options="[\n                #DEFAULT#\n                t-Button--iconRight\n            ]")
-    return s + ")\n"
+    return fdl.rechnungsliste()
 
 
-# --------------------------------------------------------------------------- Seite 11 Rechnung
 def ig_spalte(name, typ, heading, seq, dtype, extra="", pk=False, readonly=False):
     kopf = "" if typ == "hidden" else f"""            heading {{
                 heading: {heading}
@@ -992,29 +905,36 @@ def seite_11():
     )
 
 """
-    # Tab-Leiste (Region Display Selector): erster Tab "Alle anzeigen", danach je Region ein Tab –
-    # Allgemein, Kunde, Vortext, Positionen, Schlusstext, Zahlungen (Regionen mit regionDisplaySelector: true)
+    # Registerkarten wie im Kundenstamm/Marchler: direkt unter der Titelleiste (Slot fullWidthContent, Klasse
+    # thg-rds), "Alle" als Ebenen-Icon an erster Stelle (thg.js), geoeffnet wird immer die erste Karte (Allgemein);
+    # danach je Region eine Karte – Allgemein, Kunde, Vortext, Positionen, Schlusstext, Zahlungen. Die Regionen
+    # zeigen ihren Titel nur unter "Alle" (Kopf ausgeblendet, thg.css: thg-rds-alle)
     s += """    region rds (
         name: Bereiche
         type: regionDisplaySelector
         layout {
             sequence: 5
-            slot: body
+            slot: fullWidthContent
         }
         appearance {
-            template: @/blank-with-attributes
+            template: @/blank-with-attributes-no-grid
             templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
         }
         settings {
             includeShowAll: true
-            rememberSelection: bySession
+            rememberSelection: false
         }
     )
 
 """
     TAB = "        advanced {\n            regionDisplaySelector: true\n        }\n"
-    s += region("allgemein", "Allgemein", 10, parent="rechnung", extra=NUR_LESEN + TAB)
-    s += region("kunde", "Kunde", 20, parent="rechnung", extra=NUR_LESEN + TAB)
+    OHNE_KOPF = "[\n                #DEFAULT#\n                t-Region--removeHeader js-removeLandmark\n            ]"
+    s += region("allgemein", "Allgemein", 10, parent="rechnung", extra=NUR_LESEN + TAB, options=OHNE_KOPF)
+    s += region("kunde", "Kunde", 20, parent="rechnung", extra=NUR_LESEN + TAB, options=OHNE_KOPF)
     # Unterregionen von "Kunde" nebeneinander (je halbe Breite, ohne eigenen Rahmen)
     halb = lambda r, neue_zeile: r.replace("            slot: subRegions\n",
         "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n") +
@@ -1024,8 +944,8 @@ def seite_11():
                      parent="kunde"), False)
     # Vortext vor den Positionen, Schlusstext danach (wie am Ausdruck); die Lieferadresse steht unter der
     # Anschrift-Vorschau des Kunden. Ein eigener Text der Zahlungsbedingungen entfaellt (Auswahl beim Kunden).
-    s += region("vortext", "Vortext", 30, parent="rechnung", extra=NUR_LESEN + TAB)
-    s += region("schlusstext", "Schlusstext", 45, extra=NUR_LESEN + TAB)
+    s += region("vortext", "Vortext", 30, parent="rechnung", extra=NUR_LESEN + TAB, options=OHNE_KOPF)
+    s += region("schlusstext", "Schlusstext", 45, extra=NUR_LESEN + TAB, options=OHNE_KOPF)
 
     f = dict(form="rechnung")
     s += """    pageItem P11_RECH_ID (
@@ -1161,7 +1081,7 @@ def seite_11():
         "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
 
     # ------------------------------------------------ Positionen: Baum (links) | Felder der Position und Raster (rechts)
-    s += region("positionen-bereich", "Positionen", 40, bedingung="P11_RECH_ID", extra=TAB)
+    s += region("positionen-bereich", "Positionen", 40, bedingung="P11_RECH_ID", extra=TAB, options=OHNE_KOPF)
     spalte = lambda r, breite, neue_zeile: r.replace(
         "            slot: subRegions\n",
         "            slot: subRegions\n" + ("" if neue_zeile else "            startNewRow: false\n")
@@ -1287,7 +1207,9 @@ def seite_11():
             language: plsql
             plsqlExpression: :P11_RECH_STATUS in ('OFFEN', 'BEZAHLT')
         }
-""").replace("            htmlDomId: zahlungen\n", "            htmlDomId: zahlungen\n            regionDisplaySelector: true\n", 1)
+""").replace("            htmlDomId: zahlungen\n", "            htmlDomId: zahlungen\n            regionDisplaySelector: true\n", 1) \
+       .replace("            template: @/standard\n            templateOptions: #DEFAULT#\n",
+                "            template: @/standard\n            templateOptions: " + OHNE_KOPF + "\n", 1)
 
     # ------------------------------------------------ Buttons
     grau = "[\n                #DEFAULT#\n                t-Button--noUI\n            ]"
@@ -2839,7 +2761,7 @@ def seite_14():
 
 # --------------------------------------------------------------------------- Startseite, Listen, Breadcrumbs
 def startseite():
-    return ga.startseite().replace("name: Artikelstamm\n        type: list", "name: Finanz\n        type: list")
+    return fdl.dashboard()
 
 
 def listen(lists_apx):
@@ -2918,6 +2840,8 @@ def listen(lists_apx):
         }
     )""" + s[j:]
     s = re.sub(r"\nlist admin-lookup-values \(.*?\n\)\n", "\n", s, flags=re.S)
+    s = s.replace("        label: Startseite\n        icon {\n            imageIconCssClasses: fa-home",
+                  "        label: Dashboard\n        icon {\n            imageIconCssClasses: fa-dashboard", 1)
     teile = [f"""select '{w['titel']}' as label, {w['seite']} as seite, '{w['icon']}' as image, '{w['beschreibung']}' as beschreibung,
                            (select count(*) from {w['tabelle']}) as anzahl
                       from dual""" for w in WL_FINANZ + ga.WL_ARTIKEL]
@@ -2947,38 +2871,7 @@ list wertelisten-finanz (
     }}
 )
 
-list startseite (
-    name: Startseite
-    source {{
-        type: sqlQuery
-        sqlQuery:
-            ```sql
-            select 1 as the_level,
-                   label,
-                   apex_page.get_url(p_page => seite, p_clear_cache => seite) as target,
-                   null as is_current_list_entry,
-                   image,
-                   null as image_attribute,
-                   null as image_alt_attribute,
-                   beschreibung as attribute1,
-                   anzahl as attribute2
-              from (
-                    select 'Rechnungen' as label, 10 as seite, 'fa-file-text-o' as image,
-                           'Ausgangsrechnungen erfassen, abschließen und Zahlungen verbuchen' as beschreibung,
-                           (select count(*) || ' offen' from FAKT_RECHNUNGEN where RECH_STATUS = 'OFFEN' and RECH_MAND_ID = :MANDANT_ID) as anzahl
-                      from dual
-                    union all
-                    select 'Artikel', 20, 'fa-cube',
-                           'Artikelstamm: Waren und Dienstleistungen mit Preis, Einheit, MwSt., Beschreibung, Zusatzfeldern und Dateien',
-                           to_char((select count(*) from ARTI_ARTIKEL where ARTI_IST_AKTIV = 'Y')) || ' aktiv'
-                      from dual
-                    union all
-                    select 'Wertelisten', 100, 'fa-list-ul', 'Nummernkreise, Artikelgruppen, Zusatzfelder', null from dual
-                   )
-             order by seite
-            ```
-    }}
-)
+
 """
 
 
@@ -2987,7 +2880,7 @@ def breadcrumbs():
     name: Breadcrumb
 
     entry home (
-        name: Startseite
+        name: Dashboard
         pageNumber: 1
         execution {
             sequence: 10

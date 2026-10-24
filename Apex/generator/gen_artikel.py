@@ -282,95 +282,234 @@ KOPF = lambda nr, name, alias, extra_app="", modal=False: f"""page {nr} (
 
 
 # --------------------------------------------------------------------------- Seite 10 Artikel
+def _facette(name, label, spalte, seq, extra=""):
+    return f"""        facet {name} (
+            type: checkboxGroup
+            label {{
+                label: {label}
+            }}
+            lov {{
+                type: distinctValues
+            }}
+            layout {{
+                sequence: {seq}
+            }}
+            listEntries {{
+                maxDisplayedEntries: 7
+            }}
+            source {{
+                databaseColumn: {spalte}
+            }}
+{extra}        )
+
+"""
+
+
+def _spalte(name, heading, seq, typ="plainText", extra="", rechts=False):
+    if typ == "hidden":
+        return f"""        column {name} (
+            type: hidden
+            layout {{
+                sequence: {seq}
+            }}
+        )
+
+"""
+    ausr = "                alignment: end\n" if rechts else ""
+    lay = "                columnAlignment: end\n" if rechts else ""
+    return f"""        column {name} (
+            type: {typ}
+            heading {{
+                heading: {heading}
+{ausr}            }}
+{extra}            layout {{
+                sequence: {seq}
+{lay}            }}
+            sorting {{
+                sortable: false
+            }}
+        )
+
+"""
+
+
 def seite_10():
-    s = KOPF(10, "Artikel", "ARTIKEL") + BREADCRUMB("Artikel")
-    s += f"""    region artikel (
+    """Artikelliste wie die Kundenliste (Facettensuche links, Aktiv-Icon zuerst, Artikelnummer umrahmt als Link)."""
+    s = KOPF(10, "Artikel", "ARTIKEL").replace("pageTemplate: @/standard", "pageTemplate: @/left-side-column")
+    s += BREADCRUMB("Artikel")
+    s += """    region facets (
+        name: Facetten
+        type: facetedSearch
+        source {
+            filteredRegion: @artikel
+        }
+        layout {
+            sequence: 20
+            slot: leftColumn
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            compactNosThreshold: 10000
+            displayChartForTopNValues: 10
+        }
+
+        facet P10_SEARCH (
+            type: search
+            label {
+                label: Suche
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+"""
+    s += _facette("P10_AKTIV", "Aktiv", "AKTIV", 20)
+    s += _facette("P10_GRUPPE", "Gruppe", "GRUPPE", 30)
+    s += _facette("P10_EINHEIT", "Einheit", "EINHEIT", 40)
+    s += _facette("P10_MWST", "MwSt.", "MWST", 50)
+    s += """    )
+
+    region artikel (
         name: Artikel
-        type: interactiveReport
-        source {{
+        type: classicReport
+        source {
             location: localDatabase
             type: sqlQuery
             sqlQuery:
                 ```sql
                 select a.ARTI_ID,
+                       case a.ARTI_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as AKTIV,
+                       case a.ARTI_IST_AKTIV when 'Y' then 'fa-check-circle u-success-text'
+                                             else 'fa-times-circle u-danger-text' end as AKTIV_ICON,
                        a.ARTI_NUMMER,
                        a.ARTI_NAME,
-                       g.AGRP_BEZEICHNUNG as GRUPPE,
+                       coalesce(g.AGRP_BEZEICHNUNG, 'ohne Gruppe') as GRUPPE,
                        a.ARTI_VK_PREIS,
                        case a.ARTI_IST_BRUTTO when 'Y' then 'brutto' else 'netto' end as PREISBASIS,
-                       e.EINH_CODE as EINHEIT,
-                       m.MWST_PROZENT,
-                       a.ARTI_EAN,
-                       a.ARTI_AUFGENOMMEN_AM,
-                       case a.ARTI_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as ARTI_IST_AKTIV,
-                       a.ARTI_UPDATED_ON,
-                       a.ARTI_UPDATED_BY
+                       coalesce(e.EINH_CODE, '-') as EINHEIT,
+                       m.MWST_PROZENT || ' %' as MWST,
+                       a.ARTI_EAN
                   from ARTI_ARTIKEL a
                   left join ARTI_ARTIKELGRUPPEN g on g.AGRP_ID = a.ARTI_AGRP_ID
                   left join ALLG_EINHEITEN e on e.EINH_ID = a.ARTI_EINH_ID
                   join ALLG_MWST_SAETZE m on m.MWST_ID = a.ARTI_MWST_ID
-                 order by a.ARTI_NUMMER
+                 order by case a.ARTI_IST_AKTIV when 'Y' then 0 else 1 end,
+                          to_number(regexp_substr(a.ARTI_NUMMER, '^\\d+')) nulls last, a.ARTI_NUMMER
                 ```
-        }}
-        layout {{
-            sequence: 10
+        }
+        layout {
+            sequence: 30
             slot: body
-        }}
-        appearance {{
-            template: @/interactive-report
-            templateOptions: #DEFAULT#
-        }}
-        link {{
-            linkColumn: customTarget
-            target: {{
-                page: 11
-                items: {{
-                    P11_ARTI_ID: #ARTI_ID#
-                }}
-                clearCache: 11
-            }}
-            linkIcon: <span role="img" aria-label="Bearbeiten" class="fa fa-edit" title="Bearbeiten"></span>
-        }}
-        componentAppearance {{
-            showNullValuesAs: -
-        }}
-        pagination {{
-            type: rowRangesXToY
-        }}
-        messages {{
-            whenNoDataFound: Keine Artikel vorhanden.
-        }}
-{ir_spalten([("ARTI_ID", "ID", "hidden", "NUMBER"), ("ARTI_NUMMER", "Nummer", "plainText", "STRING"),
-             ("ARTI_NAME", "Name", "plainText", "STRING"), ("GRUPPE", "Gruppe", "plainText", "STRING"),
-             ("ARTI_VK_PREIS", "Verkaufspreis", "plainText", "NUMBER",
-              "            appearance {\n                formatMask: FML999G999G990D00\n            }\n"),
-             ("PREISBASIS", "Preis", "plainText", "STRING"), ("EINHEIT", "Einheit", "plainText", "STRING"),
-             ("MWST_PROZENT", "MwSt. %", "plainText", "NUMBER"), ("ARTI_EAN", "EAN", "plainText", "STRING"),
-             ("ARTI_AUFGENOMMEN_AM", "Aufgenommen am", "plainText", "DATE"),
-             ("ARTI_IST_AKTIV", "Aktiv", "plainText", "STRING"),
-             ("ARTI_UPDATED_ON", "Geändert am", "plainText", "TIMESTAMP"),
-             ("ARTI_UPDATED_BY", "Geändert von", "plainText", "STRING")]).rstrip()}
-
-    )
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        messages {
+            whenNoDataFound: Keine Artikel gefunden.
+        }
 
 """
-    s += button("reset-report", "RESET_REPORT", "Zurücksetzen", 10, "breadcrumb", "next", "@/text-with-icon",
+    s += _spalte("ARTI_ID", None, 10, "hidden")
+    s += """        column AKTIV (
+            type: plainText
+            heading {
+                heading: Aktiv
+                alignment: center
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #AKTIV_ICON#" title="Aktiv: #AKTIV#" aria-label="Aktiv: #AKTIV#" style="font-size:16px"></span>
+            }
+            layout {
+                columnAlignment: center
+                sequence: 15
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+"""
+    s += _spalte("AKTIV_ICON", None, 16, "hidden")
+    s += """        column ARTI_NUMMER (
+            type: link
+            heading {
+                heading: Nummer
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    page: 11
+                    items: {
+                        P11_ARTI_ID: #ARTI_ID#
+                    }
+                    clearCache: 11
+                }
+                linkText: <span class="thg-kundennr">#ARTI_NUMMER#</span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+"""
+    s += _spalte("ARTI_NAME", "Name", 30)
+    s += _spalte("GRUPPE", "Gruppe", 40)
+    s += _spalte("ARTI_VK_PREIS", "Verkaufspreis", 50, rechts=True,
+                 extra="            appearance {\n                formatMask: FML999G999G990D00\n            }\n")
+    s += _spalte("PREISBASIS", "Preis", 55)
+    s += _spalte("EINHEIT", "Einheit", 60)
+    s += _spalte("MWST", "MwSt.", 70, rechts=True)
+    s += _spalte("ARTI_EAN", None, 80, "hidden")
+    s += "    )\n\n"
+    s += button("up", "UP", "Zurück zum Dashboard", 10, "breadcrumb", "up", "@/icon", icon="fa-arrow-up",
+                options="[\n                #DEFAULT#\n                t-Button--noUI\n            ]",
                 verhalten="""            action: redirectThisApp
             target: {
-                page: &APP_PAGE_ID.
-                clearCache: &APP_PAGE_ID.
-                action: resetRegions
+                page: 1
+            }
+            warnOnUnsavedChanges: doNotCheck
+""")
+    s += button("reset", "RESET", "Zurücksetzen", 10, "breadcrumb", "next", "@/text-with-icon",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 10
+                clearCache: 10
+                action: resetPagination
             }
             warnOnUnsavedChanges: doNotCheck
 """, icon="fa-undo-alt", options="[\n                t-Button--noUI\n                t-Button--iconLeft\n                t-Button--gapRight\n            ]")
-    s += button("hinzufuegen", "CREATE", "Artikel hinzufügen", 20, "breadcrumb", "next", "@/text-with-icon", hot=True,
+    s += button("hinzufuegen", "CREATE", "Artikel hinzufügen", 20, "breadcrumb", "next", "@/text-with-icon",
                 verhalten="""            action: redirectThisApp
             target: {
                 page: 11
                 clearCache: 11
             }
             warnOnUnsavedChanges: doNotCheck
-""", icon="fa-plus", options="[\n                #DEFAULT#\n                t-Button--iconRight\n            ]")
+""", icon="fa-plus", options="[\n                #DEFAULT#\n                t-Button--noUI\n                t-Button--iconRight\n            ]")
     return s + ")\n"
 
 
@@ -378,7 +517,30 @@ def seite_10():
 def seite_11():
     s = KOPF(11, "Artikel bearbeiten", "ARTIKEL-BEARBEITEN").replace("title: Artikel bearbeiten", "title: &P11_TITEL.")
     s += BREADCRUMB("&P11_TITEL.")
-    s += """    region artikel (
+    # Registerkarten wie im Kundenstamm/Marchler: direkt unter der Titelleiste (thg-rds, "Alle" als Ebenen-Icon per
+    # thg.js), Bereiche ohne eigenen Kopf (Titel steht auf der Karte, unter "Alle" sichtbar), Aenderungsinformationen
+    s += """    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 6
+            slot: fullWidthContent
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: false
+        }
+    )
+
+    region artikel (
         name: Artikel
         type: form
         source {
@@ -403,12 +565,46 @@ def seite_11():
     )
 
 """
-    s += region("stammdaten", "Stammdaten", 10, parent="artikel")
-    s += region("details", "Details", 20, template="@/tabs-container", parent="artikel")
-    s += region("tab-kommentar", "Kommentar", 10, parent="details")
-    s += region("tab-zusatzfelder", "Zusatzfelder", 20, parent="details")
-    s += region("tab-dokumente", "Dokumente", 30, parent="details", bedingung="P11_ARTI_ID")
-    s += region("tab-dateien", "Dateien", 40, parent="details", bedingung="P11_ARTI_ID")
+    tab = "        advanced {\n            regionDisplaySelector: true\n        }\n"
+    ohne_kopf = "[\n                #DEFAULT#\n                t-Region--removeHeader js-removeLandmark\n            ]"
+    s += region("stammdaten", "Stammdaten", 10, parent="artikel", extra=tab, options=ohne_kopf)
+    s += region("tab-kommentar", "Kommentar", 20, parent="artikel", extra=tab, options=ohne_kopf)
+    s += region("tab-zusatzfelder", "Zusatzfelder", 30, parent="artikel", extra=tab, options=ohne_kopf)
+    s += region("tab-dokumente", "Dokumente", 40, parent="artikel", bedingung="P11_ARTI_ID", extra=tab, options=ohne_kopf)
+    # Dateien: Kopf bleibt fuer den Button "Datei hinzufuegen", nur der Titel ist ausgeblendet (thg-ohne-titel)
+    s += region("tab-dateien", "Dateien", 50, parent="artikel", bedingung="P11_ARTI_ID", extra=tab).replace(
+        "            templateOptions: #DEFAULT#\n        }\n",
+        "            templateOptions: #DEFAULT#\n            cssClasses: [\n                thg-ohne-titel\n            ]\n        }\n", 1)
+    s += region("audit", "Änderungsinformationen", 90, template="@/collapsible", parent="artikel",
+                bedingung="P11_ARTI_ID",
+                options="[\n                #DEFAULT#\n                is-collapsed\n                t-Region--scrollBody\n"
+                        "                t-Form--slimPadding\n            ]").replace(
+        "        }\n        serverSideCondition", "            cssClasses: [\n                thg-kompakt\n            ]\n        }\n        serverSideCondition", 1)
+    for i, (it, label) in enumerate((("P11_ANGELEGT_AM", "Angelegt am"), ("P11_ANGELEGT_VON", "Angelegt von"),
+                                     ("P11_GEAENDERT_AM", "Geändert am"), ("P11_GEAENDERT_VON", "Geändert von"))):
+        s += f"""    pageItem {it} (
+        type: displayOnly
+        label {{
+            label: {label}
+            alignment: left
+        }}
+        layout {{
+            sequence: {(i + 1) * 10}
+            region: @audit
+            slot: regionBody
+            alignment: left
+{'' if i == 0 else '            startNewRow: false' + chr(10)}            columnSpan: 2
+        }}
+        appearance {{
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }}
+        settings {{
+            sendOnPageSubmit: false
+        }}
+    )
+
+"""
 
     s += """    pageItem P11_ARTI_ID (
         type: hidden
@@ -770,8 +966,8 @@ def seite_11():
             }
             warnOnUnsavedChanges: doNotCheck
 """)
-    s += button("datei-hinzufuegen", "DATEI", "Datei hinzufügen", 10, "tab-dateien", "next", "@/text-with-icon",
-                icon="fa-plus", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+    s += button("datei-hinzufuegen", "DATEI", "Datei hinzufügen", 10, "tab-dateien", "edit", "@/text-with-icon",
+                icon="fa-plus", options="[\n                #DEFAULT#\n                t-Button--iconRight\n                t-Button--small\n            ]",
                 verhalten="""            action: redirectThisApp
             target: {
                 page: 12
@@ -842,13 +1038,24 @@ def seite_11():
     )
 
     process titel-setzen (
-        name: Seitentitel setzen
+        name: Seitentitel und Änderungsinformationen
         type: executeCode
         source {
             plsqlCode:
                 ```plsql
                 :P11_TITEL := case when :P11_ARTI_ID is null then 'Neuer Artikel'
                                    else :P11_ARTI_NUMMER || ' – ' || :P11_ARTI_NAME end;
+                -- angelegt/geaendert in Wiener Zeit (Server = UTC; Umrechnung in der Abfrage, nicht in der Zuweisung)
+                for l in (select to_char(from_tz(ARTI_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as AM_A,
+                                 ARTI_CREATED_BY,
+                                 to_char(from_tz(ARTI_UPDATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as AM_G,
+                                 ARTI_UPDATED_BY
+                            from ARTI_ARTIKEL where ARTI_ID = :P11_ARTI_ID) loop
+                    :P11_ANGELEGT_AM   := l.AM_A;
+                    :P11_ANGELEGT_VON  := l.ARTI_CREATED_BY;
+                    :P11_GEAENDERT_AM  := l.AM_G;
+                    :P11_GEAENDERT_VON := l.ARTI_UPDATED_BY;
+                end loop;
                 ```
         }
         execution {
