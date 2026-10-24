@@ -472,7 +472,7 @@ page 21 (
             alignment: left
         }
         layout {
-            sequence: 70
+            sequence: 6
             region: @stammdaten
             slot: regionBody
             startNewRow: false

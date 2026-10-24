@@ -623,7 +623,7 @@ def seite_11():
 
 """
     st = "stammdaten"
-    # Artikelnummer ganz oben, daneben Aktiv; darunter Name und Preis
+    # Artikelnummer ganz oben, rechts daneben Gruppe und Aktiv; darunter Name und Preis, dann Einheit und MwSt.
     s += item("P11_ARTI_NUMMER", "textField", "Nummer", 5, st, col="ARTI_NUMMER", req=True, maxlen=30, spalten=3,
               extra="""        default {
             type: sqlQuerySingleValue
@@ -644,7 +644,7 @@ def seite_11():
               extra=SWITCH("N"))
     s += item("P11_ARTI_EINH_ID", "selectList", "Einheit", 60, st, col="ARTI_EINH_ID", dtype="number",
               spalten=3, extra=lov("lov-einheiten", "-"))
-    s += item("P11_ARTI_AGRP_ID", "selectList", "Gruppe", 70, st, col="ARTI_AGRP_ID", dtype="number", spalten=4,
+    s += item("P11_ARTI_AGRP_ID", "selectList", "Gruppe", 6, st, col="ARTI_AGRP_ID", dtype="number", spalten=4,
               neue_zeile=False,
               extra=lov("lov-artikelgruppen", "- keine -"))
     s += item("P11_ARTI_MWST_ID", "selectList", "MwSt. in %", 80, st, col="ARTI_MWST_ID", dtype="number", req=True,
