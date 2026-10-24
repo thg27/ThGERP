@@ -44,6 +44,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Seite 21 Registerkarten Stammdaten/Kommentar und Änderungsinformationen. Rechnungsliste zeigt nur Netto (Brutto und Hinweis ausgeblendet). Regionstitel in Mandantenfarbe (`thg.js`: 20020, 20050).
 - Rechnungsstatus: ENTWURF → OFFEN (beim Abschließen) → TEILBEZAHLT / BEZAHLT automatisch aus den Zahlungen (Trigger ZAHL_STATUS_AIUD, DDL 31/32), STORNIERT;
   teilbezahlte Rechnungen zählen als offen/überfällig und zum Umsatz.
+- „Rechnung kopieren“ (Button im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,
+  Haupt-/Unterpositionen; ohne Nummer, Datum, Fälligkeit, Betreff, Zahlungen) und öffnet ihn.
 - Rechnungsdruck: Button „Rechnung drucken“ auf Seite 11 (ab Status OFFEN) → Seite 13 (PDF-Anzeige, Drucken/Herunterladen), Paket `FAKT_RECHNUNG_PDF` (DDL 24),
   Layout wie die Kingbill-Rechnungen in `Vorlagen/Ausgangsrechnungen` (Hauptposition ohne Unterpositionen wie eine Kingbill-Position mit Einzelpreis/Menge/Einheit, „Art.-Nr.“).
 - Rechnungen EDV 2026 - 1 bis 13 aus Kingbill übernommen (2026-10-24, `Vorlagen/Access Datenbank Migration/access_rechnungen.py`, mit Zahlungen, alle bezahlt;

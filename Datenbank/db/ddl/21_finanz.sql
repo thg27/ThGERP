@@ -2,7 +2,7 @@
 -- ThGERP (Gruppe FAKT) – App THG-FINANZ (20050)
 -- 21 – Logik und Sichten der Fakturierung:
 --      Package FAKT_RECHNUNG (Empfaenger uebernehmen, Summen der Haupt-/Unterpositionen, Positionsnummer, Abschliessen mit
---      Nummernkreis, Zahlungsstatus, Loeschen nur Entwurf bzw. letzte Rechnung)
+--      Nummernkreis, Zahlungsstatus, Loeschen nur Entwurf bzw. letzte Rechnung, Rechnung kopieren)
 --      Views FAKT_RECHNUNGEN_V (Liste mit offenem Betrag), FAKT_RECHNUNG_MWST_V (Summen je Steuersatz)
 --      Grunddaten: Mitarbeiter Thomas Gesslbauer (Login ADMIN_THG), Textvorlagen aus Kingbill, Portal-Kachel
 -- Voraussetzung: 17–20
@@ -115,6 +115,10 @@ create or replace package FAKT_RECHNUNG as
     function ist_letzte(p_rech_id in number) return varchar2;
     -- Entwurf oder letzte Rechnung loeschen (inkl. Positionen, Zahlungen); letzte Nummer wird wieder frei
     procedure loeschen(p_rech_id in number);
+    -- Rechnung 1:1 als neuen Entwurf kopieren (gleicher Mandant, Kunde, Empfaenger, Texte, Kennzeichen, alle Haupt- und
+    -- Unterpositionen); nicht uebernommen: Nummer, Datum, Faelligkeit, Betreff, Zahlungen, Altsystem-ID.
+    -- Liefert die ID der neuen Rechnung.
+    function kopieren(p_rech_id in number) return number;
     -- TRUE nur waehrend das Package Nummern vergibt/zuruecksetzt (Trigger sperren manuelle Aenderungen)
     g_intern boolean := false;
 end FAKT_RECHNUNG;
@@ -341,6 +345,56 @@ create or replace package body FAKT_RECHNUNG as
             raise;
     end loeschen;
 
+    function kopieren(p_rech_id in number) return number is
+        -- ID vorab vergeben (RECH_BIU uebernimmt sie): bei insert … select gibt es kein returning (ORA-03049)
+        l_neu   FAKT_RECHNUNGEN.RECH_ID%type := to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
+        l_haupt FAKT_RECHNUNGSPOSITIONEN.RPOS_ID%type;
+    begin
+        insert into FAKT_RECHNUNGEN (RECH_ID, RECH_MAND_ID, RECH_KUND_ID, RECH_KSTO_ID, RECH_ANSP_ID, RECH_MITA_ID, RECH_ZBED_ID,
+                                     RECH_EMPF_LAND_CODE, RECH_STATUS, RECH_LEISTUNGSZEITRAUM, RECH_LEISTUNG_VON,
+                                     RECH_LEISTUNG_BIS, RECH_REFERENZ, RECH_PROJEKT, RECH_IST_BRUTTO, RECH_IST_OHNE_MWST,
+                                     RECH_IST_FAELLIGKEIT_ANZEIGEN, RECH_EMPF_ANREDE, RECH_EMPF_NAME,
+                                     RECH_EMPF_KONTAKTPERSON, RECH_EMPF_STRASSE, RECH_EMPF_PLZ, RECH_EMPF_ORT,
+                                     RECH_EMPF_UID_NUMMER, RECH_LIEFERADRESSE, RECH_ZAHLUNGSBED_TEXT, RECH_VORTEXT,
+                                     RECH_SCHLUSSTEXT, RECH_WAEHRUNG)
+        select l_neu, RECH_MAND_ID, RECH_KUND_ID, RECH_KSTO_ID, RECH_ANSP_ID, RECH_MITA_ID, RECH_ZBED_ID,
+               RECH_EMPF_LAND_CODE, 'ENTWURF', RECH_LEISTUNGSZEITRAUM, RECH_LEISTUNG_VON,
+               RECH_LEISTUNG_BIS, RECH_REFERENZ, RECH_PROJEKT, RECH_IST_BRUTTO, RECH_IST_OHNE_MWST,
+               RECH_IST_FAELLIGKEIT_ANZEIGEN, RECH_EMPF_ANREDE, RECH_EMPF_NAME,
+               RECH_EMPF_KONTAKTPERSON, RECH_EMPF_STRASSE, RECH_EMPF_PLZ, RECH_EMPF_ORT,
+               RECH_EMPF_UID_NUMMER, RECH_LIEFERADRESSE, RECH_ZAHLUNGSBED_TEXT, RECH_VORTEXT,
+               RECH_SCHLUSSTEXT, RECH_WAEHRUNG
+          from FAKT_RECHNUNGEN
+         where RECH_ID = p_rech_id;
+        if sql%rowcount = 0 then
+            raise_application_error(-20210, 'Die Rechnung wurde nicht gefunden.');
+        end if;
+        -- Hauptpositionen, dann je Hauptposition ihre Unterpositionen (neue Hauptposition als Bezug)
+        for h in (select * from FAKT_RECHNUNGSPOSITIONEN
+                   where RPOS_RECH_ID = p_rech_id and RPOS_HAUPT_RPOS_ID is null order by RPOS_POSITION) loop
+            insert into FAKT_RECHNUNGSPOSITIONEN (RPOS_RECH_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_ARTIKELNUMMER, RPOS_NAME,
+                                                  RPOS_BESCHREIBUNG, RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS,
+                                                  RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL,
+                                                  RPOS_ERLOESKONTO, RPOS_PAUSCHALSUMME)
+            values (l_neu, h.RPOS_ARTI_ID, h.RPOS_POSITION, h.RPOS_ARTIKELNUMMER, h.RPOS_NAME, h.RPOS_BESCHREIBUNG,
+                    h.RPOS_MENGE, h.RPOS_EINHEIT, h.RPOS_EINZELPREIS, h.RPOS_RABATT_PROZENT, h.RPOS_MWST_PROZENT,
+                    h.RPOS_IST_OPTIONAL, h.RPOS_ERLOESKONTO, h.RPOS_PAUSCHALSUMME)
+            returning RPOS_ID into l_haupt;
+            insert into FAKT_RECHNUNGSPOSITIONEN (RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_ARTI_ID, RPOS_POSITION,
+                                                  RPOS_ARTIKELNUMMER, RPOS_NAME, RPOS_BESCHREIBUNG, RPOS_MENGE,
+                                                  RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT,
+                                                  RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO,
+                                                  RPOS_PAUSCHALSUMME)
+            select l_neu, l_haupt, RPOS_ARTI_ID, RPOS_POSITION, RPOS_ARTIKELNUMMER, RPOS_NAME, RPOS_BESCHREIBUNG,
+                   RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
+                   RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO, RPOS_PAUSCHALSUMME
+              from FAKT_RECHNUNGSPOSITIONEN
+             where RPOS_HAUPT_RPOS_ID = h.RPOS_ID;
+        end loop;
+        summen_berechnen(l_neu);
+        return l_neu;
+    end kopieren;
+
 end FAKT_RECHNUNG;
 /
 
@@ -366,5 +420,15 @@ insert into ADMIN_APPLIKATIONEN (APPL_APEX_APP_ID, APPL_APEX_ALIAS, APPL_BEZEICH
   select 20050, 'THG-FINANZ', 'Finanz', 'Ausgangsrechnungen, Zahlungseingänge, Nummernkreise', 'HOME', 'fa-eur', 40
     from dual where not exists (select 1 from ADMIN_APPLIKATIONEN where APPL_APEX_APP_ID = 20050);
 commit;
+
+-- abhaengige Objekte nach dem Neukompilieren des Packages wieder gueltig machen
+begin
+    for o in (select object_name, object_type from user_objects
+               where status <> 'VALID' and object_name in ('RECH_NUMMER_BUD', 'NKRS_NUMMER_BU', 'ZAHL_STATUS_AIUD', 'FAKT_RECHNUNG_PDF')) loop
+        execute immediate 'alter ' || case o.object_type when 'PACKAGE BODY' then 'package' else lower(o.object_type) end
+                          || ' ' || o.object_name || ' compile';
+    end loop;
+end;
+/
 
 prompt FAKT_RECHNUNG, FAKT_RECHNUNGEN_V, FAKT_RECHNUNG_MWST_V installiert.

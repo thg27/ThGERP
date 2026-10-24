@@ -2746,6 +2746,37 @@ page 11 (
         }
     )
 
+    button kopieren (
+        buttonName: KOPIEREN
+        label: Rechnung kopieren
+        layout {
+            sequence: 16
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-copy
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+        confirmation {
+            message: Rechnung als neuen Entwurf kopieren? Nummer und Datum werden beim Abschließen der Kopie vergeben.
+            style: information
+        }
+    )
+
     button pdf (
         buttonName: PDF
         label: Rechnung drucken
@@ -3895,6 +3926,46 @@ page 11 (
         }
         successMessage {
             successMessage: Rechnung abgeschlossen.
+        }
+    )
+
+    process kopieren (
+        name: Rechnung kopieren
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- neue Rechnung (Entwurf) anlegen; die Verzweigung oeffnet sie mit der neuen ID
+                :P11_RECH_ID := FAKT_RECHNUNG.kopieren(:P11_RECH_ID);
+                ```
+        }
+        execution {
+            sequence: 70
+        }
+        serverSideCondition {
+            whenButtonPressed: @kopieren
+        }
+        successMessage {
+            successMessage: Rechnung kopiert – neuer Entwurf.
+        }
+    )
+
+    branch zur-kopie (
+        name: Nach dem Kopieren die Kopie öffnen
+        execution {
+            sequence: 5
+        }
+        behavior {
+            target: {
+                page: 11
+                items: {
+                    P11_RECH_ID: &P11_RECH_ID.
+                }
+                clearCache: 11
+            }
+        }
+        serverSideCondition {
+            whenButtonPressed: @kopieren
         }
     )
 

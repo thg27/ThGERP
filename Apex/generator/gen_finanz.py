@@ -1258,6 +1258,21 @@ def seite_11():
             style: warning
         }
 """)
+    # Rechnung 1:1 als neuen Entwurf kopieren (FAKT_RECHNUNG.kopieren), danach die Kopie oeffnen
+    s += button("kopieren", "KOPIEREN", "Rechnung kopieren", 16, "breadcrumb", "next", "@/text-with-icon",
+                icon="fa-copy", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="""            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+""", bedingung="""        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
+        }
+        confirmation {
+            message: Rechnung als neuen Entwurf kopieren? Nummer und Datum werden beim Abschließen der Kopie vergeben.
+            style: information
+        }
+""")
     # PDF-Ausdruck (Vorschau-Dialog Seite 13 mit Drucken/Herunterladen), sobald die Rechnung abgeschlossen ist
     s += button("pdf", "PDF", "Rechnung drucken", 17, "breadcrumb", "next", "@/text-with-icon",
                 icon="fa-file-pdf-o", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
@@ -2251,6 +2266,46 @@ def seite_11():
         }
         successMessage {
             successMessage: Rechnung abgeschlossen.
+        }
+    )
+
+    process kopieren (
+        name: Rechnung kopieren
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- neue Rechnung (Entwurf) anlegen; die Verzweigung oeffnet sie mit der neuen ID
+                :P11_RECH_ID := FAKT_RECHNUNG.kopieren(:P11_RECH_ID);
+                ```
+        }
+        execution {
+            sequence: 70
+        }
+        serverSideCondition {
+            whenButtonPressed: @kopieren
+        }
+        successMessage {
+            successMessage: Rechnung kopiert – neuer Entwurf.
+        }
+    )
+
+    branch zur-kopie (
+        name: Nach dem Kopieren die Kopie öffnen
+        execution {
+            sequence: 5
+        }
+        behavior {
+            target: {
+                page: 11
+                items: {
+                    P11_RECH_ID: &P11_RECH_ID.
+                }
+                clearCache: 11
+            }
+        }
+        serverSideCondition {
+            whenButtonPressed: @kopieren
         }
     )
 
