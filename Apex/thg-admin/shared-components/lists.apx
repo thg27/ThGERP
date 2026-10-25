@@ -54,6 +54,26 @@ list navigation-bar (
         }
     )
 
+    entry einstellungen (
+        label: Einstellungen
+        icon {
+            imageIconCssClasses: fa-user-edit
+        }
+        layout {
+            sequence: 15
+            parentEntry: @app-user
+        }
+        link {
+            target: {
+                type: url
+                url: f?p=20000:20:&SESSION.
+            }
+        }
+        serverSideCondition {
+            type: userIsAuthenticated
+        }
+    )
+
     entry sign-out (
         label: Abmelden
         icon {

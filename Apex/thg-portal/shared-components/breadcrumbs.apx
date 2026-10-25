@@ -14,5 +14,20 @@ breadcrumb breadcrumb (
         }
     )
 
-)
+    entry einstellungen (
+        name: Einstellungen
+        pageNumber: 20
+        execution {
+            sequence: 20
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 20
+            }
+        }
+    )
 
+)

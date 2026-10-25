@@ -139,6 +139,28 @@ NAV_EINTRAG = """    entry mandant (
 
 """
 
+NAV_EINSTELLUNGEN = '''    entry einstellungen (
+        label: Einstellungen
+        icon {
+            imageIconCssClasses: fa-user-edit
+        }
+        layout {
+            sequence: 15
+            parentEntry: @app-user
+        }
+        link {
+            target: {
+                type: url
+                url: f?p=20000:20:&SESSION.
+            }
+        }
+        serverSideCondition {
+            type: userIsAuthenticated
+        }
+    )
+
+'''
+
 items = (APEX / "thg-portal" / "shared-components" / "app-items.apx").read_text(encoding="utf-8")
 for app, text in SUB_APPS.items():
     sc = APEX / app / "shared-components"
@@ -154,6 +176,9 @@ for app, text in SUB_APPS.items():
         s = s.replace("list navigation-bar (\n    name: Navigation Bar\n\n",
                       "list navigation-bar (\n    name: Navigation Bar\n\n" + NAV_EINTRAG, 1)
         assert "    entry mandant (" in s, app
+        # Benutzermenue: "Einstellungen" (eigene Mitarbeiterdaten, Portal Seite 20) vor "Abmelden"
+        s = re.sub(r"    entry einstellungen \(.*?\n    \)\n\n", "", s, flags=re.S)
+        s = s.replace("    entry sign-out (", NAV_EINSTELLUNGEN + "    entry sign-out (", 1)
         p.write_text(s, encoding="utf-8")
     p = APEX / app / "application.apx"
     s = p.read_text(encoding="utf-8")

@@ -55,6 +55,9 @@ list navigation-bar (
                     select 1, :APP_USER, '#', null, 'fa-user', 'has-username', 20
                       from dual
                     union all
+                    select 2, 'Einstellungen', apex_page.get_url(p_page => 20), null, 'fa-user-edit', null, 20.5
+                      from dual
+                    union all
                     select 2, '---', 'separator', null, null, null, 21
                       from dual
                     union all

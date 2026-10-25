@@ -153,6 +153,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - **Als App installierbar (PWA):** nur das Portal 20000 (`progressiveWebApp` in `thg-portal/application.apx`, Scope `/ords/r/thgerp/` – deckt alle ThGERP-Apps
   inkl. Anmeldung ab und ist genauer als der Scope `/ords/` der SIPA-App auf demselben Host). Icons `app-icon-*.png` (aus `Apex/workspace-files/thg-app-icon.svg`,
   192 randlos/maskable) in allen Apps unter `shared-components/static-files/icons/`.
+- **Einstellungen** (wie Marchler): Benutzermenü rechts oben in allen Apps → Portal Seite 20, eigene Mitarbeiterdaten (Name, Standard-Mandant,
+  Kommunikation; nur der eigene Datensatz über `MITA_BENUTZERNAME = upper(:APP_USER)`). Eintrag in den Sub-Apps auch in `mandant_in_apps.py`.
 - **Navigationsmenü** in allen Apps standardmäßig aufgeklappt (Template-Option `js-defaultCollapsed` entfernt, `thg.js` setzt die gemerkte Vorgabe je Seite zurück).
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).
