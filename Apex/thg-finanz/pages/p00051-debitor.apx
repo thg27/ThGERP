@@ -267,7 +267,7 @@ page 51 (
             alignment: left
         }
         appearance {
-            template: @/required-floating
+            template: @/optional-floating
             templateOptions: #DEFAULT#
             formatMask: 999G999G990D00
         }
@@ -275,9 +275,6 @@ page 51 (
             formRegion: @debitor
             column: DEBI_BETRAG
             dataType: number
-        }
-        validation {
-            valueRequired: true
         }
     )
 
@@ -334,16 +331,13 @@ page 51 (
             alignment: left
         }
         appearance {
-            template: @/required-floating
+            template: @/optional-floating
             templateOptions: #DEFAULT#
         }
         source {
             formRegion: @debitor
             column: DEBI_FAELLIG_AB
             dataType: date
-        }
-        validation {
-            valueRequired: true
         }
     )
 
@@ -1123,6 +1117,46 @@ page 51 (
         execution {
             sequence: 20
             point: beforeHeader
+        }
+    )
+
+    validation betrag-pflicht (
+        name: Betrag bei Intervall Pflicht
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: expression
+            language: plsql
+            plsqlExpression: :P51_DEBI_INTERVALL = 'KEIN' or :P51_DEBI_BETRAG is not null
+        }
+        error {
+            errorMessage: Bitte den zu überweisenden Betrag angeben (nur bei „Kein Intervall“ optional).
+            associatedItem: @P51_DEBI_BETRAG
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    validation faellig-ab-pflicht (
+        name: Fällig ab bei Intervall Pflicht
+        execution {
+            sequence: 20
+        }
+        validation {
+            type: expression
+            language: plsql
+            plsqlExpression: :P51_DEBI_INTERVALL = 'KEIN' or :P51_DEBI_FAELLIG_AB is not null
+        }
+        error {
+            errorMessage: Bitte „Fällig ab“ angeben (nur bei „Kein Intervall“ optional).
+            associatedItem: @P51_DEBI_FAELLIG_AB
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
         }
     )
 

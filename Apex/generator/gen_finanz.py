@@ -4976,8 +4976,9 @@ def seite_51():
     s += item("P51_DEBI_NAME", "textField", "Name (Zahler)", 10, a, col="DEBI_NAME", req=True, maxlen=200, spalten=6, **f)
     s += item("P51_DEBI_BEZEICHNUNG", "textField", "Bezeichnung (z. B. Miete Wohnung Top 3)", 20, a, col="DEBI_BEZEICHNUNG",
               maxlen=200, neue_zeile=False, spalten=6, **f)
+    # Betrag und "faellig ab" nur mit Intervall Pflicht (Validierungen unten); "Kein Intervall" = nur Zahlungen sammeln
     s += maske(item("P51_DEBI_BETRAG", "numberField", "Zu überweisender Betrag €", 30, a, col="DEBI_BETRAG", dtype="number",
-                    req=True, spalten=3, **f), "999G999G990D00")
+                    spalten=3, **f), "999G999G990D00")
     s += item("P51_DEBI_INTERVALL", "selectList", "Intervall", 40, a, col="DEBI_INTERVALL", req=True, neue_zeile=False,
               spalten=3, extra=lov("lov-debitor-intervall") + """        default {
             type: static
@@ -4985,7 +4986,7 @@ def seite_51():
         }
 """, **f)
     s += item("P51_DEBI_FAELLIG_AB", "datePicker", "Fällig ab (erste Fälligkeit)", 50, a, col="DEBI_FAELLIG_AB", dtype="date",
-              req=True, neue_zeile=False, spalten=3, **f)
+              neue_zeile=False, spalten=3, **f)
     s += item("P51_DEBI_FAELLIG_BIS", "datePicker", "Fällig bis (leer = unbefristet)", 60, a, col="DEBI_FAELLIG_BIS",
               dtype="date", neue_zeile=False, spalten=3, **f)
     s += item("P51_DEBI_IBAN", "textField", "IBAN des Zahlers (Bankabgleich, wird bei der ersten Zuweisung übernommen)", 70, a,
@@ -5165,6 +5166,46 @@ def seite_51():
         execution {{
             sequence: 20
             point: beforeHeader
+        }}
+    )
+
+    validation betrag-pflicht (
+        name: Betrag bei Intervall Pflicht
+        execution {{
+            sequence: 10
+        }}
+        validation {{
+            type: expression
+            language: plsql
+            plsqlExpression: :P51_DEBI_INTERVALL = 'KEIN' or :P51_DEBI_BETRAG is not null
+        }}
+        error {{
+            errorMessage: Bitte den zu überweisenden Betrag angeben (nur bei „Kein Intervall“ optional).
+            associatedItem: @P51_DEBI_BETRAG
+        }}
+        serverSideCondition {{
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }}
+    )
+
+    validation faellig-ab-pflicht (
+        name: Fällig ab bei Intervall Pflicht
+        execution {{
+            sequence: 20
+        }}
+        validation {{
+            type: expression
+            language: plsql
+            plsqlExpression: :P51_DEBI_INTERVALL = 'KEIN' or :P51_DEBI_FAELLIG_AB is not null
+        }}
+        error {{
+            errorMessage: Bitte „Fällig ab“ angeben (nur bei „Kein Intervall“ optional).
+            associatedItem: @P51_DEBI_FAELLIG_AB
+        }}
+        serverSideCondition {{
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
         }}
     )
 

@@ -389,10 +389,10 @@ lov lov-debitor-intervall (
         master: @/20000/lov-debitor-intervall
     }
 
-    entry einmalig (
-        sequence: 1
-        display: Einmalig
-        return: EINMALIG
+    entry kein (
+        sequence: 0
+        display: Kein Intervall
+        return: KEIN
     )
 
     entry monatlich (

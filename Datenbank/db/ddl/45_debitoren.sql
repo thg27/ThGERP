@@ -1,7 +1,7 @@
 -- =====================================================================
 -- ThGERP (Gruppe FAKT) – App THG-FINANZ (20050)
 -- 45 – Debitoren: Zahler ohne Rechnung/Gutschrift (z. B. Mieter), die regelmaessig einen festen Betrag ueberweisen.
---      FAKT_DEBITOREN (DEBI): Name, Bezeichnung, Betrag, Intervall (einmalig/monatlich/quartal/halbjaehrlich/jaehrlich),
+--      FAKT_DEBITOREN (DEBI): Name, Bezeichnung, Betrag, Intervall (kein/monatlich/quartal/halbjaehrlich/jaehrlich),
 --        faellig ab/bis, IBAN des Zahlers (Bankabgleich), optional Kunde; je Mandant
 --      FAKT_DEBITOR_POSTEN (DPOS): faellige Betraege, aus dem Intervall erzeugt (bis Ende des naechsten Monats)
 --      FAKT_DEBITOR_ZAHLUNGEN (DZAH): Zahlungen, aus der Bankdatei zugewiesen (BKUM_DEBI_ID, Status DEBITOR)
@@ -24,9 +24,9 @@ begin
   DEBI_NAME varchar2(200 char) not null,
   DEBI_BEZEICHNUNG varchar2(200 char),
   DEBI_KUND_ID number,
-  DEBI_BETRAG number(14,2) not null,
+  DEBI_BETRAG number(14,2),
   DEBI_INTERVALL varchar2(20 char) default 'MONATLICH' not null,
-  DEBI_FAELLIG_AB date not null,
+  DEBI_FAELLIG_AB date,
   DEBI_FAELLIG_BIS date,
   DEBI_IBAN varchar2(34 char),
   DEBI_IST_AKTIV varchar2(1 char) default 'Y' not null,
@@ -39,9 +39,13 @@ begin
   constraint DEBI_PK primary key (DEBI_ID)
 )~');
     DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_INTERVALL_CK', 'C',
-                         q'~DEBI_INTERVALL in ('EINMALIG', 'MONATLICH', 'QUARTAL', 'HALBJAEHRLICH', 'JAEHRLICH')~');
+                         q'~DEBI_INTERVALL in ('KEIN', 'MONATLICH', 'QUARTAL', 'HALBJAEHRLICH', 'JAEHRLICH')~');
+    -- ohne Intervall (KEIN): keine Faelligkeiten, "faellig ab" optional; sonst Pflicht
+    DDL_UTIL.spalte('FAKT_DEBITOREN', 'DEBI_FAELLIG_AB', 'date', 'Y');
+    DDL_UTIL.spalte('FAKT_DEBITOREN', 'DEBI_BETRAG', 'number(14,2)', 'Y');
+    DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_FAELLIG_AB_CK', 'C', q'~DEBI_INTERVALL = 'KEIN' or DEBI_FAELLIG_AB is not null~');
     DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_IST_AKTIV_CK', 'C', q'~DEBI_IST_AKTIV in ('Y', 'N')~');
-    DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_BETRAG_CK', 'C', 'DEBI_BETRAG > 0');
+    DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_BETRAG_CK', 'C', q'~DEBI_BETRAG > 0 or (DEBI_INTERVALL = 'KEIN' and DEBI_BETRAG is null)~');
     DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_BIS_CK', 'C', 'DEBI_FAELLIG_BIS is null or DEBI_FAELLIG_BIS >= DEBI_FAELLIG_AB');
     DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_MAND_FK', 'R', 'DEBI_MAND_ID references ADMIN_MANDANTEN (MAND_ID)');
     DDL_UTIL.constraint_('FAKT_DEBITOREN', 'DEBI_KUND_FK', 'R', 'DEBI_KUND_ID references KUND_KUNDEN (KUND_ID)');
@@ -168,9 +172,9 @@ comment on column FAKT_DEBITOREN.DEBI_MAND_ID is 'FK: Mandant (Zahlungsempfaenge
 comment on column FAKT_DEBITOREN.DEBI_NAME is 'Name des Debitors (Zahler)';
 comment on column FAKT_DEBITOREN.DEBI_BEZEICHNUNG is 'Wofuer gezahlt wird, z. B. Miete Wohnung Top 3';
 comment on column FAKT_DEBITOREN.DEBI_KUND_ID is 'FK: Kunde, optional';
-comment on column FAKT_DEBITOREN.DEBI_BETRAG is 'Zu ueberweisender Betrag je Faelligkeit';
-comment on column FAKT_DEBITOREN.DEBI_INTERVALL is 'EINMALIG, MONATLICH, QUARTAL, HALBJAEHRLICH, JAEHRLICH';
-comment on column FAKT_DEBITOREN.DEBI_FAELLIG_AB is 'Erste Faelligkeit (weitere im Intervall am selben Tag)';
+comment on column FAKT_DEBITOREN.DEBI_BETRAG is 'Zu ueberweisender Betrag je Faelligkeit (bei Intervall KEIN optional)';
+comment on column FAKT_DEBITOREN.DEBI_INTERVALL is 'KEIN (keine Faelligkeiten, nur Zahlungen), MONATLICH, QUARTAL, HALBJAEHRLICH, JAEHRLICH';
+comment on column FAKT_DEBITOREN.DEBI_FAELLIG_AB is 'Erste Faelligkeit (weitere im Intervall am selben Tag); bei Intervall KEIN optional';
 comment on column FAKT_DEBITOREN.DEBI_FAELLIG_BIS is 'Letzte Faelligkeit (leer = unbefristet)';
 comment on column FAKT_DEBITOREN.DEBI_IBAN is 'IBAN des Zahlers (Bankabgleich); wird bei der ersten Zuweisung uebernommen';
 comment on column FAKT_DEBITOREN.DEBI_IST_AKTIV is 'Y = aktiv (neue Posten werden erzeugt, Bankabgleich)';
@@ -299,7 +303,7 @@ create or replace package body FAKT_DEBITOR as
         l_i     pls_integer;
     begin
         for d in (select * from FAKT_DEBITOREN
-                   where DEBI_MAND_ID = p_mand_id and DEBI_IST_AKTIV = 'Y'
+                   where DEBI_MAND_ID = p_mand_id and DEBI_IST_AKTIV = 'Y' and DEBI_INTERVALL <> 'KEIN'
                      and (p_debi_id is null or DEBI_ID = p_debi_id)) loop
             l_i := 0;
             loop
@@ -325,7 +329,8 @@ create or replace package body FAKT_DEBITOR as
             -- kuenftige Posten (neuer Betrag) und Posten ausserhalb des Zeitraums bzw. nicht im Intervall entfernen
             delete from FAKT_DEBITOR_POSTEN p
              where p.DPOS_DEBI_ID = d.DEBI_ID
-               and (p.DPOS_FAELLIG_AM > l_heute
+               and (d.DEBI_INTERVALL = 'KEIN'   -- ohne Intervall keine Faelligkeiten
+                    or p.DPOS_FAELLIG_AM > l_heute
                     or p.DPOS_FAELLIG_AM < d.DEBI_FAELLIG_AB
                     or p.DPOS_FAELLIG_AM > nvl(d.DEBI_FAELLIG_BIS, p.DPOS_FAELLIG_AM)
                     or (l_m = 0 and p.DPOS_FAELLIG_AM <> d.DEBI_FAELLIG_AB)
@@ -461,7 +466,7 @@ create or replace package body FAKT_DEBITOR as
 
     function intervall_text(p_intervall in varchar2) return varchar2 deterministic is
     begin
-        return case p_intervall when 'EINMALIG' then 'Einmalig' when 'MONATLICH' then 'Monatlich'
+        return case p_intervall when 'KEIN' then 'Kein Intervall' when 'MONATLICH' then 'Monatlich'
                                 when 'QUARTAL' then 'Vierteljährlich' when 'HALBJAEHRLICH' then 'Halbjährlich'
                                 when 'JAEHRLICH' then 'Jährlich' else p_intervall end;
     end intervall_text;
