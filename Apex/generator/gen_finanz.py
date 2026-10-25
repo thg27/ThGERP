@@ -4884,7 +4884,15 @@ def seite_51():
     f = dict(form="debitor")
     TAB = "        advanced {\n            regionDisplaySelector: true\n        }\n"
     OHNE_KOPF = "[\n                #DEFAULT#\n                t-Region--removeHeader js-removeLandmark\n            ]"
-    s = KOPF(51, "Debitor", "DEBITOR") + BREADCRUMB("&P51_TITEL.")
+    # offener Saldo rechts im Titel der Faelligkeiten (rot, nur wenn > 0)
+    s = KOPF(51, "Debitor", "DEBITOR").replace("    security {", """    css {
+        inline:
+            ```css
+            .t-Region-title:has(.thg-titel-saldo) { display: flex; align-items: baseline; gap: 1rem; }
+            .thg-titel-saldo { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+            ```
+    }
+    security {""", 1) + BREADCRUMB("&P51_TITEL.")
     s += """    region debitor (
         name: Debitor
         type: form
@@ -4961,7 +4969,7 @@ def seite_51():
     )
 
 """
-    for nr, name in enumerate(("P51_TITEL", "P51_BKUM_ID", "P51_DZAH_ID", "P51_RDS_START", "P51_MELDUNG"), 3):
+    for nr, name in enumerate(("P51_TITEL", "P51_BKUM_ID", "P51_DZAH_ID", "P51_RDS_START", "P51_MELDUNG", "P51_SALDO"), 3):
         s += f"""    pageItem {name} (
         type: hidden
         layout {{
@@ -4969,7 +4977,7 @@ def seite_51():
             region: @{a}
             slot: regionBody
         }}
-""" + ("" if name in ("P51_TITEL", "P51_RDS_START", "P51_MELDUNG") else """        security {
+""" + ("" if name in ("P51_TITEL", "P51_RDS_START", "P51_MELDUNG", "P51_SALDO") else """        security {
             sessionStateProtection: checksumRequiredSessionLevel
         }
 """) + "    )\n\n"
@@ -5003,7 +5011,7 @@ def seite_51():
     def in_tab(txt, seq):
         return txt.replace(f"            sequence: {seq}\n            slot: body\n",
                            f"            sequence: {seq}\n            parentRegion: @zahlungen\n            slot: subRegions\n", 1)
-    s += in_tab(bericht("faelligkeiten", "Fälligkeiten", 10, """                -- Zahlungen decken die aeltesten Posten zuerst (FAKT_DEBITOR_POSTEN_V); neueste Faelligkeit oben
+    s += in_tab(bericht("faelligkeiten", "Fälligkeiten&P51_SALDO!RAW.", 10, """                -- Zahlungen decken die aeltesten Posten zuerst (FAKT_DEBITOR_POSTEN_V); neueste Faelligkeit oben
                 select to_char(v.FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG_AM,
                        FAKT_HISTORIE.betrag(v.BETRAG) as BETRAG,
                        FAKT_HISTORIE.betrag(v.BEZAHLT) as BEZAHLT,
@@ -5160,6 +5168,14 @@ def seite_51():
                         :P51_BKUM_ID := null;
                         :P51_DZAH_ID := null;
                         FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID, :P51_DEBI_ID);
+                        -- offener Saldo bis heute (Titel der Faelligkeiten, Saldo 0 wird nicht angezeigt)
+                        select case when sum(v.OFFEN) > 0
+                                    then '<span class="thg-titel-saldo u-danger-text">Offen per ' || to_char(sysdate, 'DD.MM.YYYY')
+                                         || ': ' || FAKT_HISTORIE.betrag(sum(v.OFFEN)) || '</span>' end
+                          into :P51_SALDO
+                          from FAKT_DEBITOR_POSTEN_V v
+                         where v.DEBI_ID = :P51_DEBI_ID
+                           and v.FAELLIG_AM <= trunc(sysdate);
                     end if;
                 end;
                 ```

@@ -9,6 +9,13 @@ page 51 (
     navigation {
         cursorFocus: doNotFocusCursor
     }
+    css {
+        inline:
+            ```css
+            .t-Region-title:has(.thg-titel-saldo) { display: flex; align-items: baseline; gap: 1rem; }
+            .thg-titel-saldo { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+            ```
+    }
     security {
         pageAccessProtection: argumentsMustHaveChecksum
         formAutoComplete: false
@@ -192,6 +199,15 @@ page 51 (
         type: hidden
         layout {
             sequence: 7
+            region: @stammdaten
+            slot: regionBody
+        }
+    )
+
+    pageItem P51_SALDO (
+        type: hidden
+        layout {
+            sequence: 8
             region: @stammdaten
             slot: regionBody
         }
@@ -512,7 +528,7 @@ page 51 (
     )
 
     region faelligkeiten (
-        name: Fälligkeiten
+        name: Fälligkeiten&P51_SALDO!RAW.
         type: classicReport
         source {
             location: localDatabase
@@ -1110,6 +1126,14 @@ page 51 (
                         :P51_BKUM_ID := null;
                         :P51_DZAH_ID := null;
                         FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID, :P51_DEBI_ID);
+                        -- offener Saldo bis heute (Titel der Faelligkeiten, Saldo 0 wird nicht angezeigt)
+                        select case when sum(v.OFFEN) > 0
+                                    then '<span class="thg-titel-saldo u-danger-text">Offen per ' || to_char(sysdate, 'DD.MM.YYYY')
+                                         || ': ' || FAKT_HISTORIE.betrag(sum(v.OFFEN)) || '</span>' end
+                          into :P51_SALDO
+                          from FAKT_DEBITOR_POSTEN_V v
+                         where v.DEBI_ID = :P51_DEBI_ID
+                           and v.FAELLIG_AM <= trunc(sysdate);
                     end if;
                 end;
                 ```
