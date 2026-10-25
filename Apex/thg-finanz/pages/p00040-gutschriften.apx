@@ -3,7 +3,7 @@ page 40 (
     alias: GUTSCHRIFTEN
     title: Gutschriften
     appearance {
-        pageTemplate: @/standard
+        pageTemplate: @/left-side-column
         templateOptions: #DEFAULT#
     }
     navigation {
@@ -22,7 +22,7 @@ page 40 (
             breadcrumb: @breadcrumb
         }
         layout {
-            sequence: 5
+            sequence: 10
             slot: breadcrumbBar
         }
         appearance {
@@ -37,6 +37,139 @@ page 40 (
         }
     )
 
+    region facets (
+        name: Facetten
+        type: facetedSearch
+        source {
+            filteredRegion: @gutschriften
+        }
+        layout {
+            sequence: 20
+            slot: leftColumn
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            compactNosThreshold: 10000
+            displayChartForTopNValues: 10
+        }
+
+        facet P40_SEARCH (
+            type: search
+            label {
+                label: Suche
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        facet P40_STATUS (
+            type: checkboxGroup
+            label {
+                label: Status
+            }
+            lov {
+                type: distinctValues
+            }
+            layout {
+                sequence: 20
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+            }
+            source {
+                databaseColumn: STATUS
+            }
+        )
+
+        facet P40_UEBERFAELLIG (
+            type: checkboxGroup
+            label {
+                label: Überfällig
+            }
+            lov {
+                type: distinctValues
+            }
+            layout {
+                sequence: 25
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+            }
+            source {
+                databaseColumn: UEBERFAELLIG
+            }
+        )
+
+        facet P40_JAHR (
+            type: checkboxGroup
+            label {
+                label: Jahr
+            }
+            lov {
+                type: distinctValues
+                sortDirection: desc
+            }
+            layout {
+                sequence: 30
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+                sortByTopCounts: false
+            }
+            source {
+                databaseColumn: JAHR
+            }
+        )
+
+        facet P40_MONAT (
+            type: checkboxGroup
+            label {
+                label: Monat
+            }
+            lov {
+                type: distinctValues
+                sortDirection: desc
+            }
+            layout {
+                sequence: 35
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+                sortByTopCounts: false
+            }
+            source {
+                databaseColumn: MONAT
+            }
+            appearance {
+                display: addFilterDialog
+            }
+        )
+
+        facet P40_KUNDE (
+            type: checkboxGroup
+            label {
+                label: Aussteller
+            }
+            lov {
+                type: distinctValues
+            }
+            layout {
+                sequence: 40
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+            }
+            source {
+                databaseColumn: AUSSTELLER
+            }
+        )
+
+    )
+
     region gutschriften (
         name: Gutschriften
         type: classicReport
@@ -45,33 +178,40 @@ page 40 (
             type: sqlQuery
             sqlQuery:
                 ```sql
-                select '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
-                                                                                   p_items => 'P41_GUTS_ID', p_values => g.GUTS_ID))
-                       || '">' || apex_escape.html(coalesce(g.GUTS_NUMMER, '(ohne Nummer)')) || '</a>' as NUMMER,
-                       to_char(g.GUTS_DATUM, 'DD.MM.YYYY') as DATUM,
-                       coalesce(k.KUND_NUMMER || ' – ' || k.KUND_FIRMENNAME, g.GUTS_AUSSTELLER) as AUSSTELLER,
-                       FAKT_HISTORIE.betrag(g.GUTS_BETRAG) as BETRAG,
-                       FAKT_HISTORIE.betrag(g.GUTS_ZAHLBETRAG) as ZAHLBETRAG,
-                       to_char(g.GUTS_FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG,
-                       '<span class="' || case g.GUTS_STATUS when 'BEZAHLT' then 'u-success-text'
-                                                             else case when g.GUTS_FAELLIG_AM < trunc(sysdate) then 'u-danger-text'
-                                                                       else 'u-warning-text' end end || '">'
-                       || apex_escape.html(FAKT_GUTSCHRIFT.status_text(g.GUTS_STATUS)) || '</span>' as STATUS,
-                       to_char(g.GUTS_BEZAHLT_AM, 'DD.MM.YYYY') as BEZAHLT_AM,
-                       g.GUTS_VERWENDUNGSZWECK as VERWENDUNGSZWECK
+                select g.GUTS_ID,
+                       coalesce(g.GUTS_NUMMER, '(ohne Nummer)') as NUMMER,
+                       g.GUTS_DATUM,
+                       to_char(g.GUTS_DATUM, 'YYYY') as JAHR,
+                       to_char(g.GUTS_DATUM, 'YYYY-MM') as MONAT,
+                       FAKT_GUTSCHRIFT.status_text(g.GUTS_STATUS) as STATUS,
+                       case when g.GUTS_STATUS = 'BEZAHLT' then 'fa-check-circle u-success-text'
+                            when g.GUTS_FAELLIG_AM < trunc(sysdate) then 'fa-exclamation-triangle u-danger-text'
+                            else 'fa-clock-o u-info-text' end as STATUS_ICON,
+                       case when g.GUTS_STATUS = 'OFFEN' and g.GUTS_FAELLIG_AM < trunc(sysdate) then 'Ja' else 'Nein' end as UEBERFAELLIG,
+                       k.KUND_NUMMER,
+                       coalesce(k.KUND_FIRMENNAME, g.GUTS_AUSSTELLER) as AUSSTELLER,
+                       g.GUTS_BETRAG,
+                       g.GUTS_ZAHLBETRAG,
+                       g.GUTS_FAELLIG_AM,
+                       g.GUTS_BEZAHLT_AM,
+                       g.GUTS_VERWENDUNGSZWECK
                   from FAKT_GUTSCHRIFTEN g
                   left join KUND_KUNDEN k on k.KUND_ID = g.GUTS_KUND_ID
-                 where g.GUTS_MAND_ID = :MANDANT_ID
+                 where g.GUTS_MAND_ID = :MANDANT_ID   -- nur Gutschriften des im Portal gewaehlten Mandanten
                  order by g.GUTS_DATUM desc nulls first, g.GUTS_CREATED_ON desc
                 ```
         }
         layout {
-            sequence: 10
+            sequence: 30
             slot: body
         }
         appearance {
             template: @/standard
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
         }
         componentAppearance {
             template: @/standard
@@ -86,37 +226,109 @@ page 40 (
         pagination {
             type: rowRangesXToYOfZWithPagination
         }
-        reportLayout {
-            numberOfRowsType: staticValue
-            numberOfRows: 50
-        }
         messages {
-            whenNoDataFound: Noch keine Gutschriften erfasst.
+            whenNoDataFound: Keine Gutschriften gefunden.
         }
 
-        column NUMMER (
-            type: plainText
-            heading {
-                heading: Gutschrift
-            }
+        column GUTS_ID (
+            type: hidden
             layout {
                 sequence: 10
             }
-            security {
-                escapeSpecialChars: false
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+                alignment: center
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #STATUS_ICON#" title="#STATUS#" aria-label="#STATUS#" style="font-size:16px"></span>
+            }
+            layout {
+                columnAlignment: center
+                sequence: 15
             }
             sorting {
                 sortable: false
             }
         )
 
-        column DATUM (
+        column NUMMER (
+            type: link
+            heading {
+                heading: Gutschrift
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    page: 41
+                    items: {
+                        P41_GUTS_ID: #GUTS_ID#
+                    }
+                    clearCache: 41
+                }
+                linkText: <span class="thg-kundennr">#NUMMER#</span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column STATUS_ICON (
+            type: hidden
+            layout {
+                sequence: 16
+            }
+        )
+
+        column GUTS_DATUM (
             type: plainText
             heading {
                 heading: Datum
             }
+            appearance {
+                formatMask: DD.MM.YYYY
+            }
             layout {
-                sequence: 20
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column JAHR (
+            type: hidden
+            layout {
+                sequence: 35
+            }
+        )
+
+        column MONAT (
+            type: hidden
+            layout {
+                sequence: 36
+            }
+        )
+
+        column UEBERFAELLIG (
+            type: hidden
+            layout {
+                sequence: 37
+            }
+        )
+
+        column KUND_NUMMER (
+            type: plainText
+            heading {
+                heading: Kundennr.
+            }
+            layout {
+                sequence: 40
             }
             sorting {
                 sortable: false
@@ -129,21 +341,24 @@ page 40 (
                 heading: Aussteller
             }
             layout {
-                sequence: 30
+                sequence: 50
             }
             sorting {
                 sortable: false
             }
         )
 
-        column BETRAG (
+        column GUTS_BETRAG (
             type: plainText
             heading {
                 heading: Betrag
                 alignment: end
             }
+            appearance {
+                formatMask: FML999G999G990D00
+            }
             layout {
-                sequence: 40
+                sequence: 60
                 columnAlignment: end
             }
             sorting {
@@ -151,14 +366,17 @@ page 40 (
             }
         )
 
-        column ZAHLBETRAG (
+        column GUTS_ZAHLBETRAG (
             type: plainText
             heading {
                 heading: Zahlbetrag
                 alignment: end
             }
+            appearance {
+                formatMask: FML999G999G990D00
+            }
             layout {
-                sequence: 50
+                sequence: 70
                 columnAlignment: end
             }
             sorting {
@@ -166,39 +384,13 @@ page 40 (
             }
         )
 
-        column FAELLIG (
+        column GUTS_FAELLIG_AM (
             type: plainText
             heading {
                 heading: Fällig am
             }
-            layout {
-                sequence: 60
-            }
-            sorting {
-                sortable: false
-            }
-        )
-
-        column STATUS (
-            type: plainText
-            heading {
-                heading: Status
-            }
-            layout {
-                sequence: 70
-            }
-            security {
-                escapeSpecialChars: false
-            }
-            sorting {
-                sortable: false
-            }
-        )
-
-        column BEZAHLT_AM (
-            type: plainText
-            heading {
-                heading: Bezahlt am
+            appearance {
+                formatMask: DD.MM.YYYY
             }
             layout {
                 sequence: 80
@@ -208,10 +400,13 @@ page 40 (
             }
         )
 
-        column VERWENDUNGSZWECK (
+        column GUTS_BEZAHLT_AM (
             type: plainText
             heading {
-                heading: Verwendungszweck
+                heading: Bezahlt am
+            }
+            appearance {
+                formatMask: DD.MM.YYYY
             }
             layout {
                 sequence: 90
@@ -221,11 +416,49 @@ page 40 (
             }
         )
 
+        column GUTS_VERWENDUNGSZWECK (
+            type: plainText
+            heading {
+                heading: Verwendungszweck
+            }
+            layout {
+                sequence: 100
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
     )
 
-    button neu (
-        buttonName: NEU
-        label: Neue Gutschrift
+    button up (
+        buttonName: UP
+        label: Zurück zum Dashboard
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: up
+        }
+        appearance {
+            buttonTemplate: @/icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+            icon: fa-arrow-up
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 1
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button reset (
+        buttonName: RESET
+        label: Zurücksetzen
         layout {
             sequence: 10
             region: @breadcrumb
@@ -233,10 +466,38 @@ page 40 (
         }
         appearance {
             buttonTemplate: @/text-with-icon
-            hot: true
+            templateOptions: [
+                t-Button--noUI
+                t-Button--iconLeft
+                t-Button--gapRight
+            ]
+            icon: fa-undo-alt
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 40
+                clearCache: 40
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button neue-gutschrift (
+        buttonName: CREATE
+        label: Neue Gutschrift
+        layout {
+            sequence: 20
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
             templateOptions: [
                 #DEFAULT#
-                t-Button--iconLeft
+                t-Button--noUI
+                t-Button--iconRight
             ]
             icon: fa-plus
         }

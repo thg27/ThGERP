@@ -2939,43 +2939,163 @@ def seite_30():
 
 
 def seite_40():
-    """Gutschriften (Menuepunkt): erhaltene Gutschriften des Mandanten (Gutschriftverfahren, z.B. Hays) – Liste mit Status;
-    Bezahlt setzt der Bankabgleich (Verwendungszweck/Nummer und Betrag). Neue Gutschrift: Seite 41."""
-    s = KOPF(40, "Gutschriften", "GUTSCHRIFTEN") + BREADCRUMB("Gutschriften")
-    s += bericht("gutschriften", "Gutschriften", 10, """                select '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
-                                                                                   p_items => 'P41_GUTS_ID', p_values => g.GUTS_ID))
-                       || '">' || apex_escape.html(coalesce(g.GUTS_NUMMER, '(ohne Nummer)')) || '</a>' as NUMMER,
-                       to_char(g.GUTS_DATUM, 'DD.MM.YYYY') as DATUM,
-                       coalesce(k.KUND_NUMMER || ' – ' || k.KUND_FIRMENNAME, g.GUTS_AUSSTELLER) as AUSSTELLER,
-                       FAKT_HISTORIE.betrag(g.GUTS_BETRAG) as BETRAG,
-                       FAKT_HISTORIE.betrag(g.GUTS_ZAHLBETRAG) as ZAHLBETRAG,
-                       to_char(g.GUTS_FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG,
-                       '<span class="' || case g.GUTS_STATUS when 'BEZAHLT' then 'u-success-text'
-                                                             else case when g.GUTS_FAELLIG_AM < trunc(sysdate) then 'u-danger-text'
-                                                                       else 'u-warning-text' end end || '">'
-                       || apex_escape.html(FAKT_GUTSCHRIFT.status_text(g.GUTS_STATUS)) || '</span>' as STATUS,
-                       to_char(g.GUTS_BEZAHLT_AM, 'DD.MM.YYYY') as BEZAHLT_AM,
-                       g.GUTS_VERWENDUNGSZWECK as VERWENDUNGSZWECK
+    """Gutschriften (Menuepunkt): Liste mit Facettensuche wie die Rechnungsliste (Seite 10) – Suche, Status, Ueberfaellig,
+    Jahr, Monat, Aussteller; nur Gutschriften des Mandanten der Sitzung. Neue Gutschrift: Seite 41."""
+    s = (fdl.rechnungsliste()
+         .replace("page 10 (\n    name: Rechnungen\n    alias: RECHNUNGEN\n    title: Rechnungen",
+                  "page 40 (\n    name: Gutschriften\n    alias: GUTSCHRIFTEN\n    title: Gutschriften")
+         .replace("        title: Rechnungen\n        type: breadcrumb", "        title: Gutschriften\n        type: breadcrumb")
+         .replace("filteredRegion: @rechnungen", "filteredRegion: @gutschriften")
+         .replace("P10_", "P40_"))
+    # Facette Kunde -> Aussteller
+    s = s.replace("""                label: Kunde
+            }""", """                label: Aussteller
+            }""", 1).replace("databaseColumn: KUNDE\n", "databaseColumn: AUSSTELLER\n", 1)
+    # Bericht ersetzen
+    a = s.index("    region rechnungen (")
+    e = s.index("    button up (")
+    bericht_neu = """    region gutschriften (
+        name: Gutschriften
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select g.GUTS_ID,
+                       coalesce(g.GUTS_NUMMER, '(ohne Nummer)') as NUMMER,
+                       g.GUTS_DATUM,
+                       to_char(g.GUTS_DATUM, 'YYYY') as JAHR,
+                       to_char(g.GUTS_DATUM, 'YYYY-MM') as MONAT,
+                       FAKT_GUTSCHRIFT.status_text(g.GUTS_STATUS) as STATUS,
+                       case when g.GUTS_STATUS = 'BEZAHLT' then 'fa-check-circle u-success-text'
+                            when g.GUTS_FAELLIG_AM < trunc(sysdate) then 'fa-exclamation-triangle u-danger-text'
+                            else 'fa-clock-o u-info-text' end as STATUS_ICON,
+                       case when g.GUTS_STATUS = 'OFFEN' and g.GUTS_FAELLIG_AM < trunc(sysdate) then 'Ja' else 'Nein' end as UEBERFAELLIG,
+                       k.KUND_NUMMER,
+                       coalesce(k.KUND_FIRMENNAME, g.GUTS_AUSSTELLER) as AUSSTELLER,
+                       g.GUTS_BETRAG,
+                       g.GUTS_ZAHLBETRAG,
+                       g.GUTS_FAELLIG_AM,
+                       g.GUTS_BEZAHLT_AM,
+                       g.GUTS_VERWENDUNGSZWECK
                   from FAKT_GUTSCHRIFTEN g
                   left join KUND_KUNDEN k on k.KUND_ID = g.GUTS_KUND_ID
-                 where g.GUTS_MAND_ID = :MANDANT_ID
-                 order by g.GUTS_DATUM desc nulls first, g.GUTS_CREATED_ON desc""",
-                 [("NUMMER", "Gutschrift", True, False), ("DATUM", "Datum", False, False),
-                  ("AUSSTELLER", "Aussteller", False, False), ("BETRAG", "Betrag", False, True),
-                  ("ZAHLBETRAG", "Zahlbetrag", False, True), ("FAELLIG", "Fällig am", False, False), ("STATUS", "Status", True, False),
-                  ("BEZAHLT_AM", "Bezahlt am", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False)],
-                 "Noch keine Gutschriften erfasst.")
-    s += button("neu", "NEU", "Neue Gutschrift", 10, "breadcrumb", "next", "@/text-with-icon", hot=True, icon="fa-plus",
-                options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
-                verhalten="""            action: redirectThisApp
-            target: {
-                page: 41
-                clearCache: 41
-            }
-            warnOnUnsavedChanges: doNotCheck
-""")
-    return s + ")\n"
+                 where g.GUTS_MAND_ID = :MANDANT_ID   -- nur Gutschriften des im Portal gewaehlten Mandanten
+                 order by g.GUTS_DATUM desc nulls first, g.GUTS_CREATED_ON desc
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        messages {
+            whenNoDataFound: Keine Gutschriften gefunden.
+        }
 
+        column GUTS_ID (
+            type: hidden
+            layout {
+                sequence: 10
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+                alignment: center
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa #STATUS_ICON#" title="#STATUS#" aria-label="#STATUS#" style="font-size:16px"></span>
+            }
+            layout {
+                columnAlignment: center
+                sequence: 15
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column NUMMER (
+            type: link
+            heading {
+                heading: Gutschrift
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    page: 41
+                    items: {
+                        P41_GUTS_ID: #GUTS_ID#
+                    }
+                    clearCache: 41
+                }
+                linkText: <span class="thg-kundennr">#NUMMER#</span>
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+""" + "".join(f"""        column {c} (
+            type: {"hidden" if h is None else "plainText"}
+""" + ("" if h is None else f"""            heading {{
+                heading: {h}
+""" + ("                alignment: end\n" if rechts else "") + """            }
+""") + (f"""            appearance {{
+                formatMask: {m}
+            }}
+""" if m else "") + f"""            layout {{
+                sequence: {seq}
+""" + ("                columnAlignment: end\n" if rechts else "") + """            }
+""" + ("" if h is None else """            sorting {
+                sortable: false
+            }
+""") + """        )
+
+""" for c, h, m, rechts, seq in (
+            ("STATUS_ICON", None, None, False, 16), ("GUTS_DATUM", "Datum", "DD.MM.YYYY", False, 30),
+            ("JAHR", None, None, False, 35), ("MONAT", None, None, False, 36), ("UEBERFAELLIG", None, None, False, 37),
+            ("KUND_NUMMER", "Kundennr.", None, False, 40), ("AUSSTELLER", "Aussteller", None, False, 50),
+            ("GUTS_BETRAG", "Betrag", "FML999G999G990D00", True, 60),
+            ("GUTS_ZAHLBETRAG", "Zahlbetrag", "FML999G999G990D00", True, 70),
+            ("GUTS_FAELLIG_AM", "Fällig am", "DD.MM.YYYY", False, 80),
+            ("GUTS_BEZAHLT_AM", "Bezahlt am", "DD.MM.YYYY", False, 90),
+            ("GUTS_VERWENDUNGSZWECK", "Verwendungszweck", None, False, 100))) + "    )\n\n"
+    s = s[:a] + bericht_neu + s[e:]
+    # Buttons: Zurueck zum Dashboard, Zuruecksetzen (Seite 40), Neue Gutschrift (Seite 41)
+    s = (s.replace("                page: 10\n                clearCache: 10\n                action: resetPagination",
+                   "                page: 40\n                clearCache: 40\n                action: resetPagination")
+          .replace("    button neue-rechnung (\n        buttonName: CREATE\n        label: Neue Rechnung",
+                   "    button neue-gutschrift (\n        buttonName: CREATE\n        label: Neue Gutschrift")
+          .replace("                page: 11\n                clearCache: 11", "                page: 41\n                clearCache: 41"))
+    assert "P10_" not in s and "@rechnungen" not in s and "page: 11" not in s, "Reste der Rechnungsliste"
+    return s
 
 def seite_41():
     """Gutschrift: PDF hochladen -> FAKT_GUTSCHRIFT.aus_pdf legt die Gutschrift an und belegt Aussteller/Kunde, Nummer,
@@ -2996,7 +3116,7 @@ def seite_41():
             slot: body
         }
         appearance {
-            template: @/standard
+            template: @/blank-with-attributes
             templateOptions: #DEFAULT#
         }
         edit {
@@ -3010,12 +3130,47 @@ def seite_41():
     )
 
 """
+    TAB = "        advanced {\n            regionDisplaySelector: true\n        }\n"
+    OHNE_KOPF = "[\n                #DEFAULT#\n                t-Region--removeHeader js-removeLandmark\n            ]"
+    s += """    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 5
+            slot: fullWidthContent
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: false
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P41_GUTS_ID
+        }
+    )
+
+"""
+    s += region("angaben", "Gutschrift", 10, parent="gutschrift", extra=TAB, options=OHNE_KOPF)
+    # PDF hochladen nur bei einer neuen Gutschrift (vorhandene: Original unter "Dokumente")
     s += region("pdf", "PDF der Gutschrift", 10, extra="""        source {
             htmlCode:
                 ```html
                 <p>PDF der Gutschrift hochladen: Aussteller, Gutschriftnummer, Datum, fällig am, Betrag und Verwendungszweck
-                werden ausgelesen und vorbelegt – bitte prüfen und speichern.&P41_PDF_LINK!RAW.</p>
+                werden ausgelesen und vorbelegt – bitte prüfen und speichern. Ist die Gutschrift schon vorhanden, kommt nur ein
+                Hinweis.</p>
                 ```
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P41_GUTS_ID
         }
 """)
     s += """    pageItem P41_GUTS_ID (
@@ -3066,15 +3221,6 @@ def seite_41():
         }
     )
 
-    pageItem P41_PDF_LINK (
-        type: hidden
-        layout {
-            sequence: 4
-            region: @gutschrift
-            slot: regionBody
-        }
-    )
-
     pageItem P41_DATEI (
         type: fileUpload
         label {
@@ -3103,26 +3249,26 @@ def seite_41():
     )
 
 """
-    s += item("P41_GUTS_KUND_ID", "selectList", "Kunde (Aussteller)", 10, "gutschrift", col="GUTS_KUND_ID", dtype="number",
+    s += item("P41_GUTS_KUND_ID", "selectList", "Kunde (Aussteller)", 10, "angaben", col="GUTS_KUND_ID", dtype="number",
               req=True, spalten=6, extra=lov("lov-kunden", "- Kunde wählen -"), **f)
-    s += item("P41_GUTS_AUSSTELLER", "textField", "Aussteller laut Gutschrift", 20, "gutschrift", col="GUTS_AUSSTELLER",
+    s += item("P41_GUTS_AUSSTELLER", "textField", "Aussteller laut Gutschrift", 20, "angaben", col="GUTS_AUSSTELLER",
               maxlen=200, neue_zeile=False, spalten=6, **f)
-    s += item("P41_GUTS_NUMMER", "textField", "Gutschriftnummer", 30, "gutschrift", col="GUTS_NUMMER", maxlen=50, spalten=3, **f)
-    s += item("P41_GUTS_DATUM", "datePicker", "Gutschriftdatum", 40, "gutschrift", col="GUTS_DATUM", dtype="date",
+    s += item("P41_GUTS_NUMMER", "textField", "Gutschriftnummer", 30, "angaben", col="GUTS_NUMMER", maxlen=50, spalten=3, **f)
+    s += item("P41_GUTS_DATUM", "datePicker", "Gutschriftdatum", 40, "angaben", col="GUTS_DATUM", dtype="date",
               req=True, neue_zeile=False, spalten=3, **f)
-    s += item("P41_GUTS_FAELLIG_AM", "datePicker", "Fällig am", 50, "gutschrift", col="GUTS_FAELLIG_AM", dtype="date",
+    s += item("P41_GUTS_FAELLIG_AM", "datePicker", "Fällig am", 50, "angaben", col="GUTS_FAELLIG_AM", dtype="date",
               neue_zeile=False, spalten=3, **f)
-    s += maske(item("P41_GUTS_BETRAG", "numberField", "Betrag", 60, "gutschrift", col="GUTS_BETRAG", dtype="number",
+    s += maske(item("P41_GUTS_BETRAG", "numberField", "Betrag", 60, "angaben", col="GUTS_BETRAG", dtype="number",
                     req=True, neue_zeile=False, spalten=3, **f), "999G999G990D00")
-    s += maske(item("P41_GUTS_SKONTO_PROZENT", "numberField", "Skonto %", 65, "gutschrift", col="GUTS_SKONTO_PROZENT",
+    s += maske(item("P41_GUTS_SKONTO_PROZENT", "numberField", "Skonto %", 65, "angaben", col="GUTS_SKONTO_PROZENT",
                     dtype="number", spalten=3, **f), "990D99")
-    s += maske(item("P41_GUTS_ZAHLBETRAG", "displayOnly", "Zahlbetrag € (erwartete Zahlung)", 66, "gutschrift",
+    s += maske(item("P41_GUTS_ZAHLBETRAG", "displayOnly", "Zahlbetrag € (erwartete Zahlung)", 66, "angaben",
                     col="GUTS_ZAHLBETRAG", dtype="number", neue_zeile=False, spalten=3, **f), "999G999G990D00")
-    s += item("P41_GUTS_VERWENDUNGSZWECK", "textField", "Verwendungszweck (wie auf dem Kontoauszug)", 70, "gutschrift",
+    s += item("P41_GUTS_VERWENDUNGSZWECK", "textField", "Verwendungszweck (wie auf dem Kontoauszug)", 70, "angaben",
               col="GUTS_VERWENDUNGSZWECK", maxlen=140, spalten=12, **f)
-    s += item("P41_GUTS_BEMERKUNG", "textarea", "Bemerkung", 80, "gutschrift", col="GUTS_BEMERKUNG", maxlen=1000,
+    s += item("P41_GUTS_BEMERKUNG", "textarea", "Bemerkung", 80, "angaben", col="GUTS_BEMERKUNG", maxlen=1000,
               spalten=12, **f)
-    s += item("P41_GUTS_STATUS", "displayOnly", "Status", 90, "gutschrift", col="GUTS_STATUS", spalten=3,
+    s += item("P41_GUTS_STATUS", "displayOnly", "Status", 90, "angaben", col="GUTS_STATUS", spalten=3,
               extra="""        settings {
             basedOn: lov
         }
@@ -3139,12 +3285,65 @@ def seite_41():
             staticValue: OFFEN
         }
 """, **f)
-    s += item("P41_GUTS_BEZAHLT_AM", "datePicker", "Bezahlt am (Bankabgleich oder von Hand)", 100, "gutschrift",
+    s += item("P41_GUTS_BEZAHLT_AM", "datePicker", "Bezahlt am (Bankabgleich oder von Hand)", 100, "angaben",
               col="GUTS_BEZAHLT_AM", dtype="date", neue_zeile=False, spalten=3, **f)
+    # Dokumente: Original-PDF der Gutschrift, Anzeigen im PDF-Fenster (Dialog Seite 43, wie bei der Rechnung)
+    s += bericht("dokumente", "Dokumente", 40, """                select '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 43, p_clear_cache => '43',
+                                                                                   p_items => 'P43_GUTS_ID', p_values => g.GUTS_ID))
+                       || '" title="Anzeigen"><span class="fa fa-file-pdf-o" aria-hidden="true"></span></a>' as ANZEIGEN,
+                       g.GUTS_DATEINAME as DATEI,
+                       to_char(round(dbms_lob.getlength(g.GUTS_DATEI) / 1024), 'FM999G999G990') || ' KB' as GROESSE,
+                       to_char(from_tz(g.GUTS_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
+                       g.GUTS_CREATED_BY as VON
+                  from FAKT_GUTSCHRIFTEN g
+                 where g.GUTS_ID = :P41_GUTS_ID and g.GUTS_DATEI is not null""",
+                 [("ANZEIGEN", "Anzeigen", True, False), ("DATEI", "Datei", False, False), ("GROESSE", "Größe", False, True),
+                  ("HOCHGELADEN", "Hochgeladen am", False, False), ("VON", "Von", False, False)],
+                 "Kein PDF gespeichert.").replace(
+        "            templateOptions: #DEFAULT#\n        }\n        componentAppearance",
+        "            templateOptions: " + OHNE_KOPF + "\n        }\n" + TAB + "        serverSideCondition {\n            type: itemIsNotNull\n"
+        "            item: P41_GUTS_ID\n        }\n        componentAppearance", 1)
+    # Historie als Timeline (FAKT_GUTSCHRIFT_HISTORIE, Trigger GUTS_HIST_AIU)
+    s += bericht("historie", "Historie", 50, """                select nvl(m.MITA_NAME, h.GHIS_BENUTZER) as USER_NAME,
+                       coalesce(m.MITA_KUERZEL, upper(substr(nvl(m.MITA_NAME, h.GHIS_BENUTZER), 1, 2))) as USER_AVATAR,
+                       'u-color-1' as USER_COLOR,
+                       to_char(from_tz(h.GHIS_ZEITPUNKT, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as EVENT_DATE,
+                       case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt') then 'Dokument'
+                            when h.GHIS_AKTION in ('Bezahlt', 'Zahlung zurückgenommen') then 'Zahlung'
+                            else 'Gutschrift' end as EVENT_TYPE,
+                       'fa ' || case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt') then 'fa-upload'
+                                     when h.GHIS_AKTION = 'Bezahlt' then 'fa-eur'
+                                     when h.GHIS_AKTION = 'Zahlung zurückgenommen' then 'fa-undo'
+                                     when h.GHIS_AKTION = 'Angelegt' then 'fa-plus-circle'
+                                     else 'fa-pencil' end as EVENT_ICON,
+                       case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt') then 'u-info'
+                            when h.GHIS_AKTION = 'Bezahlt' then 'u-success'
+                            when h.GHIS_AKTION = 'Zahlung zurückgenommen' then 'u-warning'
+                            else 'u-color-14' end as EVENT_STATUS,
+                       h.GHIS_AKTION as EVENT_TITLE,
+                       h.GHIS_DETAIL as EVENT_DESC,
+                       null as EVENT_MODIFIERS,
+                       null as EVENT_ATTRIBUTES,
+                       null as EVENT_LINK
+                  from FAKT_GUTSCHRIFT_HISTORIE h
+                  left join ALLG_MITARBEITER m on m.MITA_BENUTZERNAME = h.GHIS_BENUTZER
+                 where h.GHIS_GUTS_ID = :P41_GUTS_ID
+                 order by h.GHIS_ZEITPUNKT desc, h.GHIS_ID desc""",
+                 [(c, c, False, False) for c in ("USER_NAME", "USER_AVATAR", "USER_COLOR", "EVENT_DATE", "EVENT_TYPE",
+                                                 "EVENT_ICON", "EVENT_STATUS", "EVENT_TITLE", "EVENT_DESC",
+                                                 "EVENT_MODIFIERS", "EVENT_ATTRIBUTES", "EVENT_LINK")],
+                 "Noch keine Einträge.").replace(
+        "            templateOptions: #DEFAULT#\n        }\n        componentAppearance {\n            template: @/standard\n",
+        "            templateOptions: " + OHNE_KOPF + "\n        }\n" + TAB + "        serverSideCondition {\n            type: itemIsNotNull\n"
+        "            item: P41_GUTS_ID\n        }\n        componentAppearance {\n            template: @/timeline\n", 1).replace(
+        "            template: @/timeline\n            templateOptions: [\n                #DEFAULT#\n                t-Report--stretch\n"
+        "                t-Report--staticRowColors\n                t-Report--rowHighlight\n                t-Report--horizontalBorders\n"
+        "            ]\n", "            template: @/timeline\n            templateOptions: #DEFAULT#\n", 1)
     links = "[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]"
     s += button("auslesen", "AUSLESEN", "PDF hochladen und auslesen", 10, "pdf", "next", "@/text-with-icon", hot=True,
                 icon="fa-upload", options=links,
-                verhalten="            executeValidations: false\n            warnOnUnsavedChanges: doNotCheck\n")
+                verhalten="            executeValidations: false\n            warnOnUnsavedChanges: doNotCheck\n",
+                bedingung=NULL("P41_GUTS_ID"))
     s += button("up", "UP", "Zurück zu den Gutschriften", 10, "breadcrumb", "up", "@/icon", icon="fa-arrow-up",
                 options="[\n                #DEFAULT#\n                t-Button--noUI\n            ]",
                 verhalten="""            action: redirectThisApp
@@ -3181,7 +3380,7 @@ def seite_41():
     )
 
     process kopf (
-        name: Mandant prüfen, Titel und PDF-Link
+        name: Mandant prüfen, Titel
         type: executeCode
         source {
             plsqlCode:
@@ -3191,13 +3390,6 @@ def seite_41():
                 end if;
                 :P41_TITEL := case when :P41_GUTS_ID is null then 'Neue Gutschrift'
                                    else 'Gutschrift ' || coalesce(:P41_GUTS_NUMMER, :P41_GUTS_AUSSTELLER) end;
-                :P41_PDF_LINK := null;
-                for g in (select GUTS_DATEINAME from FAKT_GUTSCHRIFTEN where GUTS_ID = :P41_GUTS_ID and GUTS_DATEI is not null) loop
-                    :P41_PDF_LINK := ' Gespeichert: <a href="' || apex_escape.html_attribute(
-                                         apex_page.get_url(p_page => 42, p_items => 'P42_GUTS_ID', p_values => :P41_GUTS_ID))
-                                     || '" target="_blank" rel="noopener"><span class="fa fa-file-pdf-o" aria-hidden="true"></span> '
-                                     || apex_escape.html(g.GUTS_DATEINAME) || '</a> (ein neues PDF ersetzt es und ergänzt leere Felder)';
-                end loop;
                 ```
         }
         execution {
@@ -3254,6 +3446,7 @@ def seite_41():
                 update FAKT_BANKUMSAETZE
                    set BKUM_STATUS = 'OFFEN', BKUM_GUTS_ID = null, BKUM_ZUORDNUNG = null
                  where BKUM_GUTS_ID = :P41_GUTS_ID and BKUM_MAND_ID = :MANDANT_ID;
+                delete from FAKT_GUTSCHRIFT_HISTORIE where GHIS_GUTS_ID = :P41_GUTS_ID;
                 ```
         }
         execution {
@@ -3340,6 +3533,44 @@ def seite_41():
 """
     return s
 
+
+
+def seite_43():
+    """PDF-Fenster der Gutschrift (wie Seite 13 der Rechnung): Original-PDF (Seite 42) mit Drucken/Herunterladen/Schliessen."""
+    t = (FIN / "pages" / "p00013-rechnung-anzeigen.apx").read_text(encoding="utf-8")
+    ersetzen = [
+        ("page 13 (\n    name: Rechnung anzeigen\n    alias: RECHNUNG-ANZEIGEN\n    title: Rechnung",
+         "page 43 (\n    name: Gutschrift anzeigen\n    alias: GUTSCHRIFT-ANZEIGEN\n    title: Gutschrift"),
+        ("apex_page.get_url(p_page      => 12,\n                                             p_items     => 'P12_RECH_ID,P12_RDOK_ID',\n"
+         "                                             p_values    => :P13_RECH_ID || ',' || :P13_RDOK_ID,",
+         "apex_page.get_url(p_page      => 42,\n                                             p_items     => 'P42_GUTS_ID',\n"
+         "                                             p_values    => :P43_GUTS_ID,"),
+        ("apex_escape.html_attribute(FAKT_RECHNUNG_DOKUMENT.dateiname(:P13_RECH_ID, :P13_RDOK_ID))",
+         "apex_escape.html_attribute(FAKT_GUTSCHRIFT.dateiname(:P43_GUTS_ID))"),
+        ("title=\"Rechnung\"", "title=\"Gutschrift\""),
+        ("Rechnung konnte nicht", "Gutschrift konnte nicht"),
+    ]
+    for x, y in ersetzen:
+        assert x in t, x[:60]
+        t = t.replace(x, y)
+    # Seitenelemente: nur P43_GUTS_ID
+    i = t.index("    pageItem P13_RECH_ID (")
+    j = t.index("    dynamicAction ", i)
+    t = t[:i] + """    pageItem P43_GUTS_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @vorschau
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+""" + t[j:]
+    assert "P13_" not in t and "P12_" not in t, "Reste der Rechnungsanzeige"
+    return t
 
 def seite_42():
     """PDF einer Gutschrift ausliefern (inline, neuer Tab) – nur Gutschriften des Mandanten der Sitzung."""
@@ -4213,6 +4444,7 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00041-gutschrift.apx").write_text(seite_41(), encoding="utf-8")
     (FIN / "pages" / "p00042-gutschrift-pdf.apx").write_text(seite_42(), encoding="utf-8")
     pdf_seiten()
+    (FIN / "pages" / "p00043-gutschrift-anzeigen.apx").write_text(seite_43(), encoding="utf-8")
     # Artikelstamm (Seiten aus gen_artikel.py, umnummeriert 10/11/12 -> 20/21/22)
     (FIN / "pages" / "p00020-artikel.apx").write_text(ga.in_finanz(ga.seite_10()), encoding="utf-8")
     (FIN / "pages" / "p00021-artikel-bearbeiten.apx").write_text(ga.in_finanz(ga.seite_11()), encoding="utf-8")

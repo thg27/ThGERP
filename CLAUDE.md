@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–41 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–42 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -76,7 +76,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   die Zahlungsreferenz **RF75 2100 2212 0260 0203** angeben.“ und rechts darunter EPC-QR-Code „Zahlen mit Code“ (Empfänger = Mandantenname,
   bevorzugte IBAN, offener Betrag, Referenz; `APEX_BARCODE`) – je Kunde abschaltbar (`KUND_IST_QR_CODE`, THG-KUNDEN Rechtliches und Konditionen).
   Anzeige auf Seite 11 (Allgemein), Vorschlag im Dialog Zahlungseingang.
-- **Gutschriften** (Menüpunkt, Seiten 40 Liste / 41 Gutschrift / 42 PDF; Tabelle `FAKT_GUTSCHRIFTEN` in DDL 39, Package `FAKT_GUTSCHRIFT` DDL 40):
+- **Gutschriften** (Menüpunkt, Seiten 40 Liste mit Facettensuche / 41 Gutschrift mit Registerkarten Gutschrift, Dokumente, Historie /
+  42 PDF ausliefern / 43 PDF-Fenster; Historie `FAKT_GUTSCHRIFT_HISTORIE` DDL 42; doppeltes Hochladen (gleiche Datei oder Nummer) → nur Hinweis; Tabelle `FAKT_GUTSCHRIFTEN` in DDL 39, Package `FAKT_GUTSCHRIFT` DDL 40):
   erhaltene Gutschriften im Gutschriftverfahren (z. B. Hays, Kunde 100227, DDL 41). PDF hochladen → `aus_pdf` liest mit
   `DBMS_VECTOR_CHAIN.UTL_TO_TEXT` Kunde/Aussteller, Belegnummer, Belegdatum, fällig („voraussichtlich am“), Bruttobetrag, Skonto %
   und bildet den Verwendungszweck `/GSV/<Belegnummer>/<Vertragsnummer>`; alles änderbar, Kunde Pflicht. Zahlbetrag = Betrag − Skonto (Trigger).

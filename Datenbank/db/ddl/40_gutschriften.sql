@@ -19,6 +19,8 @@ create or replace package FAKT_GUTSCHRIFT as
     function aus_pdf(p_mand_id in number, p_dateiname in varchar2, p_mime_type in varchar2, p_datei in blob,
                      p_guts_id in number default null) return number;
     function status_text(p_status in varchar2) return varchar2 deterministic;
+    -- Dateiname des PDF (PDF-Fenster Seite 43)
+    function dateiname(p_guts_id in number) return varchar2;
 end FAKT_GUTSCHRIFT;
 /
 
@@ -129,6 +131,20 @@ create or replace package body FAKT_GUTSCHRIFT as
                                         then '/GSV/' || l_nummer || '/' || l_vertrag end), 1, 140);
 
         if l_id is null then
+            -- schon vorhanden? gleiche Datei (Inhalt) bzw. gleiche Gutschriftnummer desselben Ausstellers -> nur Hinweis
+            for g in (select GUTS_NUMMER, GUTS_AUSSTELLER,
+                             to_char(from_tz(GUTS_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as AM
+                        from FAKT_GUTSCHRIFTEN
+                       where GUTS_MAND_ID = p_mand_id
+                         and ((l_nummer is not null and GUTS_NUMMER = substr(l_nummer, 1, 50)
+                               and (GUTS_KUND_ID = l_kund or l_kund is null or GUTS_KUND_ID is null))
+                              or (dbms_lob.getlength(GUTS_DATEI) = dbms_lob.getlength(p_datei)
+                                  and dbms_lob.compare(GUTS_DATEI, p_datei) = 0))
+                       fetch first 1 rows only) loop
+                raise_application_error(-20271, 'Die Gutschrift ' || nvl(g.GUTS_NUMMER, '(ohne Nummer)')
+                                                || nvl2(g.GUTS_AUSSTELLER, ' von ' || g.GUTS_AUSSTELLER, null)
+                                                || ' ist bereits vorhanden (hochgeladen am ' || g.AM || ') – es wurde nichts angelegt.');
+            end loop;
             insert into FAKT_GUTSCHRIFTEN (GUTS_MAND_ID, GUTS_KUND_ID, GUTS_AUSSTELLER, GUTS_NUMMER, GUTS_DATUM, GUTS_FAELLIG_AM,
                                            GUTS_BETRAG, GUTS_SKONTO_PROZENT, GUTS_VERWENDUNGSZWECK, GUTS_DATEINAME, GUTS_MIME_TYPE,
                                            GUTS_DATEI, GUTS_TEXT)
@@ -155,6 +171,13 @@ create or replace package body FAKT_GUTSCHRIFT as
     begin
         return case p_status when 'OFFEN' then 'Offen' when 'BEZAHLT' then 'Bezahlt' else initcap(p_status) end;
     end status_text;
+
+    function dateiname(p_guts_id in number) return varchar2 is
+        l_name FAKT_GUTSCHRIFTEN.GUTS_DATEINAME%type;
+    begin
+        select max(GUTS_DATEINAME) into l_name from FAKT_GUTSCHRIFTEN where GUTS_ID = p_guts_id;
+        return l_name;
+    end dateiname;
 
 end FAKT_GUTSCHRIFT;
 /

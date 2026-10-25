@@ -8,7 +8,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 
 | Datei | Inhalt |
 |---|---|
-| 00_install.sql | ruft 01–41 auf (ohne 14 und 25), bricht bei Fehler ab |
+| 00_install.sql | ruft 01–42 auf (ohne 14 und 25), bricht bei Fehler ab |
 | 01_tabellen.sql | Tabellen, PK/UK/Check-Constraints |
 | 02_fremdschluessel.sql | Fremdschlüssel + FK-Indizes |
 | 03_indizes.sql | fachliche Unique-Indizes, Suchindizes |
@@ -49,6 +49,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 39_bankabgleich.sql | Bankabgleich: Tabellen FAKT_BANKDATEIEN (BKDT), FAKT_BANKUMSAETZE (BKUM), Tabelle FAKT_GUTSCHRIFTEN (GUTS, erhaltene Gutschriften), Package FAKT_BANK – CAMT-Datei (camt.052/053/054) einlesen (Konto des Mandanten, jede Buchung nur einmal), Eingänge per RF-Referenz, Rechnungsnummer oder Betrag+Kunde den Rechnungen zuordnen (Zahlung anlegen bzw. vorhandene verknüpfen); wiederholbar |
 | 40_gutschriften.sql | Erhaltene Gutschriften: Package FAKT_GUTSCHRIFT – PDF hochladen, Text mit DBMS_VECTOR_CHAIN.UTL_TO_TEXT lesen, Aussteller/Nummer/Datum/fällig am/Betrag/Verwendungszweck per Muster vorbelegen; Bankabgleich ordnet Eingänge offenen Gutschriften zu (Skript 39); wiederholbar |
 | 41_kunde_hays.sql | Kunde Hays AG (Gutschriftverfahren) aus den Angaben der Gutschriften: Anschrift, UID, Telefon/Fax/Web, Ansprechpartnerin; nur wenn fehlend; wiederholbar |
+| 42_gutschrift_historie.sql | Historie der Gutschrift: Tabelle FAKT_GUTSCHRIFT_HISTORIE (GHIS, ohne FK), Trigger GUTS_HIST_AIU (Hochgeladen/Angelegt, Geändert, Bezahlt, PDF ersetzt); vorhandene Gutschriften nachgetragen; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA
