@@ -451,9 +451,11 @@ create or replace package body FAKT_BANK as
                x.REFERENZ, x.E2E, x.ZWECK, x.BANKREF, x.SCHLUESSEL,
                case x.RICHTUNG when 'DBIT' then 'AUSGANG' else 'OFFEN' end
           from (select y.*,
-                       -- Schluessel: Referenz der Bank; fehlt sie, Pruefsumme der Buchungsdaten (gleiche Buchungen am selben
+                       -- Schluessel: Referenz der Bank; fehlt sie oder ist sie in der Datei mehrfach (z. B. Abschluss mit
+                       -- Zinsen und Spesen unter einer Referenz), Pruefsumme der Buchungsdaten (gleiche Buchungen am selben
                        -- Tag werden mitgezaehlt)
                        case when y.BANKREF is not null and upper(y.BANKREF) <> 'NOTPROVIDED'
+                             and count(*) over (partition by y.IBAN, y.BANKREF) = 1
                             then y.IBAN || ':' || y.BANKREF
                             else y.IBAN || ':' || rawtohex(standard_hash(to_char(y.BUCHUNG, 'YYYYMMDD') || '|' || y.RICHTUNG || '|'
                                                     || to_char(y.BETRAG, 'FM999999999990.00') || '|' || y.NAME || '|' || y.ZWECK
