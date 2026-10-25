@@ -225,6 +225,22 @@ POS_JS = """    javaScript {
             (function () {
                 // Tab-Leiste: erster Tab heisst "Alle anzeigen" (thg.js uebersetzt "Show All" allgemein mit "Alle")
                 $(".apex-rds li:first-child a span").text("Alle anzeigen");
+                // Kebab-Menue "Weitere Aktionen": klickt die versteckten Buttons (Bedingung, Bestaetigung, Verhalten
+                // bleiben beim Button); fehlt ein Button (Bedingung), fehlt auch der Menuepunkt
+                var aktionen = [["thg-akt-kopieren", "Rechnung kopieren", "fa-copy"],
+                                ["thg-akt-stornieren", "Rechnung stornieren", "fa-ban"],
+                                ["thg-akt-loeschen", "Rechnung löschen", "fa-trash-o"]]
+                    .filter(function (a) { return document.getElementById(a[0]); })
+                    .map(function (a) {
+                        return { type: "action", label: a[1], icon: "fa " + a[2],
+                                 action: function () { $("#" + a[0]).trigger("click"); } };
+                    });
+                if (aktionen.length) {
+                    $("<div id='thg-aktionen-menu'></div>").appendTo("body").menu({ items: aktionen });
+                    $("#thg-aktionen").attr({ "data-menu": "thg-aktionen-menu", "title": "Weitere Aktionen" });
+                } else {
+                    $("#thg-aktionen").hide();
+                }
                 if (!document.getElementById("pos-baum")) {
                     return;   // neue Rechnung: Positionen erst nach dem Anlegen
                 }
@@ -1458,7 +1474,7 @@ def seite_11():
             plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS = 'ENTWURF'
         }
 """
-    s += button("delete", "DELETE", "Rechnung löschen", 15, "breadcrumb", "next",
+    s += im_menue(button("delete", "DELETE", "Rechnung löschen", 15, "breadcrumb", "next",
                 options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n            ]",
                 verhalten="""            executeValidations: false
             warnOnUnsavedChanges: doNotCheck
@@ -1472,7 +1488,7 @@ def seite_11():
             message: Rechnung &P11_RECH_NUMMER. wirklich löschen? Positionen und Zahlungen werden mitgelöscht; bei einer abgeschlossenen Rechnung wird die Nummer wieder frei.
             style: danger
         }
-""")
+"""), "thg-akt-loeschen")
     s += button("save", "SAVE", "Speichern", 20, "breadcrumb", "next", hot=False,
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
                 bedingung="""        serverSideCondition {
@@ -1498,7 +1514,7 @@ def seite_11():
 """)
     # Rechnung stornieren (nur offen – GEDRUCKT/GESENDET – ohne Zahlung): oeffnet die Dialogseite 15 (Grund ist Pflicht).
     # Eigene Seite statt Inline-Dialog – der Inline-Dialog blitzte beim Aufbau der Seite immer wieder kurz auf.
-    s += button("stornieren", "STORNO", "Rechnung stornieren", 14, "breadcrumb", "next", "@/text-with-icon",
+    s += im_menue(button("stornieren", "STORNO", "Rechnung stornieren", 14, "breadcrumb", "next", "@/text-with-icon",
                 icon="fa-ban", options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n                t-Button--iconLeft\n            ]",
                 verhalten="""            action: redirectThisApp
             target: {
@@ -1514,9 +1530,9 @@ def seite_11():
             language: plsql
             plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET') and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
         }
-""")
+"""), "thg-akt-stornieren")
     # Rechnung 1:1 als neuen Entwurf kopieren (FAKT_RECHNUNG.kopieren), danach die Kopie oeffnen
-    s += button("kopieren", "KOPIEREN", "Rechnung kopieren", 16, "breadcrumb", "next", "@/text-with-icon",
+    s += im_menue(button("kopieren", "KOPIEREN", "Rechnung kopieren", 16, "breadcrumb", "next", "@/text-with-icon",
                 icon="fa-copy", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
                 verhalten="""            executeValidations: false
             warnOnUnsavedChanges: doNotCheck
@@ -1529,7 +1545,7 @@ def seite_11():
             message: Rechnung als neuen Entwurf kopieren? Nummer und Datum werden beim Abschließen der Kopie vergeben.
             style: information
         }
-""")
+"""), "thg-akt-kopieren")
     # PDF-Ausdruck (Vorschau-Dialog Seite 13 mit Drucken/Herunterladen), sobald die Rechnung abgeschlossen ist
     # (Seite abschicken: nach "Rechnung bearbeiten" werden Aenderungen vorher gespeichert, danach oeffnet das PDF)
     s += button("pdf", "PDF", "Rechnung drucken", 17, "breadcrumb", "next", "@/text-with-icon",
@@ -1560,6 +1576,13 @@ def seite_11():
             style: warning
         }
 """)
+    # Weitere Aktionen (Kebab-Menue wie das Benutzermenue im Banner): Rechnung kopieren, stornieren, loeschen –
+    # Menue per JavaScript (apex menu widget, js-menuButton/data-menu), Eintraege nur fuer sichtbare Buttons
+    s += button("aktionen", "AKTIONEN", "Weitere Aktionen", 40, "breadcrumb", "next", "@/icon", icon="fa-ellipsis-v",
+                options="[\n                #DEFAULT#\n                t-Button--noUI\n            ]",
+                verhalten="            action: definedByDynamicAction\n", bedingung=NICHT_NULL("P11_RECH_ID")).replace(
+        "        appearance {\n", "        advanced {\n            htmlDomId: thg-aktionen\n        }\n        appearance {\n"
+        "            cssClasses: js-menuButton\n", 1)
     s += button("create", "CREATE", "Anlegen", 30, "breadcrumb", "next", hot=True,
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: insert\n",
                 bedingung=NULL("P11_RECH_ID"))
@@ -2774,6 +2797,14 @@ def seite_11():
 
 
 # --------------------------------------------------------------------------- Seite 14 Unterposition (Dialog)
+
+def im_menue(btn, dom_id):
+    """Button unsichtbar (u-hidden) mit fester DOM-ID: wird ueber das Aktionen-Menue (Kebab-Button) angeklickt und
+    behaelt Bedingung, Bestaetigung und Verhalten."""
+    i = btn.index("        appearance {\n")
+    btn = btn[:i] + f"        advanced {{\n            htmlDomId: {dom_id}\n        }}\n" + btn[i:]
+    return btn.replace("        appearance {\n", "        appearance {\n            cssClasses: u-hidden\n", 1)
+
 
 def seite_15():
     """Dialog "Rechnung stornieren" (Button im Kopf von Seite 11, nur GEDRUCKT/GESENDET ohne Zahlung): Grund ist Pflicht,

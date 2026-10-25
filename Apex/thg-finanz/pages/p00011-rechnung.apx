@@ -25,6 +25,22 @@ page 11 (
             (function () {
                 // Tab-Leiste: erster Tab heisst "Alle anzeigen" (thg.js uebersetzt "Show All" allgemein mit "Alle")
                 $(".apex-rds li:first-child a span").text("Alle anzeigen");
+                // Kebab-Menue "Weitere Aktionen": klickt die versteckten Buttons (Bedingung, Bestaetigung, Verhalten
+                // bleiben beim Button); fehlt ein Button (Bedingung), fehlt auch der Menuepunkt
+                var aktionen = [["thg-akt-kopieren", "Rechnung kopieren", "fa-copy"],
+                                ["thg-akt-stornieren", "Rechnung stornieren", "fa-ban"],
+                                ["thg-akt-loeschen", "Rechnung löschen", "fa-trash-o"]]
+                    .filter(function (a) { return document.getElementById(a[0]); })
+                    .map(function (a) {
+                        return { type: "action", label: a[1], icon: "fa " + a[2],
+                                 action: function () { $("#" + a[0]).trigger("click"); } };
+                    });
+                if (aktionen.length) {
+                    $("<div id='thg-aktionen-menu'></div>").appendTo("body").menu({ items: aktionen });
+                    $("#thg-aktionen").attr({ "data-menu": "thg-aktionen-menu", "title": "Weitere Aktionen" });
+                } else {
+                    $("#thg-aktionen").hide();
+                }
                 if (!document.getElementById("pos-baum")) {
                     return;   // neue Rechnung: Positionen erst nach dem Anlegen
                 }
@@ -3002,7 +3018,11 @@ page 11 (
             region: @breadcrumb
             slot: next
         }
+        advanced {
+            htmlDomId: thg-akt-loeschen
+        }
         appearance {
+            cssClasses: u-hidden
             buttonTemplate: @/text
             templateOptions: [
                 #DEFAULT#
@@ -3089,7 +3109,11 @@ page 11 (
             region: @breadcrumb
             slot: next
         }
+        advanced {
+            htmlDomId: thg-akt-stornieren
+        }
         appearance {
+            cssClasses: u-hidden
             buttonTemplate: @/text-with-icon
             templateOptions: [
                 #DEFAULT#
@@ -3125,7 +3149,11 @@ page 11 (
             region: @breadcrumb
             slot: next
         }
+        advanced {
+            htmlDomId: thg-akt-kopieren
+        }
         appearance {
+            cssClasses: u-hidden
             buttonTemplate: @/text-with-icon
             templateOptions: [
                 #DEFAULT#
@@ -3232,6 +3260,35 @@ page 11 (
         confirmation {
             message: Rechnung drucken? Die Rechnung wird abgeschlossen – Rechnungsnummer und Rechnungsdatum werden vergeben und können nicht mehr geändert werden. Zum Prüfen vorher die Rechnungsvorschau verwenden.
             style: warning
+        }
+    )
+
+    button aktionen (
+        buttonName: AKTIONEN
+        label: Weitere Aktionen
+        layout {
+            sequence: 40
+            region: @breadcrumb
+            slot: next
+        }
+        advanced {
+            htmlDomId: thg-aktionen
+        }
+        appearance {
+            cssClasses: js-menuButton
+            buttonTemplate: @/icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+            icon: fa-ellipsis-v
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P11_RECH_ID
         }
     )
 

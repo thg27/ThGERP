@@ -48,7 +48,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   STORNIERT über Button „Rechnung stornieren“ (Dialogseite 15 mit Pflicht-Grund – kein Inline-Dialog, der blitzte auf; `FAKT_RECHNUNG.stornieren`; nur GEDRUCKT/GESENDET ohne Zahlung, behält Nummer/Datum,
   gesperrt, PDF mit Wasserzeichen STORNIERT, Grund in der Historie). Löschen nur Entwurf bzw. letzte vergebene Rechnung.
   teilbezahlte Rechnungen zählen als offen/überfällig und zum Umsatz.
-- „Rechnung kopieren“ (Button im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,
+- Kopf der Rechnung (Seite 11): Kopieren, Stornieren, Löschen im Kebab-Menü „Weitere Aktionen“ (⋮, versteckte Buttons `thg-akt-*`,
+  Funktion `im_menue` in `gen_finanz.py`). Breadcrumb: letzter Pfadeintrag per `thg.css` ausgeblendet (sonst „Rechnung \ Rechnung 2026 - 203“).
+- „Rechnung kopieren“ (Kebab-Menü im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,
   Haupt-/Unterpositionen; ohne Nummer, Datum, Fälligkeit, Betreff, Zahlungen) und öffnet ihn.
 - Drucken: im Entwurf „Rechnungsvorschau“ (PDF mit Wasserzeichen VORSCHAU, beliebig oft, bleibt Entwurf) und „Rechnung drucken“ (= abschließen: Nummer und
   Rechnungsdatum, danach öffnet das PDF automatisch – Branch mit `P11_PDF_OEFFNEN`, DA `pdf-oeffnen`); abgeschlossen „Rechnung drucken“ → PDF; nach „Rechnung bearbeiten“ schließt „Rechnung drucken“ die Bearbeitung ab

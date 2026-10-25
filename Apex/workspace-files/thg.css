@@ -343,3 +343,13 @@ body.thg-rds-alle .t-Region.thg-ohne-titel > .t-Region-header .t-Region-title {
     align-items: center;
     text-align: center;
 }
+
+/* Titelleiste: Listen und Dashboards zeigen nur den Titel (Vorlagenoption "Use Region Title"); bei breitem Fenster
+   zeigt die Titelleiste davor den Pfad - der aktuelle (letzte) Pfadeintrag wiederholt den Titel ("Rechnung \ Rechnung
+   2026 - 203") und wird samt Trenner ausgeblendet (wie im Projekt Marchler) */
+.t-BreadcrumbRegion .t-Breadcrumb-item.is-active {
+    display: none;
+}
+.t-BreadcrumbRegion .t-Breadcrumb-item:has(+ .t-Breadcrumb-item.is-active)::after {
+    display: none;
+}
