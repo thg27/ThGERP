@@ -106,7 +106,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - **Debitoren** (DDL 45, Menüpunkt Debitoren, Seiten 50 Liste mit Facetten / 51 Debitor mit Registerkarten Stammdaten und Zahlungen):
   Zahler ohne Rechnung/Gutschrift (z. B. Mieter) je Mandant – Name, Bezeichnung, Betrag, Intervall (`LOV_DEBITOR_INTERVALL` im Portal:
   Kein Intervall, monatlich, vierteljährlich, halbjährlich, jährlich; „Kein Intervall“ = keine Fälligkeiten, nur Zahlungen sammeln, z. B.
-  Umbuchungen THG-EDV → Holding, Betrag und „fällig ab“ dann optional, sonst Pflicht per Validierung), fällig ab/bis, IBAN des Zahlers, optional Kunde. Fällige Posten (`FAKT_DEBITOR_POSTEN`) erzeugt `FAKT_DEBITOR.posten_erzeugen` bis Ende
+  Umbuchungen THG-EDV → Holding, Betrag und „fällig ab“ dann optional, sonst Pflicht per Validierung; Intervall steht links vor dem Betrag, Pflicht-Markierung per DA `intervall-pflicht`), fällig ab/bis, IBAN des Zahlers, optional Kunde. Fällige Posten (`FAKT_DEBITOR_POSTEN`) erzeugt `FAKT_DEBITOR.posten_erzeugen` bis Ende
   des nächsten Monats (beim Öffnen von 50/51 und im Abgleich); Speichern plant künftige Posten neu (`planen`, bisherige Beträge bleiben).
   Zahlungen (`FAKT_DEBITOR_ZAHLUNGEN`) nur aus der Bankdatei: `FAKT_BANK.abgleichen` weist nach Rechnungen/Gutschriften offene Eingänge per
   IBAN bzw. Name des Zahlers (`name_passt`, Reihenfolge egal) zu → Status DEBITOR (Anzeige „Zugeordnet“ wie bei Rechnungen, damit sich alle zugeordneten ausblenden lassen), IBAN wird gemerkt.

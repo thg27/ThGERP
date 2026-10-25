@@ -260,14 +260,15 @@ page 51 (
             alignment: left
         }
         layout {
-            sequence: 30
+            sequence: 40
             region: @stammdaten
             slot: regionBody
+            startNewRow: false
             columnSpan: 3
             alignment: left
         }
         appearance {
-            template: @/optional-floating
+            template: @/required-floating
             templateOptions: #DEFAULT#
             formatMask: 999G999G990D00
         }
@@ -285,10 +286,9 @@ page 51 (
             alignment: left
         }
         layout {
-            sequence: 40
+            sequence: 30
             region: @stammdaten
             slot: regionBody
-            startNewRow: false
             columnSpan: 3
             alignment: left
         }
@@ -331,7 +331,7 @@ page 51 (
             alignment: left
         }
         appearance {
-            template: @/optional-floating
+            template: @/required-floating
             templateOptions: #DEFAULT#
         }
         source {
@@ -1118,6 +1118,41 @@ page 51 (
             sequence: 20
             point: beforeHeader
         }
+    )
+
+    dynamicAction intervall-pflicht (
+        name: Betrag und Fällig ab nur mit Intervall als Pflicht markieren
+        execution {
+            sequence: 10
+        }
+        when {
+            event: change
+            selectionType: items
+            items: [
+                P51_DEBI_INTERVALL
+            ]
+        }
+
+        action pflicht-markieren (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    var pflicht = $v("P51_DEBI_INTERVALL") !== "KEIN";
+                    ["P51_DEBI_BETRAG", "P51_DEBI_FAELLIG_AB"].forEach(function (name) {
+                        // Vorlage "Required" zeichnet die Markierung; ohne Intervall ausblenden
+                        var feld = $("#" + name + "_CONTAINER");
+                        feld.toggleClass("is-required", pflicht);
+                        feld.find(".t-Form-itemRequired-marker").toggle(pflicht);
+                    });
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: true
+            }
+        )
+
     )
 
     validation betrag-pflicht (

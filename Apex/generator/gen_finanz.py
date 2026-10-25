@@ -4977,16 +4977,17 @@ def seite_51():
     s += item("P51_DEBI_BEZEICHNUNG", "textField", "Bezeichnung (z. B. Miete Wohnung Top 3)", 20, a, col="DEBI_BEZEICHNUNG",
               maxlen=200, neue_zeile=False, spalten=6, **f)
     # Betrag und "faellig ab" nur mit Intervall Pflicht (Validierungen unten); "Kein Intervall" = nur Zahlungen sammeln
-    s += maske(item("P51_DEBI_BETRAG", "numberField", "Zu überweisender Betrag €", 30, a, col="DEBI_BETRAG", dtype="number",
-                    spalten=3, **f), "999G999G990D00")
-    s += item("P51_DEBI_INTERVALL", "selectList", "Intervall", 40, a, col="DEBI_INTERVALL", req=True, neue_zeile=False,
+    s += maske(item("P51_DEBI_BETRAG", "numberField", "Zu überweisender Betrag €", 40, a, col="DEBI_BETRAG", dtype="number",
+                    neue_zeile=False, spalten=3, tmpl="@/required-floating", **f), "999G999G990D00")
+    # Intervall links vor dem Betrag: bestimmt, ob Betrag und "faellig ab" Pflicht sind (DA intervall-pflicht)
+    s += item("P51_DEBI_INTERVALL", "selectList", "Intervall", 30, a, col="DEBI_INTERVALL", req=True,
               spalten=3, extra=lov("lov-debitor-intervall") + """        default {
             type: static
             staticValue: MONATLICH
         }
 """, **f)
     s += item("P51_DEBI_FAELLIG_AB", "datePicker", "Fällig ab (erste Fälligkeit)", 50, a, col="DEBI_FAELLIG_AB", dtype="date",
-              neue_zeile=False, spalten=3, **f)
+              neue_zeile=False, spalten=3, tmpl="@/required-floating", **f)
     s += item("P51_DEBI_FAELLIG_BIS", "datePicker", "Fällig bis (leer = unbefristet)", 60, a, col="DEBI_FAELLIG_BIS",
               dtype="date", neue_zeile=False, spalten=3, **f)
     s += item("P51_DEBI_IBAN", "textField", "IBAN des Zahlers (Bankabgleich, wird bei der ersten Zuweisung übernommen)", 70, a,
@@ -5167,6 +5168,41 @@ def seite_51():
             sequence: 20
             point: beforeHeader
         }}
+    )
+
+    dynamicAction intervall-pflicht (
+        name: Betrag und Fällig ab nur mit Intervall als Pflicht markieren
+        execution {{
+            sequence: 10
+        }}
+        when {{
+            event: change
+            selectionType: items
+            items: [
+                P51_DEBI_INTERVALL
+            ]
+        }}
+
+        action pflicht-markieren (
+            action: executeJsCode
+            settings {{
+                jsCode:
+                    ```javascript-browser
+                    var pflicht = $v("P51_DEBI_INTERVALL") !== "KEIN";
+                    ["P51_DEBI_BETRAG", "P51_DEBI_FAELLIG_AB"].forEach(function (name) {{
+                        // Vorlage "Required" zeichnet die Markierung; ohne Intervall ausblenden
+                        var feld = $("#" + name + "_CONTAINER");
+                        feld.toggleClass("is-required", pflicht);
+                        feld.find(".t-Form-itemRequired-marker").toggle(pflicht);
+                    }});
+                    ```
+            }}
+            execution {{
+                sequence: 10
+                fireOnInit: true
+            }}
+        )
+
     )
 
     validation betrag-pflicht (
