@@ -2823,63 +2823,31 @@ def seite_30():
     s += button("abgleichen", "ABGLEICHEN", "Erneut abgleichen", 20, "upload", "next", "@/text-with-icon",
                 icon="fa-refresh", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n")
-    s += """    region suche (
-        name: Suche
-        type: facetedSearch
-        source {
-            filteredRegion: @eingaenge
-        }
-        layout {
-            sequence: 15
-            slot: body
-        }
-        appearance {
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }
-        settings {
-            compactNosThreshold: 10000
-            displayChartForTopNValues: 10
-        }
-
-        facet P30_SEARCH (
-            type: search
-            label {
-                label: Zahlungseingänge durchsuchen
-            }
-            layout {
-                sequence: 10
-            }
-        )
-    )
-
-"""
-    s += bericht("eingaenge", "Zahlungseingänge", 20, """                -- Eingaenge des Mandanten, neueste zuerst; Rechnung als Link (nur wenn erkannt)
-                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
-                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+    # Zahlungseingaenge als Interactive Report (Aktionsleiste: Suche, Filter, Sortierung, Download); Status farbig und
+    # Beleg als Link ueber HTML-Ausdruck, damit Suche/Filter auf dem Klartext arbeiten
+    sql = """                -- Eingaenge des Mandanten, neueste zuerst; Beleg als Link (Rechnung, Gutschrift bzw. Debitor)
+                select u.BKUM_ID,
+                       u.BKUM_BUCHUNGSDATUM as DATUM,
+                       u.BKUM_BETRAG as BETRAG,
                        u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       FAKT_RECHNUNG.referenz_anzeige(u.BKUM_GEGEN_IBAN) as IBAN,
                        trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
-                       '<span class="' || case u.BKUM_STATUS when 'ZUGEORDNET' then 'u-success-text'
-                                                             when 'DEBITOR' then 'u-success-text'
-                                                             when 'BEREITS_BEZAHLT' then 'u-info-text'
-                                                             when 'OFFEN' then 'u-warning-text' end || '">'
-                       || apex_escape.html(FAKT_BANK.status_text(u.BKUM_STATUS)) || '</span>' as STATUS,
+                       FAKT_BANK.status_text(u.BKUM_STATUS) as STATUS,
+                       case u.BKUM_STATUS when 'ZUGEORDNET' then 'u-success-text'
+                                          when 'DEBITOR' then 'u-success-text'
+                                          when 'BEREITS_BEZAHLT' then 'u-info-text'
+                                          when 'OFFEN' then 'u-warning-text' end as STATUS_KLASSE,
+                       case when d.DEBI_ID is not null then 'Debitor ' || d.DEBI_NAME
+                            when g.GUTS_ID is not null then 'Gutschrift ' || coalesce(g.GUTS_INTERN_NUMMER, g.GUTS_NUMMER, g.GUTS_AUSSTELLER)
+                            when r.RECH_ID is not null then 'Rechnung ' || r.RECH_NUMMER
+                       end as BELEG,
                        case when d.DEBI_ID is not null then
-                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_clear_cache => '51',
-                                                                                       p_items => 'P51_DEBI_ID',
-                                                                                       p_values => d.DEBI_ID))
-                           || '">Debitor ' || apex_escape.html(d.DEBI_NAME) || '</a>'
+                                apex_page.get_url(p_page => 51, p_clear_cache => '51', p_items => 'P51_DEBI_ID', p_values => d.DEBI_ID)
                             when g.GUTS_ID is not null then
-                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
-                                                                                       p_items => 'P41_GUTS_ID',
-                                                                                       p_values => g.GUTS_ID))
-                           || '">Gutschrift ' || apex_escape.html(coalesce(g.GUTS_NUMMER, g.GUTS_AUSSTELLER)) || '</a>'
+                                apex_page.get_url(p_page => 41, p_clear_cache => '41', p_items => 'P41_GUTS_ID', p_values => g.GUTS_ID)
                             when r.RECH_ID is not null then
-                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 11, p_clear_cache => '11',
-                                                                                       p_items => 'P11_RECH_ID',
-                                                                                       p_values => r.RECH_ID))
-                           || '">' || apex_escape.html(r.RECH_NUMMER) || '</a>'
-                       end as RECHNUNG,
+                                apex_page.get_url(p_page => 11, p_clear_cache => '11', p_items => 'P11_RECH_ID', p_values => r.RECH_ID)
+                       end as BELEG_URL,
                        coalesce(u.BKUM_ZUORDNUNG,
                                 case when k.KUNDE is not null then 'Auftraggeber ist Kunde ' || k.KUNDE
                                                                    || ' – passende Rechnung bzw. Gutschrift fehlt' end) as ZUORDNUNG,
@@ -2905,12 +2873,74 @@ def seite_30():
                                   and FAKT_DEBITOR.ist_kunde(c.KUND_FIRMENNAME, u.BKUM_GEGEN_NAME) = 'Y') k
                  where u.BKUM_MAND_ID = :MANDANT_ID
                    and u.BKUM_RICHTUNG = 'CRDT'
-                 order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc""",
-                 [("DATUM", "Datum", False, False), ("BETRAG", "Betrag", False, True),
-                  ("AUFTRAGGEBER", "Auftraggeber", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False),
-                  ("STATUS", "Status", True, False), ("RECHNUNG", "Rechnung / Gutschrift / Debitor", True, False),
-                  ("ZUORDNUNG", "Zuordnung", False, False), ("AKTION", "Aktion", True, False)],
-                 "Noch keine Zahlungseingänge – bitte eine Bankdatei hochladen.")
+                 order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc"""
+    def ir_spalte(name, heading, seq, dtype, maske=None, rechts=False, html=None, hidden=False, escape=True):
+        return f"""
+        column {name} (
+            type: {"hidden" if hidden else "plainText"}
+""" + f"""            heading {{
+                heading: {heading or name}
+""" + ("                alignment: end\n" if rechts else "") + """            }
+""" + f"""            layout {{
+                sequence: {seq}
+""" + ("                columnAlignment: end\n" if rechts else "") + """            }
+""" + (f"""            appearance {{
+                formatMask: {maske}
+            }}
+""" if maske else "") + (f"""            columnFormatting {{
+                htmlExpression: {html}
+            }}
+""" if html else "") + ("" if escape else """            security {
+                escapeSpecialChars: false
+            }
+""") + f"""            source {{
+                dataType: {dtype}
+            }}
+        )
+"""
+    s += f"""    region eingaenge (
+        name: Zahlungseingänge
+        type: interactiveReport
+        source {{
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+{sql}
+                ```
+        }}
+        layout {{
+            sequence: 20
+            slot: body
+        }}
+        appearance {{
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }}
+        componentAppearance {{
+            showNullValuesAs: -
+        }}
+        pagination {{
+            type: rowRangesXToY
+        }}
+        messages {{
+            whenNoDataFound: Noch keine Zahlungseingänge – bitte eine Bankdatei hochladen.
+        }}
+""" + ir_spalte("BKUM_ID", None, 5, "NUMBER", hidden=True) \
+       + ir_spalte("DATUM", "Datum", 10, "DATE", maske="DD.MM.YYYY") \
+       + ir_spalte("BETRAG", "Betrag", 20, "NUMBER", maske="FML999G999G990D00", rechts=True) \
+       + ir_spalte("AUFTRAGGEBER", "Auftraggeber", 30, "STRING") \
+       + ir_spalte("IBAN", "IBAN", 35, "STRING") \
+       + ir_spalte("VERWENDUNGSZWECK", "Verwendungszweck", 40, "STRING") \
+       + ir_spalte("STATUS", "Status", 50, "STRING", html='<span class="#STATUS_KLASSE#">#STATUS#</span>') \
+       + ir_spalte("STATUS_KLASSE", None, 55, "STRING", hidden=True) \
+       + ir_spalte("BELEG", "Rechnung / Gutschrift / Debitor", 60, "STRING", html='<a href="#BELEG_URL#">#BELEG#</a>') \
+       + ir_spalte("BELEG_URL", None, 65, "STRING", hidden=True) \
+       + ir_spalte("ZUORDNUNG", "Zuordnung", 70, "STRING") \
+       + ir_spalte("AKTION", "Aktion", 80, "STRING", escape=False) + """
+    )
+
+"""
     s += bericht("dateien", "Hochgeladene Bankdateien", 30, """                select to_char(from_tz(d.BKDT_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
                        d.BKDT_CREATED_BY as VON,
                        d.BKDT_DATEINAME as DATEI,

@@ -139,70 +139,37 @@ page 30 (
         }
     )
 
-    region suche (
-        name: Suche
-        type: facetedSearch
-        source {
-            filteredRegion: @eingaenge
-        }
-        layout {
-            sequence: 15
-            slot: body
-        }
-        appearance {
-            template: @/blank-with-attributes
-            templateOptions: #DEFAULT#
-        }
-        settings {
-            compactNosThreshold: 10000
-            displayChartForTopNValues: 10
-        }
-
-        facet P30_SEARCH (
-            type: search
-            label {
-                label: Zahlungseingänge durchsuchen
-            }
-            layout {
-                sequence: 10
-            }
-        )
-    )
-
     region eingaenge (
         name: Zahlungseingänge
-        type: classicReport
+        type: interactiveReport
         source {
             location: localDatabase
             type: sqlQuery
             sqlQuery:
                 ```sql
-                -- Eingaenge des Mandanten, neueste zuerst; Rechnung als Link (nur wenn erkannt)
-                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
-                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+                -- Eingaenge des Mandanten, neueste zuerst; Beleg als Link (Rechnung, Gutschrift bzw. Debitor)
+                select u.BKUM_ID,
+                       u.BKUM_BUCHUNGSDATUM as DATUM,
+                       u.BKUM_BETRAG as BETRAG,
                        u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       FAKT_RECHNUNG.referenz_anzeige(u.BKUM_GEGEN_IBAN) as IBAN,
                        trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
-                       '<span class="' || case u.BKUM_STATUS when 'ZUGEORDNET' then 'u-success-text'
-                                                             when 'DEBITOR' then 'u-success-text'
-                                                             when 'BEREITS_BEZAHLT' then 'u-info-text'
-                                                             when 'OFFEN' then 'u-warning-text' end || '">'
-                       || apex_escape.html(FAKT_BANK.status_text(u.BKUM_STATUS)) || '</span>' as STATUS,
+                       FAKT_BANK.status_text(u.BKUM_STATUS) as STATUS,
+                       case u.BKUM_STATUS when 'ZUGEORDNET' then 'u-success-text'
+                                          when 'DEBITOR' then 'u-success-text'
+                                          when 'BEREITS_BEZAHLT' then 'u-info-text'
+                                          when 'OFFEN' then 'u-warning-text' end as STATUS_KLASSE,
+                       case when d.DEBI_ID is not null then 'Debitor ' || d.DEBI_NAME
+                            when g.GUTS_ID is not null then 'Gutschrift ' || coalesce(g.GUTS_INTERN_NUMMER, g.GUTS_NUMMER, g.GUTS_AUSSTELLER)
+                            when r.RECH_ID is not null then 'Rechnung ' || r.RECH_NUMMER
+                       end as BELEG,
                        case when d.DEBI_ID is not null then
-                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_clear_cache => '51',
-                                                                                       p_items => 'P51_DEBI_ID',
-                                                                                       p_values => d.DEBI_ID))
-                           || '">Debitor ' || apex_escape.html(d.DEBI_NAME) || '</a>'
+                                apex_page.get_url(p_page => 51, p_clear_cache => '51', p_items => 'P51_DEBI_ID', p_values => d.DEBI_ID)
                             when g.GUTS_ID is not null then
-                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
-                                                                                       p_items => 'P41_GUTS_ID',
-                                                                                       p_values => g.GUTS_ID))
-                           || '">Gutschrift ' || apex_escape.html(coalesce(g.GUTS_NUMMER, g.GUTS_AUSSTELLER)) || '</a>'
+                                apex_page.get_url(p_page => 41, p_clear_cache => '41', p_items => 'P41_GUTS_ID', p_values => g.GUTS_ID)
                             when r.RECH_ID is not null then
-                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 11, p_clear_cache => '11',
-                                                                                       p_items => 'P11_RECH_ID',
-                                                                                       p_values => r.RECH_ID))
-                           || '">' || apex_escape.html(r.RECH_NUMMER) || '</a>'
-                       end as RECHNUNG,
+                                apex_page.get_url(p_page => 11, p_clear_cache => '11', p_items => 'P11_RECH_ID', p_values => r.RECH_ID)
+                       end as BELEG_URL,
                        coalesce(u.BKUM_ZUORDNUNG,
                                 case when k.KUNDE is not null then 'Auftraggeber ist Kunde ' || k.KUNDE
                                                                    || ' – passende Rechnung bzw. Gutschrift fehlt' end) as ZUORDNUNG,
@@ -240,25 +207,27 @@ page 30 (
             templateOptions: #DEFAULT#
         }
         componentAppearance {
-            template: @/standard
-            templateOptions: [
-                #DEFAULT#
-                t-Report--stretch
-                t-Report--staticRowColors
-                t-Report--rowHighlight
-                t-Report--horizontalBorders
-            ]
+            showNullValuesAs: -
         }
         pagination {
-            type: rowRangesXToYOfZWithPagination
-        }
-        reportLayout {
-            numberOfRowsType: staticValue
-            numberOfRows: 50
+            type: rowRangesXToY
         }
         messages {
             whenNoDataFound: Noch keine Zahlungseingänge – bitte eine Bankdatei hochladen.
         }
+
+        column BKUM_ID (
+            type: hidden
+            heading {
+                heading: BKUM_ID
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
 
         column DATUM (
             type: plainText
@@ -268,8 +237,11 @@ page 30 (
             layout {
                 sequence: 10
             }
-            sorting {
-                sortable: false
+            appearance {
+                formatMask: DD.MM.YYYY
+            }
+            source {
+                dataType: DATE
             }
         )
 
@@ -283,8 +255,11 @@ page 30 (
                 sequence: 20
                 columnAlignment: end
             }
-            sorting {
-                sortable: false
+            appearance {
+                formatMask: FML999G999G990D00
+            }
+            source {
+                dataType: NUMBER
             }
         )
 
@@ -296,8 +271,21 @@ page 30 (
             layout {
                 sequence: 30
             }
-            sorting {
-                sortable: false
+            source {
+                dataType: STRING
+            }
+        )
+
+        column IBAN (
+            type: plainText
+            heading {
+                heading: IBAN
+            }
+            layout {
+                sequence: 35
+            }
+            source {
+                dataType: STRING
             }
         )
 
@@ -309,8 +297,8 @@ page 30 (
             layout {
                 sequence: 40
             }
-            sorting {
-                sortable: false
+            source {
+                dataType: STRING
             }
         )
 
@@ -322,15 +310,28 @@ page 30 (
             layout {
                 sequence: 50
             }
-            security {
-                escapeSpecialChars: false
+            columnFormatting {
+                htmlExpression: <span class="#STATUS_KLASSE#">#STATUS#</span>
             }
-            sorting {
-                sortable: false
+            source {
+                dataType: STRING
             }
         )
 
-        column RECHNUNG (
+        column STATUS_KLASSE (
+            type: hidden
+            heading {
+                heading: STATUS_KLASSE
+            }
+            layout {
+                sequence: 55
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column BELEG (
             type: plainText
             heading {
                 heading: Rechnung / Gutschrift / Debitor
@@ -338,11 +339,24 @@ page 30 (
             layout {
                 sequence: 60
             }
-            security {
-                escapeSpecialChars: false
+            columnFormatting {
+                htmlExpression: <a href="#BELEG_URL#">#BELEG#</a>
             }
-            sorting {
-                sortable: false
+            source {
+                dataType: STRING
+            }
+        )
+
+        column BELEG_URL (
+            type: hidden
+            heading {
+                heading: BELEG_URL
+            }
+            layout {
+                sequence: 65
+            }
+            source {
+                dataType: STRING
             }
         )
 
@@ -354,8 +368,8 @@ page 30 (
             layout {
                 sequence: 70
             }
-            sorting {
-                sortable: false
+            source {
+                dataType: STRING
             }
         )
 
@@ -370,8 +384,8 @@ page 30 (
             security {
                 escapeSpecialChars: false
             }
-            sorting {
-                sortable: false
+            source {
+                dataType: STRING
             }
         )
 

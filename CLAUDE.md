@@ -97,7 +97,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Auch von Hand als bezahlt erfasste Gutschriften (ohne Bankbuchung) und bezahlte Rechnungen mit gleich hoher, noch nicht verknüpfter
   Zahlung anderen Datums werden zugeordnet („vorhandene Zahlung vom …“); Rechnungsnummer ohne Trennzeichen („2026201“) nur, wenn der
   Auftraggeber der Kunde ist (`FAKT_DEBITOR.ist_kunde`). Kein „Debitor anlegen“, wenn der Auftraggeber ein Kunde ist (Hinweis „Rechnung
-  bzw. Gutschrift fehlt“). Suche über den Zahlungseingängen (Facettensuche P30_SEARCH). Holding-Datei 202699999 (3).xml am 25.10.2026 eingelesen (HEROLD → 2026 - 202).
+  bzw. Gutschrift fehlt“). Zahlungseingänge als Interactive Report (Aktionsleiste: Suche, Filter, Download; Status-Farbe und Beleg-Link per HTML-Ausdruck). Holding-Datei 202699999 (3).xml am 25.10.2026 eingelesen (HEROLD → 2026 - 202).
 - **Debitoren** (DDL 45, Menüpunkt Debitoren, Seiten 50 Liste mit Facetten / 51 Debitor mit Registerkarten Stammdaten und Zahlungen):
   Zahler ohne Rechnung/Gutschrift (z. B. Mieter) je Mandant – Name, Bezeichnung, Betrag, Intervall (`LOV_DEBITOR_INTERVALL` im Portal),
   fällig ab/bis, IBAN des Zahlers, optional Kunde. Fällige Posten (`FAKT_DEBITOR_POSTEN`) erzeugt `FAKT_DEBITOR.posten_erzeugen` bis Ende
