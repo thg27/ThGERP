@@ -46,6 +46,22 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry bankdatei (
+        name: Bankdatei hochladen
+        pageNumber: 30
+        execution {
+            sequence: 35
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 30
+            }
+        }
+    )
+
     entry artikel (
         name: Artikel
         pageNumber: 20

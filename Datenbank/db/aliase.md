@@ -44,6 +44,8 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | FAKT | FAKT_ZAHLUNGEN | ZAHL | Zahlungseingänge zu Rechnungen |
 | FAKT | FAKT_RECHNUNG_HISTORIE | RHIS | Historie der Rechnung (wer, wann, was) |
 | FAKT | FAKT_RECHNUNG_DOKUMENTE | RDOK | Abgelegte Rechnungsdrucke (PDF-Versionen) |
+| FAKT | FAKT_BANKDATEIEN | BKDT | Hochgeladene Bankdateien (CAMT-Kontoauszüge) |
+| FAKT | FAKT_BANKUMSAETZE | BKUM | Bankbuchungen mit Zuordnung zu Rechnungen |
 
 ## Gruppencodes
 

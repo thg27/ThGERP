@@ -1,0 +1,526 @@
+page 30 (
+    name: Bankdatei hochladen
+    alias: BANKDATEI
+    title: Bankdatei hochladen
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Bankdatei hochladen
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 5
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                t-BreadcrumbRegion--useRegionTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region upload (
+        name: Bankdatei hochladen
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Kontoauszug als CAMT-Datei (XML, z.&nbsp;B. ELBA-Export „camt.052“ oder „camt.053“) des Kontos von
+                &MANDANT_NAME. hochladen. Die Zahlungseingänge werden automatisch den offenen Rechnungen zugeordnet –
+                über die Zahlungsreferenz, die Rechnungsnummer im Verwendungszweck oder den offenen Betrag und den Kunden.</p>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P30_DATEI (
+        type: fileUpload
+        label {
+            label: Bankdatei (XML)
+            alignment: left
+        }
+        display {
+            displayAs: inlineDropzone
+            dropzoneTitle: Bankdatei hierher ziehen
+            dropzoneDesc: oder klicken zum Auswählen
+        }
+        storage {
+            type: appTempFiles
+        }
+        layout {
+            sequence: 10
+            region: @upload
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P30_MELDUNG (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @upload
+            slot: regionBody
+        }
+    )
+
+    button hochladen (
+        buttonName: HOCHLADEN
+        label: Hochladen und abgleichen
+        layout {
+            sequence: 10
+            region: @upload
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-upload
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button abgleichen (
+        buttonName: ABGLEICHEN
+        label: Erneut abgleichen
+        layout {
+            sequence: 20
+            region: @upload
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-refresh
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    region eingaenge (
+        name: Zahlungseingänge
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Eingaenge des Mandanten, neueste zuerst; Rechnung als Link (nur wenn erkannt)
+                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       '<span class="' || case u.BKUM_STATUS when 'ZUGEORDNET' then 'u-success-text'
+                                                             when 'BEREITS_BEZAHLT' then 'u-info-text'
+                                                             when 'OFFEN' then 'u-warning-text' end || '">'
+                       || apex_escape.html(FAKT_BANK.status_text(u.BKUM_STATUS)) || '</span>' as STATUS,
+                       case when r.RECH_ID is not null then
+                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 11, p_clear_cache => '11',
+                                                                                       p_items => 'P11_RECH_ID',
+                                                                                       p_values => r.RECH_ID))
+                           || '">' || apex_escape.html(r.RECH_NUMMER) || '</a>'
+                       end as RECHNUNG,
+                       u.BKUM_ZUORDNUNG as ZUORDNUNG
+                  from FAKT_BANKUMSAETZE u
+                  left join FAKT_RECHNUNGEN r on r.RECH_ID = u.BKUM_RECH_ID
+                 where u.BKUM_MAND_ID = :MANDANT_ID
+                   and u.BKUM_RICHTUNG = 'CRDT'
+                 order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Noch keine Zahlungseingänge – bitte eine Bankdatei hochladen.
+        }
+
+        column DATUM (
+            type: plainText
+            heading {
+                heading: Datum
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUFTRAGGEBER (
+            type: plainText
+            heading {
+                heading: Auftraggeber
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VERWENDUNGSZWECK (
+            type: plainText
+            heading {
+                heading: Verwendungszweck
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+            }
+            layout {
+                sequence: 50
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column RECHNUNG (
+            type: plainText
+            heading {
+                heading: Rechnung
+            }
+            layout {
+                sequence: 60
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ZUORDNUNG (
+            type: plainText
+            heading {
+                heading: Zuordnung
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region dateien (
+        name: Hochgeladene Bankdateien
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select to_char(from_tz(d.BKDT_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
+                       d.BKDT_CREATED_BY as VON,
+                       d.BKDT_DATEINAME as DATEI,
+                       FAKT_RECHNUNG.referenz_anzeige(d.BKDT_IBAN) as KONTO,
+                       d.BKDT_FORMAT as FORMAT,
+                       d.BKDT_ANZ_UMSAETZE as BUCHUNGEN,
+                       d.BKDT_ANZ_NEU as NEU,
+                       d.BKDT_ANZ_ZUGEORDNET as ZUGEORDNET
+                  from FAKT_BANKDATEIEN d
+                 where d.BKDT_MAND_ID = :MANDANT_ID
+                 order by d.BKDT_CREATED_ON desc
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Noch keine Bankdatei hochgeladen.
+        }
+
+        column HOCHGELADEN (
+            type: plainText
+            heading {
+                heading: Hochgeladen
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VON (
+            type: plainText
+            heading {
+                heading: Von
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column DATEI (
+            type: plainText
+            heading {
+                heading: Datei
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column KONTO (
+            type: plainText
+            heading {
+                heading: Konto
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column FORMAT (
+            type: plainText
+            heading {
+                heading: Format
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BUCHUNGEN (
+            type: plainText
+            heading {
+                heading: Buchungen
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column NEU (
+            type: plainText
+            heading {
+                heading: Davon neu
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ZUGEORDNET (
+            type: plainText
+            heading {
+                heading: Zugeordnet
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    process bankdatei-einlesen (
+        name: Bankdatei einlesen und abgleichen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_blob  blob;
+                    l_name  varchar2(400);
+                    l_id    number;
+                begin
+                    if :P30_DATEI is null then
+                        raise_application_error(-20263, 'Bitte eine Bankdatei auswählen.');
+                    end if;
+                    select blob_content, filename into l_blob, l_name
+                      from apex_application_temp_files where name = :P30_DATEI;
+                    l_id := FAKT_BANK.einlesen(:MANDANT_ID, l_name, l_blob);
+                    for d in (select * from FAKT_BANKDATEIEN where BKDT_ID = l_id) loop
+                        :P30_MELDUNG := d.BKDT_DATEINAME || ': ' || d.BKDT_ANZ_UMSAETZE || ' Buchungen, davon '
+                                        || d.BKDT_ANZ_NEU || ' neu; ' || d.BKDT_ANZ_ZUGEORDNET || ' Zahlungseingänge zugeordnet.';
+                    end loop;
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            whenButtonPressed: @hochladen
+        }
+        successMessage {
+            successMessage: &P30_MELDUNG.
+        }
+    )
+
+    process erneut-abgleichen (
+        name: Offene Eingänge erneut abgleichen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                :P30_MELDUNG := FAKT_BANK.abgleichen(:MANDANT_ID) || ' Zahlungseingänge zugeordnet.';
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            whenButtonPressed: @abgleichen
+        }
+        successMessage {
+            successMessage: &P30_MELDUNG.
+        }
+    )
+
+)

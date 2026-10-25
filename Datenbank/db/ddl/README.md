@@ -8,7 +8,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 
 | Datei | Inhalt |
 |---|---|
-| 00_install.sql | ruft 01–38 auf (ohne 14 und 25), bricht bei Fehler ab |
+| 00_install.sql | ruft 01–39 auf (ohne 14 und 25), bricht bei Fehler ab |
 | 01_tabellen.sql | Tabellen, PK/UK/Check-Constraints |
 | 02_fremdschluessel.sql | Fremdschlüssel + FK-Indizes |
 | 03_indizes.sql | fachliche Unique-Indizes, Suchindizes |
@@ -46,6 +46,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 36_zahlungsreferenz.sql | Zahlungsreferenz je Zahlungseingang (`ZAHL_REFERENZ`, 140 Zeichen, Index für die automatische Zuordnung), Referenz in der Historie (ruft 33 auf); wiederholbar |
 | 37_zahlung_ohne_skonto_mahnspesen.sql | Spalten ZAHL_SKONTO und ZAHL_MAHNSPESEN entfernt (nur wenn leer); Bezahlt/Status nur aus ZAHL_BETRAG, ruft 21 und 33 auf; wiederholbar |
 | 38_zahlungsreferenz_rechnung.sql | Zahlungsreferenz der Rechnung (RF-Referenz ISO 11649: Firma, Kundennummer, Jahr, Nummer), eindeutig, beim Abschließen erzeugt, auf dem Ausdruck; ruft 21 auf; wiederholbar |
+| 39_bankabgleich.sql | Bankabgleich: Tabellen FAKT_BANKDATEIEN (BKDT), FAKT_BANKUMSAETZE (BKUM), Package FAKT_BANK – CAMT-Datei (camt.052/053/054) einlesen (Konto des Mandanten, jede Buchung nur einmal), Eingänge per RF-Referenz, Rechnungsnummer oder Betrag+Kunde den Rechnungen zuordnen (Zahlung anlegen bzw. vorhandene verknüpfen); wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

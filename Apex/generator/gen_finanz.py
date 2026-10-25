@@ -2698,6 +2698,239 @@ def im_menue(btn, dom_id):
 
 
 
+
+def bericht(sid, name, seq, sql, spalten, leer, extra_region=""):
+    """Classic Report (Standard-Vorlage) mit Spalten [(Name, Ueberschrift, html=False, rechts=False)]"""
+    s = f"""    region {sid} (
+        name: {name}
+        type: classicReport
+        source {{
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+{sql}
+                ```
+        }}
+        layout {{
+            sequence: {seq}
+            slot: body
+        }}
+        appearance {{
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }}
+        componentAppearance {{
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }}
+        pagination {{
+            type: rowRangesXToYOfZWithPagination
+        }}
+        reportLayout {{
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }}
+        messages {{
+            whenNoDataFound: {leer}
+        }}
+{extra_region}
+"""
+    for i, (c, h, html, rechts) in enumerate(spalten, start=1):
+        s += f"""        column {c} (
+            type: {"hidden" if h is None else "plainText"}
+""" + ("" if h is None else f"""            heading {{
+                heading: {h}
+""" + ("                alignment: end\n" if rechts else "") + """            }
+""") + f"""            layout {{
+                sequence: {i * 10}
+""" + ("                columnAlignment: end\n" if rechts else "") + """            }
+""" + ("""            security {
+                escapeSpecialChars: false
+            }
+""" if html else "") + """            sorting {
+                sortable: false
+            }
+        )
+
+"""
+    return s + "    )\n\n"
+
+
+def seite_30():
+    """Bankdatei hochladen (Menuepunkt): CAMT-Datei (camt.052/.053/.054, z.B. ELBA-Export) des Mandanten der Sitzung
+    hochladen -> FAKT_BANK.einlesen speichert die Buchungen (jede nur einmal) und gleicht die Eingaenge mit den offenen
+    Rechnungen ab (Zahlung anlegen bzw. vorhandene verknuepfen, Status der Rechnung per Trigger). Darunter die
+    Zahlungseingaenge mit Zuordnung und die hochgeladenen Dateien. "Erneut abgleichen" prueft offene Eingaenge noch einmal
+    (z.B. nachdem eine Rechnung erfasst wurde)."""
+    s = KOPF(30, "Bankdatei hochladen", "BANKDATEI") + BREADCRUMB("Bankdatei hochladen")
+    s += region("upload", "Bankdatei hochladen", 10, extra="""        source {
+            htmlCode:
+                ```html
+                <p>Kontoauszug als CAMT-Datei (XML, z.&nbsp;B. ELBA-Export „camt.052“ oder „camt.053“) des Kontos von
+                &MANDANT_NAME. hochladen. Die Zahlungseingänge werden automatisch den offenen Rechnungen zugeordnet –
+                über die Zahlungsreferenz, die Rechnungsnummer im Verwendungszweck oder den offenen Betrag und den Kunden.</p>
+                ```
+        }
+""")
+    s += """    pageItem P30_DATEI (
+        type: fileUpload
+        label {
+            label: Bankdatei (XML)
+            alignment: left
+        }
+        display {
+            displayAs: inlineDropzone
+            dropzoneTitle: Bankdatei hierher ziehen
+            dropzoneDesc: oder klicken zum Auswählen
+        }
+        storage {
+            type: appTempFiles
+        }
+        layout {
+            sequence: 10
+            region: @upload
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P30_MELDUNG (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @upload
+            slot: regionBody
+        }
+    )
+
+"""
+    s += button("hochladen", "HOCHLADEN", "Hochladen und abgleichen", 10, "upload", "next", "@/text-with-icon", hot=True,
+                icon="fa-upload", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n")
+    s += button("abgleichen", "ABGLEICHEN", "Erneut abgleichen", 20, "upload", "next", "@/text-with-icon",
+                icon="fa-refresh", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n")
+    s += bericht("eingaenge", "Zahlungseingänge", 20, """                -- Eingaenge des Mandanten, neueste zuerst; Rechnung als Link (nur wenn erkannt)
+                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       '<span class="' || case u.BKUM_STATUS when 'ZUGEORDNET' then 'u-success-text'
+                                                             when 'BEREITS_BEZAHLT' then 'u-info-text'
+                                                             when 'OFFEN' then 'u-warning-text' end || '">'
+                       || apex_escape.html(FAKT_BANK.status_text(u.BKUM_STATUS)) || '</span>' as STATUS,
+                       case when r.RECH_ID is not null then
+                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 11, p_clear_cache => '11',
+                                                                                       p_items => 'P11_RECH_ID',
+                                                                                       p_values => r.RECH_ID))
+                           || '">' || apex_escape.html(r.RECH_NUMMER) || '</a>'
+                       end as RECHNUNG,
+                       u.BKUM_ZUORDNUNG as ZUORDNUNG
+                  from FAKT_BANKUMSAETZE u
+                  left join FAKT_RECHNUNGEN r on r.RECH_ID = u.BKUM_RECH_ID
+                 where u.BKUM_MAND_ID = :MANDANT_ID
+                   and u.BKUM_RICHTUNG = 'CRDT'
+                 order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc""",
+                 [("DATUM", "Datum", False, False), ("BETRAG", "Betrag", False, True),
+                  ("AUFTRAGGEBER", "Auftraggeber", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False),
+                  ("STATUS", "Status", True, False), ("RECHNUNG", "Rechnung", True, False),
+                  ("ZUORDNUNG", "Zuordnung", False, False)],
+                 "Noch keine Zahlungseingänge – bitte eine Bankdatei hochladen.")
+    s += bericht("dateien", "Hochgeladene Bankdateien", 30, """                select to_char(from_tz(d.BKDT_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
+                       d.BKDT_CREATED_BY as VON,
+                       d.BKDT_DATEINAME as DATEI,
+                       FAKT_RECHNUNG.referenz_anzeige(d.BKDT_IBAN) as KONTO,
+                       d.BKDT_FORMAT as FORMAT,
+                       d.BKDT_ANZ_UMSAETZE as BUCHUNGEN,
+                       d.BKDT_ANZ_NEU as NEU,
+                       d.BKDT_ANZ_ZUGEORDNET as ZUGEORDNET
+                  from FAKT_BANKDATEIEN d
+                 where d.BKDT_MAND_ID = :MANDANT_ID
+                 order by d.BKDT_CREATED_ON desc""",
+                 [("HOCHGELADEN", "Hochgeladen", False, False), ("VON", "Von", False, False),
+                  ("DATEI", "Datei", False, False), ("KONTO", "Konto", False, False), ("FORMAT", "Format", False, False),
+                  ("BUCHUNGEN", "Buchungen", False, True), ("NEU", "Davon neu", False, True),
+                  ("ZUGEORDNET", "Zugeordnet", False, True)],
+                 "Noch keine Bankdatei hochgeladen.")
+    s += """    process bankdatei-einlesen (
+        name: Bankdatei einlesen und abgleichen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_blob  blob;
+                    l_name  varchar2(400);
+                    l_id    number;
+                begin
+                    if :P30_DATEI is null then
+                        raise_application_error(-20263, 'Bitte eine Bankdatei auswählen.');
+                    end if;
+                    select blob_content, filename into l_blob, l_name
+                      from apex_application_temp_files where name = :P30_DATEI;
+                    l_id := FAKT_BANK.einlesen(:MANDANT_ID, l_name, l_blob);
+                    for d in (select * from FAKT_BANKDATEIEN where BKDT_ID = l_id) loop
+                        :P30_MELDUNG := d.BKDT_DATEINAME || ': ' || d.BKDT_ANZ_UMSAETZE || ' Buchungen, davon '
+                                        || d.BKDT_ANZ_NEU || ' neu; ' || d.BKDT_ANZ_ZUGEORDNET || ' Zahlungseingänge zugeordnet.';
+                    end loop;
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            whenButtonPressed: @hochladen
+        }
+        successMessage {
+            successMessage: &P30_MELDUNG.
+        }
+    )
+
+    process erneut-abgleichen (
+        name: Offene Eingänge erneut abgleichen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                :P30_MELDUNG := FAKT_BANK.abgleichen(:MANDANT_ID) || ' Zahlungseingänge zugeordnet.';
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            whenButtonPressed: @abgleichen
+        }
+        successMessage {
+            successMessage: &P30_MELDUNG.
+        }
+    )
+
+)
+"""
+    return s
+
 def seite_16():
     """Dialog "Zahlungseingang" (Button im Tab Zahlungen von Seite 11; Klick auf eine Zahlung der Timeline zum Aendern):
     Datum (Vorschlag heute), eingegangener Betrag (Vorschlag: offener Betrag), Zahlungsreferenz (fuer die spaetere
@@ -3139,6 +3372,27 @@ def listen(lists_apx):
         }
     )
 
+    entry bankdatei (
+        label: Bankdatei hochladen
+        icon {
+            imageIconCssClasses: fa-bank
+        }
+        layout {
+            sequence: 25
+        }
+        link {
+            target: {
+                page: 30
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                30
+            ]
+        }
+    )
+
     entry artikel (
         label: Artikel
         icon {
@@ -3266,6 +3520,22 @@ def breadcrumbs():
         link {
             target: {
                 page: 11
+            }
+        }
+    )
+
+    entry bankdatei (
+        name: Bankdatei hochladen
+        pageNumber: 30
+        execution {
+            sequence: 35
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 30
             }
         }
     )
@@ -3407,6 +3677,7 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00011-rechnung.apx").write_text(seite_11(), encoding="utf-8")
     (FIN / "pages" / "p00015-stornieren.apx").write_text(seite_15(), encoding="utf-8")
     (FIN / "pages" / "p00016-zahlungseingang.apx").write_text(seite_16(), encoding="utf-8")
+    (FIN / "pages" / "p00030-bankdatei.apx").write_text(seite_30(), encoding="utf-8")
     pdf_seiten()
     # Artikelstamm (Seiten aus gen_artikel.py, umnummeriert 10/11/12 -> 20/21/22)
     (FIN / "pages" / "p00020-artikel.apx").write_text(ga.in_finanz(ga.seite_10()), encoding="utf-8")

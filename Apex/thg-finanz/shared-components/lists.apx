@@ -133,6 +133,27 @@ list navigation-menu (
         }
     )
 
+    entry bankdatei (
+        label: Bankdatei hochladen
+        icon {
+            imageIconCssClasses: fa-bank
+        }
+        layout {
+            sequence: 25
+        }
+        link {
+            target: {
+                page: 30
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                30
+            ]
+        }
+    )
+
     entry artikel (
         label: Artikel
         icon {

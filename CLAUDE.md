@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–38 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–39 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -76,6 +76,12 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   die Zahlungsreferenz **RF75 2100 2212 0260 0203** angeben.“ und rechts darunter EPC-QR-Code „Zahlen mit Code“ (Empfänger = Mandantenname,
   bevorzugte IBAN, offener Betrag, Referenz; `APEX_BARCODE`) – je Kunde abschaltbar (`KUND_IST_QR_CODE`, THG-KUNDEN Rechtliches und Konditionen).
   Anzeige auf Seite 11 (Allgemein), Vorschlag im Dialog Zahlungseingang.
+- **Bankabgleich** (DDL 39, Menüpunkt „Bankdatei hochladen“, Seite 30): CAMT-Datei (camt.052/053/054, ELBA-Export) des Mandanten der Sitzung
+  hochladen → `FAKT_BANK.einlesen` (Konto muss eine Bankverbindung des Mandanten sein, Datei je Nachrichten-ID nur einmal, jede Buchung nur
+  einmal – `BKUM_SCHLUESSEL`), danach `FAKT_BANK.abgleichen`: Eingänge per 1. RF-Zahlungsreferenz, 2. Rechnungsnummer im Text,
+  3. offener Betrag + Auftraggeber ≈ Kunde → Zahlung anlegen („Bankabgleich: …“, Status per Trigger) bzw. gleich hohe Zahlung ±7 Tage
+  verknüpfen; bezahlte Rechnung nur als Hinweis (BEREITS_BEZAHLT). Tabellen `FAKT_BANKDATEIEN` (BKDT), `FAKT_BANKUMSAETZE` (BKUM).
+  „Erneut abgleichen“ prüft offene Eingänge noch einmal. Holding-Datei 202699999 (3).xml am 25.10.2026 eingelesen (HEROLD → 2026 - 202).
 - Zahlungen (Tab auf Seite 11): Timeline – zuerst „Rechnung erstellt“ mit offenem Betrag, dann je Zahlung Betrag/Skonto/Referenz/Bemerkung
   und der danach offene Betrag; Button „Zahlungseingang“ öffnet Dialog Seite 16 (Datum Vorschlag heute, Betrag Vorschlag offener Betrag,
   Skonto, Mahnspesen, Zahlungsreferenz `ZAHL_REFERENZ` (DDL 36) für die spätere automatische Zuordnung, Bemerkung); Klick auf eine Zahlung
