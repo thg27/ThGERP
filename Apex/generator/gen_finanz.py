@@ -306,6 +306,7 @@ POS_JS = """    javaScript {
                          .addClass("is-selected").attr("aria-selected", "true");
                     $("#pos-neu-unter").prop("disabled", !zustand.aenderbar || !(zustand.hauptId || zustand.id));
                     $("#pos-loeschen").prop("disabled", !zustand.aenderbar || !zustand.id);
+                    $("#pos-kopieren").prop("disabled", !zustand.aenderbar || !zustand.id);
                 };
                 var baumZeigen = function () {
                     var html = "";
@@ -629,6 +630,23 @@ POS_JS = """    javaScript {
                     });
                 });
                 $("#pos-loeschen").on("click", loeschen);
+                // gewaehlte Position kopieren (Hauptposition mit allen Unterpositionen bzw. Unterposition); die Kopie steht
+                // direkt hinter dem Original und wird danach geoeffnet
+                $("#pos-kopieren").on("click", function () {
+                    sicher(function () {
+                        server("POS_KOPIEREN", { x01: zustand.id }).then(function (d) {
+                            if (d.fehler) {
+                                fehler(d.fehler);
+                                return;
+                            }
+                            apex.message.clearErrors();
+                            apex.message.showPageSuccess("Position kopiert.");
+                            laden().then(function () {
+                                oeffnen(d.id);
+                            });
+                        });
+                    });
+                });
                 $(".thg-pos-speichern").on("click", function () {
                     speichern();
                 });
@@ -990,6 +1008,7 @@ def seite_11():
                        extra=html("                <div class=\"thg-pos-leiste\">\n"
                                   + knopf("pos-neu-haupt", "Hauptposition", "fa-plus")
                                   + knopf("pos-neu-unter", "Unterposition", "fa-plus")
+                                  + knopf("pos-kopieren", "Kopieren", "fa-copy")
                                   + knopf("pos-loeschen", "Löschen", "fa-trash-o", "t-Button--danger t-Button--simple")
                                   + "                </div>\n"
                                   + "                <div id=\"pos-baum\" class=\"thg-pos-baum\" role=\"tree\" aria-label=\"Positionen\"></div>\n"
@@ -2288,6 +2307,50 @@ def seite_11():
         }
         execution {
             sequence: 50
+            point: ajaxCallback
+        }
+    )
+
+    process pos-kopieren (
+        name: POS_KOPIEREN
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Position kopieren (x01 = RPOS_ID): Hauptposition mit Unterpositionen bzw. Unterposition, Kopie dahinter
+                declare
+                    l_id     number := to_number(apex_application.g_x01);
+                    l_mand   FAKT_RECHNUNGEN.RECH_MAND_ID%type;
+                    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+                    l_anz    pls_integer;
+                    l_neu    number;
+                begin
+                    select RECH_MAND_ID, RECH_STATUS into l_mand, l_status from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID;
+                    if l_mand <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                        raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
+                    end if;
+                    select count(*) into l_anz from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
+                    if l_anz = 0 then
+                        raise_application_error(-20211, 'Die Position gehört nicht zu dieser Rechnung.');
+                    end if;
+                    l_neu := FAKT_RECHNUNG.position_kopieren(l_id);
+                    apex_json.open_object;
+                    apex_json.write('id', to_char(l_neu));
+                    apex_json.close_object;
+                exception
+                    when others then
+                        rollback;
+                        apex_json.open_object;
+                        apex_json.write('fehler', regexp_replace(sqlerrm, '^ORA-\\d+: '));
+                        apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 55
             point: ajaxCallback
         }
     )

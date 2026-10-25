@@ -120,6 +120,9 @@ create or replace package FAKT_RECHNUNG as
     -- Unterpositionen); nicht uebernommen: Nummer, Datum, Faelligkeit, Betreff, Zahlungen, Altsystem-ID.
     -- Liefert die ID der neuen Rechnung.
     function kopieren(p_rech_id in number) return number;
+    -- Position kopieren (Button "Kopieren" in der Rechnungsuebersicht): Hauptposition mit allen Unterpositionen bzw.
+    -- eine Unterposition; die Kopie steht direkt hinter dem Original, die Ebene wird neu nummeriert. Liefert die neue ID.
+    function position_kopieren(p_rpos_id in number) return number;
     -- Rechnung stornieren: nur abgeschlossene, offene Rechnungen ohne Zahlung; Grund ist Pflicht. Die Rechnung behaelt
     -- Nummer und Datum, zaehlt nicht mehr zum Umsatz und ist gesperrt; der Grund steht in der Historie.
     procedure stornieren(p_rech_id in number, p_grund in varchar2);
@@ -388,6 +391,53 @@ create or replace package body FAKT_RECHNUNG as
         execute immediate 'begin FAKT_HISTORIE.protokoll(:1, :2, :3); end;' using p_rech_id, 'Stornogrund', trim(p_grund);
     end stornieren;
 
+    function position_kopieren(p_rpos_id in number) return number is
+        o     FAKT_RECHNUNGSPOSITIONEN%rowtype;
+        l_neu FAKT_RECHNUNGSPOSITIONEN.RPOS_ID%type;
+    begin
+        select * into o from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = p_rpos_id;
+        -- vorlaeufig Nummer -1 (RPOS_UK), danach die Ebene neu nummerieren
+        insert into FAKT_RECHNUNGSPOSITIONEN (RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_ARTI_ID, RPOS_POSITION, RPOS_ARTIKELNUMMER,
+                                              RPOS_NAME, RPOS_BESCHREIBUNG, RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS,
+                                              RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO,
+                                              RPOS_PAUSCHALSUMME)
+        values (o.RPOS_RECH_ID, o.RPOS_HAUPT_RPOS_ID, o.RPOS_ARTI_ID, -1, o.RPOS_ARTIKELNUMMER, o.RPOS_NAME,
+                o.RPOS_BESCHREIBUNG, o.RPOS_MENGE, o.RPOS_EINHEIT, o.RPOS_EINZELPREIS, o.RPOS_RABATT_PROZENT,
+                o.RPOS_MWST_PROZENT, o.RPOS_IST_OPTIONAL, o.RPOS_ERLOESKONTO, o.RPOS_PAUSCHALSUMME)
+        returning RPOS_ID into l_neu;
+        -- Hauptposition: ihre Unterpositionen mitkopieren (gleiche Nummern 10, 20, 30 … unter der neuen Hauptposition)
+        if o.RPOS_HAUPT_RPOS_ID is null then
+            insert into FAKT_RECHNUNGSPOSITIONEN (RPOS_RECH_ID, RPOS_HAUPT_RPOS_ID, RPOS_ARTI_ID, RPOS_POSITION,
+                                                  RPOS_ARTIKELNUMMER, RPOS_NAME, RPOS_BESCHREIBUNG, RPOS_MENGE,
+                                                  RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT,
+                                                  RPOS_MWST_PROZENT, RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO,
+                                                  RPOS_PAUSCHALSUMME)
+            select RPOS_RECH_ID, l_neu, RPOS_ARTI_ID, RPOS_POSITION, RPOS_ARTIKELNUMMER, RPOS_NAME, RPOS_BESCHREIBUNG,
+                   RPOS_MENGE, RPOS_EINHEIT, RPOS_EINZELPREIS, RPOS_RABATT_PROZENT, RPOS_MWST_PROZENT,
+                   RPOS_IST_OPTIONAL, RPOS_ERLOESKONTO, RPOS_PAUSCHALSUMME
+              from FAKT_RECHNUNGSPOSITIONEN
+             where RPOS_HAUPT_RPOS_ID = p_rpos_id
+             order by RPOS_POSITION;
+        end if;
+        -- Ebene neu nummerieren: Kopie direkt hinter das Original (Schluessel 2 x Position + 1), Hauptpositionen 1, 2, 3 …,
+        -- Unterpositionen 10, 20, 30 …
+        update FAKT_RECHNUNGSPOSITIONEN p
+           set RPOS_POSITION = (select x.NR
+                                  from (select RPOS_ID,
+                                               row_number() over (order by case when RPOS_ID = l_neu then o.RPOS_POSITION * 2 + 1
+                                                                                else RPOS_POSITION * 2 end, RPOS_ID)
+                                               * case when o.RPOS_HAUPT_RPOS_ID is null then 1 else 10 end as NR
+                                          from FAKT_RECHNUNGSPOSITIONEN
+                                         where RPOS_RECH_ID = o.RPOS_RECH_ID
+                                           and (RPOS_HAUPT_RPOS_ID = o.RPOS_HAUPT_RPOS_ID
+                                                or (RPOS_HAUPT_RPOS_ID is null and o.RPOS_HAUPT_RPOS_ID is null))) x
+                                 where x.RPOS_ID = p.RPOS_ID)
+         where p.RPOS_RECH_ID = o.RPOS_RECH_ID
+           and (p.RPOS_HAUPT_RPOS_ID = o.RPOS_HAUPT_RPOS_ID or (p.RPOS_HAUPT_RPOS_ID is null and o.RPOS_HAUPT_RPOS_ID is null));
+        summen_berechnen(o.RPOS_RECH_ID);
+        return l_neu;
+    end position_kopieren;
+
     function kopieren(p_rech_id in number) return number is
         -- ID vorab vergeben (RECH_BIU uebernimmt sie): bei insert … select gibt es kein returning (ORA-03049)
         l_neu   FAKT_RECHNUNGEN.RECH_ID%type := to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
@@ -528,7 +578,7 @@ commit;
 -- abhaengige Objekte nach dem Neukompilieren des Packages wieder gueltig machen
 begin
     for o in (select object_name, object_type from user_objects
-               where status <> 'VALID' and object_name in ('RECH_NUMMER_BUD', 'NKRS_NUMMER_BU', 'ZAHL_STATUS_AIUD', 'FAKT_RECHNUNG_PDF')) loop
+               where status <> 'VALID' and object_name in ('RECH_NUMMER_BUD', 'NKRS_NUMMER_BU', 'ZAHL_STATUS_AIUD', 'FAKT_RECHNUNG_PDF', 'RECH_HIST_AIU', 'FAKT_RECHNUNG_DOKUMENT')) loop
         execute immediate 'alter ' || case o.object_type when 'PACKAGE BODY' then 'package' else lower(o.object_type) end
                           || ' ' || o.object_name || ' compile';
     end loop;

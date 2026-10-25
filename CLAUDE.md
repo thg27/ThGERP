@@ -94,7 +94,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Eine Hauptposition hat in der Maske und am Ausdruck keinen eigenen Einzelpreis/Menge/Einheit/MwSt. (gespeichert: Menge 1, Einzelpreis 0);
   ohne Unterpositionen zählt nur ihre Pauschalsumme. Nach jeder Änderung `FAKT_RECHNUNG.summen_berechnen`. Rabatt/Pauschale werden anteilig auf die
   Steuersätze der Unterpositionen verteilt (`FAKT_RECHNUNG_MWST_V`).
-  Maske: links Baum der Positionen (Hauptposition/Unterposition anlegen, löschen, verschieben, Unterpositionen ein-/ausklappen), darunter die Summen je Steuersatz, rechts die Felder der gewählten Position (`P11_POS_*`,
+  Maske: links Baum der Positionen (Hauptposition/Unterposition anlegen, kopieren – `FAKT_RECHNUNG.position_kopieren`, Hauptposition mit allen
+  Unterpositionen, Kopie direkt dahinter –, löschen, verschieben, Unterpositionen ein-/ausklappen), darunter die Summen je Steuersatz, rechts die Felder der gewählten Position (`P11_POS_*`,
   per AJAX `POS_LADEN`/`POS_SPEICHERN`/`POS_LOESCHEN`; Hauptposition: Name, Rabatt, Summe, Pauschalsumme; Unterposition: alle Felder); Unterpositionen
   werden im Baum gewählt und rechts bearbeitet (Raster der Unterpositionen und Dialog Seite 14 entfernt, 2026-10-25);
   Artikel-Auswahl als Popup LOV mit Gruppe/Artikelnummer/Name (`LOV_ARTIKEL`). Änderbar nur im Entwurf oder nach „Rechnung bearbeiten“, sonst nur Anzeige.
