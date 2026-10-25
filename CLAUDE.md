@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–43 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–44 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -28,6 +28,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 
 ## APEX
 - Portal-App ist Master für Shared Components; Sub-Apps abonnieren.
+- **Dashboards überall netto** (Portal, Finanz, Kundenstamm inkl. Kopfinfo): Umsatz `RECH_SUMME_NETTO`, offene Beträge `OFFEN_NETTO` aus `FAKT_BELEGE_V` (DDL 44, anteilig).
 - Portal-Startseite (20000 Seite 1): Kennzahlen, Umsatz je Monat und Top 10 Kunden über **beide Mandanten summiert** (`FAKT_BELEGE_V` ohne
   Mandantenfilter, Tooltip mit Aufteilung EDV/Holding, keine Links – die Finanz-Listen filtern auf den Mandanten der Sitzung), darunter die Modul-Kacheln.
 - **List of Values immer in der Portal-App anlegen**; in den Sub-Apps nur als Subscription (keine eigenen LOVs). LOV-Namen mit Präfix `LOV_`.

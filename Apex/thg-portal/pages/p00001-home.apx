@@ -45,7 +45,7 @@ page 1 (
                 -- Rechnungen und erhaltene Gutschriften (FAKT_BELEGE_V) beider Mandanten zusammen;
                 -- Umsatz = GEDRUCKT/GESENDET/TEILBEZAHLT/BEZAHLT netto (ohne Entwuerfe, stornierte)
                 with r as (
-                    select b.RECH_STATUS, b.RECH_DATUM, b.RECH_SUMME_NETTO, b.OFFEN, b.IST_UEBERFAELLIG, a.MAND_CODE
+                    select b.RECH_STATUS, b.RECH_DATUM, b.RECH_SUMME_NETTO, b.OFFEN_NETTO as OFFEN, b.IST_UEBERFAELLIG, a.MAND_CODE
                       from FAKT_BELEGE_V b
                       join ADMIN_MANDANTEN a on a.MAND_ID = b.RECH_MAND_ID
                 ), u as (

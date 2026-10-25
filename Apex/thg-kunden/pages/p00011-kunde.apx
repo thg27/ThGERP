@@ -58,7 +58,7 @@ page 11 (
                                and z.KMIT_GUELTIG_BIS is null), '–') as BETREUER
                   from (select count(*) as ANZAHL,
                                to_char(nvl(sum(RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as UMSATZ,
-                               to_char(nvl(sum(OFFEN), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as OFFEN,
+                               to_char(nvl(sum(OFFEN_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as OFFEN,
                                case when count(*) = 0 then '–'
                                     else to_char(max(RECH_DATUM), 'DD.MM.YYYY')
                                          || ' (' || max(RECH_NUMMER) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER) || ')' end as LETZTE,
@@ -143,7 +143,7 @@ page 11 (
         column OFFEN (
             type: plainText
             heading {
-                heading: Offen
+                heading: Offen (netto)
             }
             layout {
                 sequence: 22

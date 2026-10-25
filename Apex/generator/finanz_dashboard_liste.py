@@ -49,7 +49,7 @@ def dashboard():
                 -- Rechnungen und erhaltene Gutschriften (FAKT_BELEGE_V) des im Portal gewaehlten Mandanten;
                 -- Umsatz = GEDRUCKT/GESENDET/TEILBEZAHLT/BEZAHLT netto (ohne Entwuerfe, stornierte)
                 with r as (
-                    select RECH_STATUS, RECH_DATUM, RECH_SUMME_NETTO, OFFEN, IST_UEBERFAELLIG
+                    select RECH_STATUS, RECH_DATUM, RECH_SUMME_NETTO, OFFEN_NETTO as OFFEN, IST_UEBERFAELLIG
                       from FAKT_BELEGE_V
                      where RECH_MAND_ID = :MANDANT_ID
                 ), u as (
@@ -203,7 +203,7 @@ def dashboard():
                             else 'offen' end as HINWEIS,
                        r.KUNDE,
                        r.RECH_BETREFF,
-                       r.OFFEN,
+                       r.OFFEN_NETTO as OFFEN,   -- Dashboards netto
                        -- Kunde im Kundenstamm (20020 Seite 11, mit Pruefsumme)
                        apex_page.get_url(p_application => '20020', p_page => 11, p_clear_cache => 11,
                                          p_items => 'P11_KUND_ID', p_values => r.RECH_KUND_ID) as KUND_URL
@@ -362,7 +362,7 @@ def dashboard():
         column OFFEN (
             type: plainText
             heading {
-                heading: Offen
+                heading: Offen (netto)
                 alignment: end
             }
             appearance {

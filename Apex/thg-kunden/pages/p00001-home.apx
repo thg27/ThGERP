@@ -34,7 +34,7 @@ page 1 (
                     select k.KUND_ID, k.KUND_STATUS, k.KUND_KUNDE_SEIT
                       from KUND_KUNDEN k
                 ), rechnungen as (
-                    select r.RECH_ID, r.RECH_KUND_ID, r.RECH_DATUM, r.RECH_SUMME_NETTO, r.OFFEN, r.IST_UEBERFAELLIG
+                    select r.RECH_ID, r.RECH_KUND_ID, r.RECH_DATUM, r.RECH_SUMME_NETTO, r.OFFEN_NETTO as OFFEN, r.IST_UEBERFAELLIG
                       from FAKT_BELEGE_V r
                      where r.RECH_MAND_ID = :MANDANT_ID
                        and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
@@ -182,7 +182,7 @@ page 1 (
                             else 'offen' end as HINWEIS,
                        r.KUNDE,
                        r.RECH_BETREFF,
-                       r.OFFEN,
+                       r.OFFEN_NETTO as OFFEN,   -- Dashboards netto
                        -- Rechnung in der Finanz-App (20050 Seite 11), Kunde im Kundendetail (Seite 11), mit Pruefsumme
                        case r.BELEGART
                             when 'GUTSCHRIFT' then apex_page.get_url(p_application => '20050', p_page => 41, p_clear_cache => 41,
@@ -339,7 +339,7 @@ page 1 (
         column OFFEN (
             type: plainText
             heading {
-                heading: Offen
+                heading: Offen (netto)
                 alignment: end
             }
             appearance {

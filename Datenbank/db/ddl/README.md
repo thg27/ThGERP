@@ -51,6 +51,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 41_kunde_hays.sql | Kunde Hays AG (Gutschriftverfahren) aus den Angaben der Gutschriften: Anschrift, UID, Telefon/Fax/Web, Ansprechpartnerin; nur wenn fehlend; wiederholbar |
 | 42_gutschrift_historie.sql | Historie der Gutschrift: Tabelle FAKT_GUTSCHRIFT_HISTORIE (GHIS, ohne FK), Trigger GUTS_HIST_AIU (Hochgeladen/Angelegt, Geändert, Bezahlt, PDF ersetzt); vorhandene Gutschriften nachgetragen; wiederholbar |
 | 43_gutschrift_ablauf.sql | Gutschriften wie Rechnungen: interne Nummer „GS 2026 - 1“ (Nummernkreis GUTSCHRIFT, eindeutig je Mandant), Bestand nachnummeriert, View FAKT_BELEGE_V (Rechnungen + erhaltene Gutschriften, Dashboard); wiederholbar |
+| 44_offen_netto.sql | FAKT_BELEGE_V um OFFEN_NETTO (offener Betrag netto, anteilig) – alle Dashboards zeigen Nettobeträge; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA
