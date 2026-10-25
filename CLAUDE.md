@@ -107,7 +107,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   fällig ab/bis, IBAN des Zahlers, optional Kunde. Fällige Posten (`FAKT_DEBITOR_POSTEN`) erzeugt `FAKT_DEBITOR.posten_erzeugen` bis Ende
   des nächsten Monats (beim Öffnen von 50/51 und im Abgleich); Speichern plant künftige Posten neu (`planen`, bisherige Beträge bleiben).
   Zahlungen (`FAKT_DEBITOR_ZAHLUNGEN`) nur aus der Bankdatei: `FAKT_BANK.abgleichen` weist nach Rechnungen/Gutschriften offene Eingänge per
-  IBAN bzw. Name des Zahlers (`name_passt`, Reihenfolge egal) zu → Status DEBITOR „Zugewiesen zu Debitor“, IBAN wird gemerkt.
+  IBAN bzw. Name des Zahlers (`name_passt`, Reihenfolge egal) zu → Status DEBITOR (Anzeige „Zugeordnet“ wie bei Rechnungen, damit sich alle zugeordneten ausblenden lassen), IBAN wird gemerkt.
   Registerkarte Zahlungen: Fälligkeiten mit Zahlungsstand (`FAKT_DEBITOR_POSTEN_V`, Zahlungen decken die ältesten Posten zuerst),
   Zahlungseingänge mit „Aufheben“, offene Bankeingänge mit „Zuweisen“ (Request-Links, danach Karte Zahlungen über `P51_RDS_START`).
   Seite 30: Button „Debitor anlegen“ je nicht zuordenbarem Eingang (`FAKT_DEBITOR.aus_buchung`, öffnet Seite 51). Löschen gibt Buchungen frei.

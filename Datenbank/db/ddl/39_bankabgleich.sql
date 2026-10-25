@@ -788,7 +788,7 @@ create or replace package body FAKT_BANK as
                              when 'BEREITS_BEZAHLT' then 'Rechnung bereits bezahlt'
                              when 'AUSGANG'         then 'Ausgang'
                              when 'IGNORIERT'       then 'Ignoriert'
-                             when 'DEBITOR'         then 'Zugewiesen zu Debitor'
+                             when 'DEBITOR'         then 'Zugeordnet'   -- Debitor: gleicher Text, damit sich alle zugeordneten ausblenden lassen
                              else initcap(p_status) end;
     end status_text;
 
