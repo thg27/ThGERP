@@ -1401,8 +1401,10 @@ def seite_11():
             sqlQuery:
                 ```sql
                 select nvl(m.MITA_NAME, h.RHIS_BENUTZER) as USER_NAME,
-                       upper(substr(nvl(m.MITA_NAME, h.RHIS_BENUTZER), 1, 1)
-                             || substr(regexp_substr(nvl(m.MITA_NAME, h.RHIS_BENUTZER), '[[:space:]_.]+([^[:space:]_.])', 1, 1, null, 1), 1, 1))
+                       -- Kuerzel aus der Mitarbeiterpflege (THG-ADMIN), sonst Anfangsbuchstaben des Namens
+                       coalesce(m.MITA_KUERZEL,
+                                upper(substr(nvl(m.MITA_NAME, h.RHIS_BENUTZER), 1, 1)
+                                      || substr(regexp_substr(nvl(m.MITA_NAME, h.RHIS_BENUTZER), '[[:space:]_.]+([^[:space:]_.])', 1, 1, null, 1), 1, 1)))
                            as USER_AVATAR,
                        'u-color-1' as USER_COLOR,
                        to_char(from_tz(h.RHIS_ZEITPUNKT, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as EVENT_DATE,
