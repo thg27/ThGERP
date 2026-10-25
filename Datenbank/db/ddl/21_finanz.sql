@@ -70,7 +70,7 @@ select r.RECH_ID,
   from FAKT_RECHNUNGEN r
   join ADMIN_MANDANTEN m on m.MAND_ID = r.RECH_MAND_ID
   join KUND_KUNDEN k on k.KUND_ID = r.RECH_KUND_ID
-  left join (select ZAHL_RECH_ID, sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)) as BEZAHLT
+  left join (select ZAHL_RECH_ID, sum(ZAHL_BETRAG) as BEZAHLT
                from FAKT_ZAHLUNGEN group by ZAHL_RECH_ID) z on z.ZAHL_RECH_ID = r.RECH_ID;
 
 comment on table FAKT_RECHNUNG_MWST_V is 'Rechnungssummen je Steuersatz (netto, MwSt.) aus den Hauptpositionen, Rabatt/Pauschale anteilig je Steuersatz, ohne optionale Positionen';
@@ -306,8 +306,8 @@ create or replace package body FAKT_RECHNUNG as
     procedure zahlungsstatus(p_rech_id in number) is
     begin
         update FAKT_RECHNUNGEN r
-           set RECH_STATUS = (select case when nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0) >= r.RECH_SUMME_BRUTTO then 'BEZAHLT'
-                                          when nvl(sum(ZAHL_BETRAG + nvl(ZAHL_SKONTO, 0)), 0) > 0 then 'TEILBEZAHLT'
+           set RECH_STATUS = (select case when nvl(sum(ZAHL_BETRAG), 0) >= r.RECH_SUMME_BRUTTO then 'BEZAHLT'
+                                          when nvl(sum(ZAHL_BETRAG), 0) > 0 then 'TEILBEZAHLT'
                                           when r.RECH_STATUS = 'GESENDET' then 'GESENDET'
                                           else 'GEDRUCKT' end
                                 from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = r.RECH_ID)

@@ -247,7 +247,7 @@ begin
   if inserting then
     FAKT_HISTORIE.protokoll(:new.ZAHL_RECH_ID, 'Zahlung erfasst',
         to_char(:new.ZAHL_DATUM, 'DD.MM.YYYY') || ': ' || FAKT_HISTORIE.betrag(:new.ZAHL_BETRAG)
-        || case when nvl(:new.ZAHL_SKONTO, 0) <> 0 then ', Skonto ' || FAKT_HISTORIE.betrag(:new.ZAHL_SKONTO) end
+        || nvl2(:new.ZAHL_REFERENZ, ', Referenz ' || :new.ZAHL_REFERENZ, null)
         || nvl2(:new.ZAHL_BEMERKUNG, ' (' || :new.ZAHL_BEMERKUNG || ')', null));
   elsif deleting then
     FAKT_HISTORIE.protokoll(:old.ZAHL_RECH_ID, 'Zahlung gelöscht',
@@ -255,8 +255,7 @@ begin
   else
     l_det := FAKT_HISTORIE.d('Datum', :old.ZAHL_DATUM, :new.ZAHL_DATUM)
           || FAKT_HISTORIE.d('Betrag', :old.ZAHL_BETRAG, :new.ZAHL_BETRAG)
-          || FAKT_HISTORIE.d('Skonto', :old.ZAHL_SKONTO, :new.ZAHL_SKONTO)
-          || FAKT_HISTORIE.d('Mahnspesen', :old.ZAHL_MAHNSPESEN, :new.ZAHL_MAHNSPESEN)
+          || FAKT_HISTORIE.d('Referenz', :old.ZAHL_REFERENZ, :new.ZAHL_REFERENZ)
           || FAKT_HISTORIE.d('Bemerkung', :old.ZAHL_BEMERKUNG, :new.ZAHL_BEMERKUNG);
     if l_det is not null then
       FAKT_HISTORIE.protokoll(:new.ZAHL_RECH_ID, 'Zahlung geändert', l_det);

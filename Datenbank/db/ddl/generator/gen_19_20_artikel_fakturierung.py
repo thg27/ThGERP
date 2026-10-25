@@ -215,12 +215,11 @@ FAKT = [
     ('ZAHL_RECH_ID', 'number', 'N', None, 'FK: Rechnung'),
     ('ZAHL_DATUM', 'date', 'N', None, 'Zahlungsdatum'),
     ('ZAHL_BETRAG', BETRAG, 'N', None, 'Gezahlter Betrag'),
-    ('ZAHL_SKONTO', BETRAG, 'Y', None, 'Abgezogenes Skonto'),
-    ('ZAHL_MAHNSPESEN', BETRAG, 'Y', None, 'Mahnspesen und Verzugszinsen'),
     ('ZAHL_BEMERKUNG', 'varchar2(500 char)', 'Y', None, 'Bemerkung'),
+    ('ZAHL_REFERENZ', 'varchar2(140 char)', 'Y', None, 'Zahlungsreferenz (Verwendungszweck/Referenz der Bank) fuer die automatische Zuordnung'),
     ('ZAHL_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill Payment.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme'),
   ], [('ZAHL_RECH_FK', 'R', 'ZAHL_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)')],
-  [('ZAHL_RECH_I', 'ZAHL_RECH_ID'), ('ZAHL_ALT_ID_I', 'ZAHL_ALT_ID')], ''),
+  [('ZAHL_RECH_I', 'ZAHL_RECH_ID'), ('ZAHL_ALT_ID_I', 'ZAHL_ALT_ID'), ('ZAHL_REFERENZ_I', 'ZAHL_REFERENZ')], ''),
 ]
 
 # Nummernkreise 2026: zuletzt vergebene Nummern lt. Ausgangsrechnungen (EDV: 2026 - 13, HOLDING: 2026 - 199)

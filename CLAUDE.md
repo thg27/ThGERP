@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–35 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–37 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -71,6 +71,14 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Kingbill-ID 833 (Duplikat 188) nicht übernommen, 186 als bezahlt, 202 offen); dafür 6 Kunden ohne Kingbill-Stammsatz angelegt
   (Hohl, Ingenieurbüro Forst/Holz, C.S.M., Elektro ON Balk, Dr. Barbara Lenhard, ThG - edv GmbH). Kingbill-IDs je Mandant eindeutig (DDL 30).
   Nummernkreise: EDV 2026 = 13, HOLDING 2025 = 171, 2026 = 202.
+- Zahlungen (Tab auf Seite 11): Timeline – zuerst „Rechnung erstellt“ mit offenem Betrag, dann je Zahlung Betrag/Skonto/Referenz/Bemerkung
+  und der danach offene Betrag; Button „Zahlungseingang“ öffnet Dialog Seite 16 (Datum Vorschlag heute, Betrag Vorschlag offener Betrag,
+  Skonto, Mahnspesen, Zahlungsreferenz `ZAHL_REFERENZ` (DDL 36) für die spätere automatische Zuordnung, Bemerkung); Klick auf eine Zahlung
+  öffnet sie zum Ändern/Löschen; danach lädt Seite 11 neu (Status per Trigger). Das frühere Zahlungsraster entfällt.
+- Zahlungen (Tab auf Seite 11): Timeline – zuerst „Rechnung erstellt“ mit offenem Betrag, dann je Zahlung Betrag/Referenz/Bemerkung und der
+  danach offene Betrag (grün = bezahlt, orange = noch offen); Button „Zahlungseingang“ (nur offen/teilbezahlt) öffnet Dialog Seite 16
+  (Datum Vorschlag heute, Betrag Vorschlag offener Betrag, Zahlungsreferenz `ZAHL_REFERENZ` (DDL 36) für die spätere automatische Zuordnung,
+  Bemerkung); Klick auf eine Zahlung öffnet sie zum Ändern/Löschen; danach lädt Seite 11 neu. Kein Skonto/Mahnspesen (DDL 37 entfernt).
 - Rechnung (THG-FINANZ Seite 11): Regionen Allgemein, Kunde (mit Anschrift-Vorschau und Lieferadresse), Vortext, Positionen, Schlusstext, Zahlungen;
   darüber eine Tab-Leiste (Region Display Selector, erster Tab „Alle anzeigen“).
 - Rechnungspositionen (THG-FINANZ Seite 11): Haupt- und Unterpositionen in `FAKT_RECHNUNGSPOSITIONEN` (`RPOS_HAUPT_RPOS_ID` leer = Hauptposition;
@@ -82,9 +90,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   ohne Unterpositionen zählt nur ihre Pauschalsumme. Nach jeder Änderung `FAKT_RECHNUNG.summen_berechnen`. Rabatt/Pauschale werden anteilig auf die
   Steuersätze der Unterpositionen verteilt (`FAKT_RECHNUNG_MWST_V`).
   Maske: links Baum der Positionen (Hauptposition/Unterposition anlegen, löschen, verschieben, Unterpositionen ein-/ausklappen), darunter die Summen je Steuersatz, rechts die Felder der gewählten Position (`P11_POS_*`,
-  per AJAX `POS_LADEN`/`POS_SPEICHERN`/`POS_LOESCHEN`; Hauptposition: Name, Rabatt, Summe, Pauschalsumme; Unterposition: alle Felder), darunter bei einer
-  Hauptposition das Raster ihrer Unterpositionen: „Schnelleingabe“ (neue Zeile) oder „Zeile Detail“ bzw. Zeilenmenü „Detail …“ (Dialog Seite 14);
-  gewählte Hauptposition in `P11_HAUPT_ID`, vom Browser mitgeschickt;
+  per AJAX `POS_LADEN`/`POS_SPEICHERN`/`POS_LOESCHEN`; Hauptposition: Name, Rabatt, Summe, Pauschalsumme; Unterposition: alle Felder); Unterpositionen
+  werden im Baum gewählt und rechts bearbeitet (Raster der Unterpositionen und Dialog Seite 14 entfernt, 2026-10-25);
   Artikel-Auswahl als Popup LOV mit Gruppe/Artikelnummer/Name (`LOV_ARTIKEL`). Änderbar nur im Entwurf oder nach „Rechnung bearbeiten“, sonst nur Anzeige.
 - **Kundenstamm (THG-KUNDEN 20020)** – Aufbau wie im Projekt Marchler (App 10020), aber schlanker: keine Hauptgruppe/Branchen/Unterkategorien,
   keine Mandanten je Kunde (Kunden mandantenübergreifend), keine Bemerkung, keine Kundenberichte/Auswertungen.

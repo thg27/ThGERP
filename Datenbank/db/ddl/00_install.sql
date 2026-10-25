@@ -43,5 +43,7 @@ whenever sqlerror exit failure rollback
 @@33_rechnung_historie.sql
 @@34_status_gedruckt.sql
 @@35_rechnung_dokumente.sql
+@@36_zahlungsreferenz.sql
+@@37_zahlung_ohne_skonto_mahnspesen.sql
 
 prompt Installation abgeschlossen.

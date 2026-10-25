@@ -214,9 +214,8 @@ begin
   ZAHL_RECH_ID number not null,
   ZAHL_DATUM date not null,
   ZAHL_BETRAG number(12,2) not null,
-  ZAHL_SKONTO number(12,2),
-  ZAHL_MAHNSPESEN number(12,2),
   ZAHL_BEMERKUNG varchar2(500 char),
+  ZAHL_REFERENZ varchar2(140 char),
   ZAHL_ALT_ID number,
   ZAHL_CREATED_ON timestamp not null,
   ZAHL_CREATED_BY varchar2(255 char) not null,
@@ -229,9 +228,8 @@ begin
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_RECH_ID', 'number', 'N');
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_DATUM', 'date', 'N');
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_BETRAG', 'number(12,2)', 'N');
-    DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_SKONTO', 'number(12,2)', 'Y');
-    DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_MAHNSPESEN', 'number(12,2)', 'Y');
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_BEMERKUNG', 'varchar2(500 char)', 'Y');
+    DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_REFERENZ', 'varchar2(140 char)', 'Y');
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_ALT_ID', 'number', 'Y');
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_CREATED_ON', 'timestamp', 'N');
     DDL_UTIL.spalte('FAKT_ZAHLUNGEN', 'ZAHL_CREATED_BY', 'varchar2(255 char)', 'N');
@@ -269,6 +267,7 @@ begin
     DDL_UTIL.constraint_('FAKT_ZAHLUNGEN', 'ZAHL_RECH_FK', 'R', 'ZAHL_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)');
     DDL_UTIL.index_('FAKT_ZAHLUNGEN', 'ZAHL_RECH_I', q'~ZAHL_RECH_ID~');
     DDL_UTIL.index_('FAKT_ZAHLUNGEN', 'ZAHL_ALT_ID_I', q'~ZAHL_ALT_ID~');
+    DDL_UTIL.index_('FAKT_ZAHLUNGEN', 'ZAHL_REFERENZ_I', q'~ZAHL_REFERENZ~');
 end;
 /
 
@@ -471,9 +470,8 @@ comment on column FAKT_ZAHLUNGEN.ZAHL_ID is 'Primaerschluessel (SYS_GUID)';
 comment on column FAKT_ZAHLUNGEN.ZAHL_RECH_ID is 'FK: Rechnung';
 comment on column FAKT_ZAHLUNGEN.ZAHL_DATUM is 'Zahlungsdatum';
 comment on column FAKT_ZAHLUNGEN.ZAHL_BETRAG is 'Gezahlter Betrag';
-comment on column FAKT_ZAHLUNGEN.ZAHL_SKONTO is 'Abgezogenes Skonto';
-comment on column FAKT_ZAHLUNGEN.ZAHL_MAHNSPESEN is 'Mahnspesen und Verzugszinsen';
 comment on column FAKT_ZAHLUNGEN.ZAHL_BEMERKUNG is 'Bemerkung';
+comment on column FAKT_ZAHLUNGEN.ZAHL_REFERENZ is 'Zahlungsreferenz (Verwendungszweck/Referenz der Bank) fuer die automatische Zuordnung';
 comment on column FAKT_ZAHLUNGEN.ZAHL_ALT_ID is 'ID im Altsystem (Kingbill Payment.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme';
 comment on column FAKT_ZAHLUNGEN.ZAHL_CREATED_ON is 'Audit: angelegt am';
 comment on column FAKT_ZAHLUNGEN.ZAHL_CREATED_BY is 'Audit: angelegt von';
