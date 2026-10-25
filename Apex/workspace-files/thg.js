@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /* Registerkarten unter der Titelleiste (CSS-Klasse thg-rds, z.B. Kundendetail 20020 Seite 11): "Alle" als Ebenen-Icon
    (fa-layers) an erster Stelle; beim Oeffnen trotzdem die erste Sachkarte (z.B. Stammdaten). Unter "Alle" zeigen die
-   Bereiche ihre Ueberschrift (body-Klasse thg-rds-alle, thg.css). */
+   Bereiche ihre Ueberschrift (body-Klasse thg-rds-alle, thg.css). Andere Startkarte: Seitenelement P<Seite>_RDS_START (Beschriftung der Karte). */
 if (window.apex && apex.jQuery) {
     apex.jQuery(window).on("apexreadyend", function () {
         var leiste = document.querySelector(".thg-rds");
@@ -74,6 +74,18 @@ if (window.apex && apex.jQuery) {
         // Auswahl ueber die Klasse apex-rds-selected verfolgen (der Region Display Selector laesst den Klick nicht durch)
         new MutationObserver(merken).observe(alle.closest(".apex-rds-item"), { attributes: true, attributeFilter: ["class"] });
         var erste = Array.prototype.find.call(karten, function (a) { return a !== alle; });
+        // Startkarte vorgeben: verstecktes Seitenelement P<Seite>_RDS_START mit der Beschriftung der Karte (z.B. "Zahlungen")
+        var start = document.querySelector("input[id$='_RDS_START']");
+        if (start && start.value) {
+            erste = Array.prototype.find.call(karten, function (a) {
+                // Static-ID der Region (falls als DOM-ID gesetzt) oder Beschriftung der Karte
+                return (a.getAttribute("href") || "").replace(/^.*#/, "") === start.value
+                    || a.textContent.trim().toLowerCase() === start.value.trim().toLowerCase();
+            }) || erste;
+            if (erste) {
+                erste.click();
+            }
+        }
         if (erste && alle.closest(".apex-rds-item").classList.contains("apex-rds-selected")) {
             erste.click();
         }

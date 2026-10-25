@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–44 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–45 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -29,8 +29,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 ## APEX
 - Portal-App ist Master für Shared Components; Sub-Apps abonnieren.
 - **Dashboards überall netto** (Portal, Finanz, Kundenstamm inkl. Kopfinfo): Umsatz `RECH_SUMME_NETTO`, offene Beträge `OFFEN_NETTO` aus `FAKT_BELEGE_V` (DDL 44, anteilig).
-- Portal-Startseite (20000 Seite 1): Kennzahlen, Umsatz je Monat und Top 10 Kunden über **beide Mandanten summiert** (`FAKT_BELEGE_V` ohne
-  Mandantenfilter, Tooltip mit Aufteilung EDV/Holding, keine Links – die Finanz-Listen filtern auf den Mandanten der Sitzung), darunter die Modul-Kacheln.
+- Portal-Startseite (20000 Seite 1): Kennzahlen, darunter Modul-Kacheln immer in einer Zeile (`#thg-module-einzeilig`, thg.css), dann Umsatz je Monat und Top 10 Kunden über **beide Mandanten summiert** (`FAKT_BELEGE_V` ohne
+  Mandantenfilter, Tooltip mit Aufteilung EDV/Holding, keine Links – die Finanz-Listen filtern auf den Mandanten der Sitzung).
 - **List of Values immer in der Portal-App anlegen**; in den Sub-Apps nur als Subscription (keine eigenen LOVs). LOV-Namen mit Präfix `LOV_`.
   APEXlang: `subscription { master: @/<portal-id>/<static-id> }` in der LOV und `"subscription": {"masterApps": {...}}` in `deployments/default.json` der Sub-App.
   Einspielen (einzeln nacheinander): 1. Portal, 2. Sub-Apps, 3. Subscriptions mit `apex_shared_component.refresh` aktualisieren, 4. `apex_subscribed_components` prüfen – alle `UP_TO_DATE`.
@@ -94,6 +94,15 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   3. offener Betrag + Auftraggeber ≈ Kunde → Zahlung anlegen („Bankabgleich: …“, Status per Trigger) bzw. gleich hohe Zahlung ±7 Tage
   verknüpfen; bezahlte Rechnung nur als Hinweis (BEREITS_BEZAHLT). Tabellen `FAKT_BANKDATEIEN` (BKDT), `FAKT_BANKUMSAETZE` (BKUM).
   „Erneut abgleichen“ prüft offene Eingänge noch einmal. Holding-Datei 202699999 (3).xml am 25.10.2026 eingelesen (HEROLD → 2026 - 202).
+- **Debitoren** (DDL 45, Menüpunkt Debitoren, Seiten 50 Liste mit Facetten / 51 Debitor mit Registerkarten Stammdaten und Zahlungen):
+  Zahler ohne Rechnung/Gutschrift (z. B. Mieter) je Mandant – Name, Bezeichnung, Betrag, Intervall (`LOV_DEBITOR_INTERVALL` im Portal),
+  fällig ab/bis, IBAN des Zahlers, optional Kunde. Fällige Posten (`FAKT_DEBITOR_POSTEN`) erzeugt `FAKT_DEBITOR.posten_erzeugen` bis Ende
+  des nächsten Monats (beim Öffnen von 50/51 und im Abgleich); Speichern plant künftige Posten neu (`planen`, bisherige Beträge bleiben).
+  Zahlungen (`FAKT_DEBITOR_ZAHLUNGEN`) nur aus der Bankdatei: `FAKT_BANK.abgleichen` weist nach Rechnungen/Gutschriften offene Eingänge per
+  IBAN bzw. Name des Zahlers (`name_passt`, Reihenfolge egal) zu → Status DEBITOR „Zugewiesen zu Debitor“, IBAN wird gemerkt.
+  Registerkarte Zahlungen: Fälligkeiten mit Zahlungsstand (`FAKT_DEBITOR_POSTEN_V`, Zahlungen decken die ältesten Posten zuerst),
+  Zahlungseingänge mit „Aufheben“, offene Bankeingänge mit „Zuweisen“ (Request-Links, danach Karte Zahlungen über `P51_RDS_START`).
+  Seite 30: Button „Debitor anlegen“ je nicht zuordenbarem Eingang (`FAKT_DEBITOR.aus_buchung`, öffnet Seite 51). Löschen gibt Buchungen frei.
 - Zahlungen (Tab auf Seite 11): Timeline – zuerst „Rechnung erstellt“ mit offenem Betrag, dann je Zahlung Betrag/Skonto/Referenz/Bemerkung
   und der danach offene Betrag; Button „Zahlungseingang“ öffnet Dialog Seite 16 (Datum Vorschlag heute, Betrag Vorschlag offener Betrag,
   Skonto, Mahnspesen, Zahlungsreferenz `ZAHL_REFERENZ` (DDL 36) für die spätere automatische Zuordnung, Bemerkung); Klick auf eine Zahlung
@@ -130,7 +139,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Übernommen 2026-10-24 per Skript aus den Marchler-Quellen; Weiterentwicklung jetzt direkt in den Dateien unter `Apex/thg-kunden/pages`.
 - Gemeinsame Bausteine in `thg.css`/`thg.js` (aus Marchler): Registerkarten `thg-rds` (Alle-Icon, erste Karte beim Öffnen), `thg-ohne-titel`, `thg-kundenname`,
   `thg-kundennr`, `thg-badge`, Kennzahlen `#kennzahlen`, PLZ-Facette `thg-plz-bereich`, Regionstitel in Mandantenfarbe (`thg-region-farbig`, App-Liste in `thg.js`, derzeit 20020),
-  inaktive LOV-Einträge („ – inaktiv“) werden ausgeblendet, Dialoge übernehmen den Mandanten der aufrufenden Seite.
+  inaktive LOV-Einträge („ – inaktiv“) werden ausgeblendet, Startkarte der Registerkarten per Seitenelement `P<Seite>_RDS_START` (Beschriftung), Dialoge übernehmen den Mandanten der aufrufenden Seite.
 - **Als App installierbar (PWA):** nur das Portal 20000 (`progressiveWebApp` in `thg-portal/application.apx`, Scope `/ords/r/thgerp/` – deckt alle ThGERP-Apps
   inkl. Anmeldung ab und ist genauer als der Scope `/ords/` der SIPA-App auf demselben Host). Icons `app-icon-*.png` (aus `Apex/workspace-files/thg-app-icon.svg`,
   192 randlos/maskable) in allen Apps unter `shared-components/static-files/icons/`.

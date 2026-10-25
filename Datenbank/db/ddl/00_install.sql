@@ -52,5 +52,6 @@ whenever sqlerror exit failure rollback
 @@42_gutschrift_historie.sql
 @@43_gutschrift_ablauf.sql
 @@44_offen_netto.sql
+@@45_debitoren.sql
 
 prompt Installation abgeschlossen.

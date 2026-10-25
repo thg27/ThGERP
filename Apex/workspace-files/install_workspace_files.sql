@@ -428,6 +428,29 @@ body.thg-rds-alle .t-Region.thg-ohne-titel > .t-Region-header .t-Region-title {
 .t-BreadcrumbRegion .t-Breadcrumb-item:has(+ .t-Breadcrumb-item.is-active)::after {
     display: none;
 }
+
+/* Portal-Startseite: Modul-Kacheln immer in einer Zeile, gleich breit (unabhaengig von der Anzahl); schmal untereinander */
+#thg-module-einzeilig {
+    margin-block-end: 48px !important;   /* gleicher Abstand zu den Diagrammen wie unter den Kennzahlen */
+}
+#thg-module-einzeilig .t-Cards {
+    display: flex;
+   '));
+    dbms_lob.append(l_inhalt, to_clob(' flex-wrap: nowrap;
+}
+#thg-module-einzeilig .t-Cards .t-Cards-item {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+}
+@media (max-width: 640px) {
+    #thg-module-einzeilig .t-Cards {
+        flex-wrap: wrap;
+    }
+    #thg-module-einzeilig .t-Cards .t-Cards-item {
+        flex-basis: 100%;
+    }
+}
 '));
     workspace_datei(p_file_name => 'thg.css', p_mime_type => 'text/css', p_inhalt => l_inhalt, p_base64 => false);
     dbms_lob.freetemporary(l_inhalt);
@@ -490,15 +513,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /* Registerkarten unter der Titelleiste (CSS-Klasse thg-rds, z.B. Kundendetail 20020 Seite 11): "Alle" als Ebenen-Icon
    (fa-layers) an erster Stelle; beim Oeffnen trotzdem die erste Sachkarte (z.B. Stammdaten). Unter "Alle" zeigen die
-   Bereiche ihre Ueberschrift (body-Klasse thg-rds-alle, thg.css). */
+   Bereiche ihre Ueberschrift (body-Klasse thg-rds-alle, thg.css). Andere Startkarte: Seitenelement P<Seite>_RDS_START (Beschriftung der Karte). */
 if (window.apex && apex.jQuery) {
     apex.jQuery(window).on("apexreadyend", function () {
         var leiste = document.querySelector(".thg-rds");
-        if (!leiste) {
+        if (!leist'));
+    dbms_lob.append(l_inhalt, to_clob('e) {
             return;
         }
-        var karten = leiste.querySelectorAl'));
-    dbms_lob.append(l_inhalt, to_clob('l(".apex-rds-item a");
+        var karten = leiste.querySelectorAll(".apex-rds-item a");
         var alle = Array.prototype.find.call(karten, function (a) { return /SHOW_ALL$/.test(a.getAttribute("href") || ""); });
         if (!alle) {
             return;
@@ -513,16 +536,29 @@ if (window.apex && apex.jQuery) {
         // Auswahl ueber die Klasse apex-rds-selected verfolgen (der Region Display Selector laesst den Klick nicht durch)
         new MutationObserver(merken).observe(alle.closest(".apex-rds-item"), { attributes: true, attributeFilter: ["class"] });
         var erste = Array.prototype.find.call(karten, function (a) { return a !== alle; });
+        // Startkarte '));
+    dbms_lob.append(l_inhalt, to_clob('vorgeben: verstecktes Seitenelement P<Seite>_RDS_START mit der Beschriftung der Karte (z.B. "Zahlungen")
+        var start = document.querySelector("input[id$=''_RDS_START'']");
+        if (start && start.value) {
+            erste = Array.prototype.find.call(karten, function (a) {
+                // Static-ID der Region (falls als DOM-ID gesetzt) oder Beschriftung der Karte
+                return (a.getAttribute("href") || "").replace(/^.*#/, "") === start.value
+                    || a.textContent.trim().toLowerCase() === start.value.trim().toLowerCase();
+            }) || erste;
+            if (erste) {
+                erste.click();
+            }
+        }
         if (erste && alle.closest(".apex-rds-item").classList.contains("apex-rds-selected")) {
-     '));
-    dbms_lob.append(l_inhalt, to_clob('       erste.click();
+            erste.click();
         }
         merken();
     });
 }
 
 /* Kundenliste (20020 Seite 10): Facette "PLZ von – bis" – nur Ziffern, hoechstens 4 (oesterreichische PLZ).
-   Ereignisse am document, weil APEX die Facetten-Felder erst nachtraeglich erzeugt. */
+   Ereignisse am document, weil APEX die Facetten-Felder erst n'));
+    dbms_lob.append(l_inhalt, to_clob('achtraeglich erzeugt. */
 document.addEventListener("keydown", function (ereignis) {
     var feld = ereignis.target;
     if (!feld.closest || !feld.closest(".thg-plz-bereich") || feld.tagName !== "INPUT") {
@@ -538,15 +574,15 @@ document.addEventListener("keydown", function (ereignis) {
 document.addEventListener("input", function (ereignis) {
     var feld = ereignis.target;
     if (feld.closest && feld.closest(".thg-plz-bereich") && feld.tagName === "INPUT") {
-        var bereinigt = String(feld.value).replace(/'));
-    dbms_lob.append(l_inhalt, to_clob('[^0-9]/g, "").slice(0, 4);
+        var bereinigt = String(feld.value).replace(/[^0-9]/g, "").slice(0, 4);
         if (feld.value !== bereinigt) {
             feld.value = bereinigt;   // z.B. beim Einfuegen aus der Zwischenablage
         }
     }
 }, true);
 
-/* Regionstitel in Mandantenfarbe (thg.css: .thg-region-farbig) – vorerst nur in diesen Apps;
+/* Regionstitel in Mandantenfarbe (thg.css: .thg-region'));
+    dbms_lob.append(l_inhalt, to_clob('-farbig) – vorerst nur in diesen Apps;
    fuer weitere Apps die App-ID ergaenzen (20020 = Kundenstammdaten, 20050 = Finanz). */
 document.addEventListener("DOMContentLoaded", function () {
     var apps = ["20020", "20050"];
@@ -559,14 +595,14 @@ document.addEventListener("DOMContentLoaded", function () {
    Solche Eintraege werden aus der Auswahl entfernt bzw. ausgeblendet - in Auswahllisten (auch in Grids),
    Mehrfachauswahl und Popup-Listen. Ein bereits gespeicherter (ausgewaehlter) inaktiver Wert bleibt sichtbar. */
 (function () {
-    var INAKTIV = "– inaktiv", geplant = fal'));
-    dbms_lob.append(l_inhalt, to_clob('se;
+    var INAKTIV = "– inaktiv", geplant = false;
     var bereinigen = function () {
         geplant = false;
         document.querySelectorAll("select option").forEach(function (o) {
             if (!o.selected && o.text.indexOf(INAKTIV) >= 0) {
                 o.remove();
-            }
+    '));
+    dbms_lob.append(l_inhalt, to_clob('        }
         });
         // Popup-Liste (Dialog), Mehrfachauswahl (Combobox): Zeilen bzw. Optionen ausblenden
         document.querySelectorAll(".a-PopupLOV-dialog tr, .a-PopupLOV-dialog li, [role=''option'']").forEach(function (el) {
@@ -584,13 +620,13 @@ document.addEventListener("DOMContentLoaded", function () {
     };
     document.addEventListener("DOMContentLoaded", function () {
         bereinigen();
-        new MutationObserver(planen).observe(docu'));
-    dbms_lob.append(l_inhalt, to_clob('ment.body, { childList: true, subtree: true });
+        new MutationObserver(planen).observe(document.body, { childList: true, subtree: true });
     });
 })();
 
 /* Dialoge (Modal/Schublade) laufen in einem iframe ohne Logo und kennen den Mandanten nicht - die Mandantenfarben in
-   thg.css haengen an [data-mandant] im Logo. Den Mandanten deshalb von der aufrufenden Seite uebernehmen. */
+   thg.css haengen an [data-mandant] im Logo. Den Ma'));
+    dbms_lob.append(l_inhalt, to_clob('ndanten deshalb von der aufrufenden Seite uebernehmen. */
 (function () {
     try {
         if (window.parent === window || document.querySelector("[data-mandant]")) {
@@ -610,8 +646,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
     } catch (e) {
- '));
-    dbms_lob.append(l_inhalt, to_clob('       // aufrufende Seite aus anderer Herkunft: Standardfarben
+        // aufrufende Seite aus anderer Herkunft: Standardfarben
     }
 })();
 '));

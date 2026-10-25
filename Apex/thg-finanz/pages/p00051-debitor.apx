@@ -1,0 +1,1249 @@
+page 51 (
+    name: Debitor
+    alias: DEBITOR
+    title: Debitor
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: &P51_TITEL.
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 5
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                t-BreadcrumbRegion--useRegionTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region debitor (
+        name: Debitor
+        type: form
+        source {
+            location: localDatabase
+            tableName: FAKT_DEBITOREN
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 5
+            slot: fullWidthContent
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: false
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P51_DEBI_ID
+        }
+    )
+
+    region stammdaten (
+        name: Stammdaten
+        type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
+        layout {
+            sequence: 10
+            parentRegion: @debitor
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
+        }
+    )
+
+    pageItem P51_DEBI_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @stammdaten
+            slot: regionBody
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P51_DEBI_MAND_ID (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @stammdaten
+            slot: regionBody
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_MAND_ID
+            dataType: number
+        }
+        default {
+            type: item
+            item: MANDANT_ID
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P51_TITEL (
+        type: hidden
+        layout {
+            sequence: 3
+            region: @stammdaten
+            slot: regionBody
+        }
+    )
+
+    pageItem P51_BKUM_ID (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @stammdaten
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P51_DZAH_ID (
+        type: hidden
+        layout {
+            sequence: 5
+            region: @stammdaten
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P51_RDS_START (
+        type: hidden
+        layout {
+            sequence: 6
+            region: @stammdaten
+            slot: regionBody
+        }
+    )
+
+    pageItem P51_MELDUNG (
+        type: hidden
+        layout {
+            sequence: 7
+            region: @stammdaten
+            slot: regionBody
+        }
+    )
+
+    pageItem P51_DEBI_NAME (
+        type: textField
+        label {
+            label: Name (Zahler)
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @stammdaten
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_NAME
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+            maxLength: 200
+        }
+    )
+
+    pageItem P51_DEBI_BEZEICHNUNG (
+        type: textField
+        label {
+            label: Bezeichnung (z. B. Miete Wohnung Top 3)
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @stammdaten
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_BEZEICHNUNG
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P51_DEBI_BETRAG (
+        type: numberField
+        label {
+            label: Zu überweisender Betrag €
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @stammdaten
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            formatMask: 999G999G990D00
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_BETRAG
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P51_DEBI_INTERVALL (
+        type: selectList
+        label {
+            label: Intervall
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @stammdaten
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_INTERVALL
+            dataType: varchar2
+        }
+        validation {
+            valueRequired: true
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-debitor-intervall
+            displayNullValue: false
+            displayExtraValues: false
+        }
+        default {
+            type: static
+            staticValue: MONATLICH
+        }
+    )
+
+    pageItem P51_DEBI_FAELLIG_AB (
+        type: datePicker
+        label {
+            label: Fällig ab (erste Fälligkeit)
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @stammdaten
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_FAELLIG_AB
+            dataType: date
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P51_DEBI_FAELLIG_BIS (
+        type: datePicker
+        label {
+            label: Fällig bis (leer = unbefristet)
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @stammdaten
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_FAELLIG_BIS
+            dataType: date
+        }
+    )
+
+    pageItem P51_DEBI_IBAN (
+        type: textField
+        label {
+            label: IBAN des Zahlers (Bankabgleich, wird bei der ersten Zuweisung übernommen)
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @stammdaten
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_IBAN
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 34
+        }
+    )
+
+    pageItem P51_DEBI_KUND_ID (
+        type: selectList
+        label {
+            label: Kunde (optional)
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @stammdaten
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_KUND_ID
+            dataType: number
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-kunden
+            displayNullValue: true
+            nullDisplayValue: - kein Kunde -
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P51_DEBI_IST_AKTIV (
+        type: switch
+        label {
+            label: Aktiv
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @stammdaten
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_IST_AKTIV
+            dataType: varchar2
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
+    pageItem P51_DEBI_BEMERKUNG (
+        type: textarea
+        label {
+            label: Bemerkung
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            region: @stammdaten
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @debitor
+            column: DEBI_BEMERKUNG
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 1000
+        }
+    )
+
+    region zahlungen (
+        name: Zahlungen
+        type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P51_DEBI_ID
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+            ]
+        }
+    )
+
+    region faelligkeiten (
+        name: Fälligkeiten
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Zahlungen decken die aeltesten Posten zuerst (FAKT_DEBITOR_POSTEN_V); neueste Faelligkeit oben
+                select to_char(v.FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG_AM,
+                       FAKT_HISTORIE.betrag(v.BETRAG) as BETRAG,
+                       FAKT_HISTORIE.betrag(v.BEZAHLT) as BEZAHLT,
+                       FAKT_HISTORIE.betrag(v.OFFEN) as OFFEN,
+                       '<span class="fa ' || case when v.STATUS = 'BEZAHLT' then 'fa-check-circle u-success-text'
+                                                  when v.IST_UEBERFAELLIG = 'Y' then 'fa-exclamation-triangle u-danger-text'
+                                                  when v.STATUS = 'TEILBEZAHLT' then 'fa-adjust u-warning-text'
+                                                  else 'fa-clock-o u-info-text' end || '" aria-hidden="true"></span> '
+                       || case when v.IST_UEBERFAELLIG = 'Y' and v.STATUS = 'OFFEN' then 'Überfällig'
+                               else FAKT_DEBITOR.status_text(v.STATUS) end as STATUS,
+                       to_char(v.BEZAHLT_AM, 'DD.MM.YYYY') as BEZAHLT_AM
+                  from FAKT_DEBITOR_POSTEN_V v
+                 where v.DEBI_ID = :P51_DEBI_ID
+                 order by v.FAELLIG_AM desc
+                ```
+        }
+        layout {
+            sequence: 10
+            parentRegion: @zahlungen
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Noch keine Fälligkeiten.
+        }
+
+        column FAELLIG_AM (
+            type: plainText
+            heading {
+                heading: Fällig am
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BEZAHLT (
+            type: plainText
+            heading {
+                heading: Bezahlt
+                alignment: end
+            }
+            layout {
+                sequence: 30
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column OFFEN (
+            type: plainText
+            heading {
+                heading: Offen
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+            }
+            layout {
+                sequence: 50
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BEZAHLT_AM (
+            type: plainText
+            heading {
+                heading: Bezahlt am
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region eingaenge (
+        name: Zahlungseingänge laut Bankdatei
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select to_char(z.DZAH_DATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(z.DZAH_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       u.BKUM_ZUORDNUNG as ZUORDNUNG,
+                       '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_items => 'P51_DEBI_ID,P51_DZAH_ID',
+                                                                                   p_values => z.DZAH_DEBI_ID || ',' || z.DZAH_ID,
+                                                                                   p_request => 'AUFHEBEN'))
+                       || '" title="Zuweisung aufheben – die Buchung ist danach wieder offen"><span class="fa fa-unlink" aria-hidden="true"></span> Aufheben</a>' as AKTION
+                  from FAKT_DEBITOR_ZAHLUNGEN z
+                  left join FAKT_BANKUMSAETZE u on u.BKUM_ID = z.DZAH_BKUM_ID
+                 where z.DZAH_DEBI_ID = :P51_DEBI_ID
+                 order by z.DZAH_DATUM desc, z.DZAH_ID desc
+                ```
+        }
+        layout {
+            sequence: 20
+            parentRegion: @zahlungen
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Noch keine Zahlungen – Zahlungseingänge kommen aus der Bankdatei (Menüpunkt Bankdatei hochladen).
+        }
+
+        column DATUM (
+            type: plainText
+            heading {
+                heading: Datum
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUFTRAGGEBER (
+            type: plainText
+            heading {
+                heading: Auftraggeber
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VERWENDUNGSZWECK (
+            type: plainText
+            heading {
+                heading: Verwendungszweck
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ZUORDNUNG (
+            type: plainText
+            heading {
+                heading: Zuordnung
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AKTION (
+            type: plainText
+            heading {
+                heading: Aktion
+            }
+            layout {
+                sequence: 60
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region bank-offen (
+        name: Offene Bankeingänge zuweisen
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- nicht zugeordnete Eingaenge des Mandanten (ohne erkannte Rechnung/Gutschrift); passender Name zuerst
+                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       FAKT_RECHNUNG.referenz_anzeige(u.BKUM_GEGEN_IBAN) as IBAN,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_items => 'P51_DEBI_ID,P51_BKUM_ID',
+                                                                                   p_values => d.DEBI_ID || ',' || u.BKUM_ID,
+                                                                                   p_request => 'ZUWEISEN'))
+                       || '" title="Diesem Debitor zuweisen"><span class="fa fa-link" aria-hidden="true"></span> Zuweisen</a>' as AKTION
+                  from FAKT_BANKUMSAETZE u
+                  join FAKT_DEBITOREN d on d.DEBI_ID = :P51_DEBI_ID
+                 where u.BKUM_MAND_ID = d.DEBI_MAND_ID
+                   and u.BKUM_RICHTUNG = 'CRDT' and u.BKUM_STATUS = 'OFFEN'
+                   and u.BKUM_RECH_ID is null and u.BKUM_GUTS_ID is null
+                 order by case when FAKT_DEBITOR.name_passt(d.DEBI_NAME, u.BKUM_GEGEN_NAME) = 'Y'
+                                 or replace(upper(u.BKUM_GEGEN_IBAN), ' ') = d.DEBI_IBAN then 0 else 1 end,
+                          u.BKUM_BUCHUNGSDATUM desc
+                ```
+        }
+        layout {
+            sequence: 30
+            parentRegion: @zahlungen
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Keine offenen Bankeingänge.
+        }
+
+        column DATUM (
+            type: plainText
+            heading {
+                heading: Datum
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUFTRAGGEBER (
+            type: plainText
+            heading {
+                heading: Auftraggeber
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column IBAN (
+            type: plainText
+            heading {
+                heading: IBAN
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VERWENDUNGSZWECK (
+            type: plainText
+            heading {
+                heading: Verwendungszweck
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AKTION (
+            type: plainText
+            heading {
+                heading: Aktion
+            }
+            layout {
+                sequence: 60
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    button up (
+        buttonName: UP
+        label: Zurück zu den Debitoren
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: up
+        }
+        appearance {
+            buttonTemplate: @/icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+            icon: fa-arrow-up
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 50
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Löschen
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+                t-Button--simple
+            ]
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P51_DEBI_ID
+        }
+        confirmation {
+            message: Debitor wirklich löschen? Die zugewiesenen Bankbuchungen werden wieder offen.
+            style: danger
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 20
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P51_DEBI_ID
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Anlegen
+        layout {
+            sequence: 30
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P51_DEBI_ID
+        }
+    )
+
+    process initialize-form-debitor (
+        name: Formular Debitor initialisieren
+        type: formInitialization
+        formRegion: @debitor
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process aus-buchung (
+        name: Debitor aus Bankbuchung anlegen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- Button "Debitor anlegen" auf Seite 30: anlegen, Buchung zuweisen, danach im Formular bearbeiten
+                begin
+                    :P51_DEBI_ID := FAKT_DEBITOR.aus_buchung(:P51_BKUM_ID);
+                    apex_application.g_print_success_message := 'Debitor aus der Bankbuchung angelegt und zugewiesen – bitte Angaben prüfen und speichern.';
+                exception
+                    when others then
+                        if sqlcode <> -20280 then raise; end if;
+                        -- Seite neu geladen: Buchung ist schon zugewiesen -> diesen Debitor zeigen
+                        select max(BKUM_DEBI_ID) into :P51_DEBI_ID from FAKT_BANKUMSAETZE where BKUM_ID = :P51_BKUM_ID;
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :REQUEST = 'ANLEGEN' and :P51_BKUM_ID is not null and :P51_DEBI_ID is null
+        }
+    )
+
+    process kopf (
+        name: Mandant prüfen, Titel, Posten, Zuweisen/Aufheben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    if :P51_DEBI_ID is not null and :P51_DEBI_MAND_ID <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Dieser Debitor gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    :P51_TITEL := case when :P51_DEBI_ID is null then 'Neuer Debitor' else 'Debitor ' || :P51_DEBI_NAME end;
+                    if :P51_DEBI_ID is null then
+                        :P51_BKUM_ID := null;
+                    else
+                        -- Link "Zuweisen" bzw. "Aufheben" (Request aus der URL); ein Neuladen der Seite schadet nicht
+                        if :REQUEST = 'ZUWEISEN' and :P51_BKUM_ID is not null then
+                            begin
+                                FAKT_DEBITOR.zuweisen(:P51_BKUM_ID, :P51_DEBI_ID);
+                                apex_application.g_print_success_message := 'Zahlungseingang zugewiesen.';
+                            exception
+                                when others then
+                                    if sqlcode <> -20280 then raise; end if;   -- schon zugewiesen
+                            end;
+                        elsif :REQUEST = 'AUFHEBEN' and :P51_DZAH_ID is not null then
+                            FAKT_DEBITOR.aufheben(:P51_DZAH_ID);
+                            apex_application.g_print_success_message := 'Zuweisung aufgehoben – die Buchung ist wieder offen.';
+                        end if;
+                        -- nach Zuweisen/Aufheben die Registerkarte Zahlungen zeigen (thg.js)
+                        :P51_RDS_START := case when :REQUEST in ('ZUWEISEN', 'AUFHEBEN') then 'Zahlungen' end;
+                        :P51_BKUM_ID := null;
+                        :P51_DZAH_ID := null;
+                        FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID, :P51_DEBI_ID);
+                    end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: beforeHeader
+        }
+    )
+
+    process zahlungen-freigeben (
+        name: Vor dem Löschen Zuweisungen aufheben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                for z in (select DZAH_ID from FAKT_DEBITOR_ZAHLUNGEN where DZAH_DEBI_ID = :P51_DEBI_ID) loop
+                    FAKT_DEBITOR.aufheben(z.DZAH_ID);
+                end loop;
+                :P51_MELDUNG := 'Debitor gelöscht.';
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            whenButtonPressed: @delete
+        }
+    )
+
+    process meldung (
+        name: Meldung beim Speichern
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                :P51_MELDUNG := 'Debitor gespeichert.';
+                ```
+        }
+        execution {
+            sequence: 6
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    process process-form-debitor (
+        name: Formular Debitor verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @debitor
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: &P51_MELDUNG.
+        }
+    )
+
+    process planen (
+        name: Posten planen, Bank abgleichen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_anz pls_integer;
+                begin
+                    FAKT_DEBITOR.planen(:P51_DEBI_ID);
+                    -- offene Eingaenge mit passender IBAN bzw. passendem Namen gleich zuweisen
+                    l_anz := FAKT_BANK.abgleichen(:MANDANT_ID);
+                    if l_anz > 0 then
+                        apex_application.g_print_success_message := 'Debitor gespeichert. Bankabgleich: ' || l_anz || ' Zahlungseingänge zugeordnet.';
+                    end if;
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    branch nach-speichern (
+        name: Debitor wieder öffnen
+        execution {
+            sequence: 10
+        }
+        behavior {
+            target: {
+                page: 51
+                items: {
+                    P51_DEBI_ID: &P51_DEBI_ID.
+                }
+            }
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    branch nach-loeschen (
+        name: Zur Liste
+        execution {
+            sequence: 20
+        }
+        behavior {
+            target: {
+                page: 50
+            }
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: DELETE
+        }
+    )
+
+)

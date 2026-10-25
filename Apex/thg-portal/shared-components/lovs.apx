@@ -690,3 +690,41 @@ lov lov-standorttypen (
         display: D
     }
 )
+
+lov lov-debitor-intervall (
+    name: LOV_DEBITOR_INTERVALL
+    source {
+        location: staticValues
+    }
+
+    entry einmalig (
+        sequence: 1
+        display: Einmalig
+        return: EINMALIG
+    )
+
+    entry monatlich (
+        sequence: 2
+        display: Monatlich
+        return: MONATLICH
+    )
+
+    entry quartal (
+        sequence: 3
+        display: Vierteljährlich
+        return: QUARTAL
+    )
+
+    entry halbjaehrlich (
+        sequence: 4
+        display: Halbjährlich
+        return: HALBJAEHRLICH
+    )
+
+    entry jaehrlich (
+        sequence: 5
+        display: Jährlich
+        return: JAEHRLICH
+    )
+
+)

@@ -2754,10 +2754,10 @@ def bericht(sid, name, seq, sql, spalten, leer, extra_region=""):
 """ + ("""            security {
                 escapeSpecialChars: false
             }
-""" if html else "") + """            sorting {
+""" if html else "") + ("" if h is None else """            sorting {
                 sortable: false
             }
-        )
+""") + """        )
 
 """
     return s + "    )\n\n"
@@ -2775,7 +2775,8 @@ def seite_30():
                 ```html
                 <p>Kontoauszug als CAMT-Datei (XML, z.&nbsp;B. ELBA-Export „camt.052“ oder „camt.053“) des Kontos von
                 &MANDANT_NAME. hochladen. Die Zahlungseingänge werden automatisch den offenen Rechnungen zugeordnet –
-                über die Zahlungsreferenz, die Rechnungsnummer im Verwendungszweck oder den offenen Betrag und den Kunden.</p>
+                über die Zahlungsreferenz, die Rechnungsnummer im Verwendungszweck oder den offenen Betrag und den Kunden –,
+                sonst den Debitoren (z.&nbsp;B. Mieter) über die IBAN bzw. den Namen des Zahlers.</p>
                 ```
         }
 """)
@@ -2828,10 +2829,16 @@ def seite_30():
                        u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
                        trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
                        '<span class="' || case u.BKUM_STATUS when 'ZUGEORDNET' then 'u-success-text'
+                                                             when 'DEBITOR' then 'u-success-text'
                                                              when 'BEREITS_BEZAHLT' then 'u-info-text'
                                                              when 'OFFEN' then 'u-warning-text' end || '">'
                        || apex_escape.html(FAKT_BANK.status_text(u.BKUM_STATUS)) || '</span>' as STATUS,
-                       case when g.GUTS_ID is not null then
+                       case when d.DEBI_ID is not null then
+                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_clear_cache => '51',
+                                                                                       p_items => 'P51_DEBI_ID',
+                                                                                       p_values => d.DEBI_ID))
+                           || '">Debitor ' || apex_escape.html(d.DEBI_NAME) || '</a>'
+                            when g.GUTS_ID is not null then
                            '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
                                                                                        p_items => 'P41_GUTS_ID',
                                                                                        p_values => g.GUTS_ID))
@@ -2842,17 +2849,27 @@ def seite_30():
                                                                                        p_values => r.RECH_ID))
                            || '">' || apex_escape.html(r.RECH_NUMMER) || '</a>'
                        end as RECHNUNG,
-                       u.BKUM_ZUORDNUNG as ZUORDNUNG
+                       u.BKUM_ZUORDNUNG as ZUORDNUNG,
+                       -- nicht zuordenbarer Eingang: Debitor daraus anlegen (Seite 51 mit Request ANLEGEN), danach bearbeiten
+                       case when u.BKUM_STATUS = 'OFFEN' and u.BKUM_RECH_ID is null and u.BKUM_GUTS_ID is null then
+                           '<a class="t-Button t-Button--small t-Button--icon t-Button--iconLeft" href="'
+                           || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_clear_cache => '51',
+                                                                           p_items => 'P51_BKUM_ID', p_values => u.BKUM_ID,
+                                                                           p_request => 'ANLEGEN'))
+                           || '" title="Debitor aus dieser Buchung anlegen und zuweisen"><span class="t-Icon t-Icon--left fa fa-user-plus" aria-hidden="true"></span>'
+                           || 'Debitor anlegen</a>'
+                       end as AKTION
                   from FAKT_BANKUMSAETZE u
                   left join FAKT_RECHNUNGEN r on r.RECH_ID = u.BKUM_RECH_ID
                   left join FAKT_GUTSCHRIFTEN g on g.GUTS_ID = u.BKUM_GUTS_ID
+                  left join FAKT_DEBITOREN d on d.DEBI_ID = u.BKUM_DEBI_ID
                  where u.BKUM_MAND_ID = :MANDANT_ID
                    and u.BKUM_RICHTUNG = 'CRDT'
                  order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc""",
                  [("DATUM", "Datum", False, False), ("BETRAG", "Betrag", False, True),
                   ("AUFTRAGGEBER", "Auftraggeber", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False),
-                  ("STATUS", "Status", True, False), ("RECHNUNG", "Rechnung / Gutschrift", True, False),
-                  ("ZUORDNUNG", "Zuordnung", False, False)],
+                  ("STATUS", "Status", True, False), ("RECHNUNG", "Rechnung / Gutschrift / Debitor", True, False),
+                  ("ZUORDNUNG", "Zuordnung", False, False), ("AKTION", "Aktion", True, False)],
                  "Noch keine Zahlungseingänge – bitte eine Bankdatei hochladen.")
     s += bericht("dateien", "Hochgeladene Bankdateien", 30, """                select to_char(from_tz(d.BKDT_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
                        d.BKDT_CREATED_BY as VON,
@@ -4275,6 +4292,551 @@ def seite_15():
 """
     return s
 
+FEHLER = """                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;"""
+
+
+def facette(name, label, spalte, seq, extra=""):
+    return f"""        facet {name} (
+            type: checkboxGroup
+            label {{
+                label: {label}
+            }}
+            lov {{
+                type: distinctValues
+            }}
+            layout {{
+                sequence: {seq}
+            }}
+            listEntries {{
+                maxDisplayedEntries: 7
+            }}
+            source {{
+                databaseColumn: {spalte}
+            }}
+{extra}        )
+
+"""
+
+
+def seite_50():
+    """Debitoren (Menuepunkt): Zahler ohne Rechnung/Gutschrift (z. B. Mieter) des Mandanten der Sitzung – Liste mit
+    Facettensuche (Aktiv, Intervall, Rueckstand). Fehlende Posten werden beim Oeffnen erzeugt (FAKT_DEBITOR)."""
+    s = KOPF(50, "Debitoren", "DEBITOREN").replace("pageTemplate: @/standard", "pageTemplate: @/left-side-column")
+    s += BREADCRUMB("Debitoren")
+    s += """    region facets (
+        name: Facetten
+        type: facetedSearch
+        source {
+            filteredRegion: @debitoren
+        }
+        layout {
+            sequence: 20
+            slot: leftColumn
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            compactNosThreshold: 10000
+            displayChartForTopNValues: 10
+        }
+
+        facet P50_SEARCH (
+            type: search
+            label {
+                label: Suche
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+""" + facette("P50_AKTIV", "Aktiv", "AKTIV", 20) + facette("P50_INTERVALL", "Intervall", "INTERVALL", 30) \
+        + facette("P50_RUECKSTAND", "Mit Rückstand", "MIT_RUECKSTAND", 40) + "    )\n\n"
+    s += bericht("debitoren", "Debitoren", 30, """                -- Debitoren des im Portal gewaehlten Mandanten; Rueckstand = ueberfaellige offene Posten
+                select '<a class="thg-kundennr" href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_clear_cache => '51',
+                                                                                                      p_items => 'P51_DEBI_ID',
+                                                                                                      p_values => d.DEBI_ID))
+                       || '">' || apex_escape.html(d.DEBI_NAME) || '</a>' as NAME_LINK,
+                       d.DEBI_NAME,
+                       d.DEBI_BEZEICHNUNG as BEZEICHNUNG,
+                       FAKT_HISTORIE.betrag(d.DEBI_BETRAG) as BETRAG,
+                       FAKT_DEBITOR.intervall_text(d.DEBI_INTERVALL) as INTERVALL,
+                       to_char(d.NAECHSTE_FAELLIGKEIT, 'DD.MM.YYYY') as NAECHSTE,
+                       case when d.RUECKSTAND > 0 then '<span class="u-danger-text">' || FAKT_HISTORIE.betrag(d.RUECKSTAND) || '</span>'
+                            else '<span class="u-success-text">–</span>' end as RUECKSTAND,
+                       to_char(d.LETZTE_ZAHLUNG, 'DD.MM.YYYY') as LETZTE_ZAHLUNG,
+                       FAKT_RECHNUNG.referenz_anzeige(d.DEBI_IBAN) as IBAN,
+                       case d.DEBI_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as AKTIV,
+                       case when d.RUECKSTAND > 0 then 'Ja' else 'Nein' end as MIT_RUECKSTAND
+                  from FAKT_DEBITOREN_V d
+                 where d.DEBI_MAND_ID = :MANDANT_ID
+                 order by upper(d.DEBI_NAME)""",
+                 [("NAME_LINK", "Debitor", True, False), ("DEBI_NAME", None, False, False),
+                  ("BEZEICHNUNG", "Bezeichnung", False, False), ("BETRAG", "Betrag", False, True),
+                  ("INTERVALL", "Intervall", False, False), ("NAECHSTE", "Nächste Fälligkeit", False, False),
+                  ("RUECKSTAND", "Rückstand", True, True), ("LETZTE_ZAHLUNG", "Letzte Zahlung", False, False),
+                  ("IBAN", "IBAN des Zahlers", False, False), ("AKTIV", None, False, False),
+                  ("MIT_RUECKSTAND", None, False, False)],
+                 "Keine Debitoren gefunden.").replace(
+        "            templateOptions: #DEFAULT#\n        }\n        componentAppearance",
+        "            templateOptions: [\n                #DEFAULT#\n                t-Region--noPadding\n                t-Region--scrollBody\n"
+        "            ]\n        }\n        componentAppearance", 1)
+    s += button("reset", "RESET", "Zurücksetzen", 10, "breadcrumb", "next", "@/text-with-icon",
+                icon="fa-undo-alt", options="[\n                t-Button--noUI\n                t-Button--iconLeft\n                t-Button--gapRight\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 50
+                clearCache: 50
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+""")
+    s += button("neu", "CREATE", "Neuer Debitor", 20, "breadcrumb", "next", "@/text-with-icon", hot=True,
+                icon="fa-plus", options="[\n                #DEFAULT#\n                t-Button--iconRight\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 51
+                clearCache: 51
+            }
+""")
+    s += """    process posten-erzeugen (
+        name: Fällige Posten erzeugen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID);
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+)
+"""
+    return s
+
+
+def seite_51():
+    """Debitor: Registerkarten Stammdaten (Name, Bezeichnung, Betrag, Intervall, faellig ab/bis, IBAN des Zahlers, Kunde,
+    aktiv) und Zahlungen (Faelligkeiten mit Zahlungsstand, Zahlungseingaenge aus der Bankdatei mit "Aufheben",
+    offene Bankeingaenge mit "Zuweisen"). Speichern plant die kuenftigen Posten neu und gleicht die Bank ab."""
+    f = dict(form="debitor")
+    TAB = "        advanced {\n            regionDisplaySelector: true\n        }\n"
+    OHNE_KOPF = "[\n                #DEFAULT#\n                t-Region--removeHeader js-removeLandmark\n            ]"
+    s = KOPF(51, "Debitor", "DEBITOR") + BREADCRUMB("&P51_TITEL.")
+    s += """    region debitor (
+        name: Debitor
+        type: form
+        source {
+            location: localDatabase
+            tableName: FAKT_DEBITOREN
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+    region rds (
+        name: Bereiche
+        type: regionDisplaySelector
+        layout {
+            sequence: 5
+            slot: fullWidthContent
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+            cssClasses: [
+                u-padding-inline-dynamic
+                thg-rds
+            ]
+        }
+        settings {
+            includeShowAll: true
+            rememberSelection: false
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P51_DEBI_ID
+        }
+    )
+
+"""
+    s += region("stammdaten", "Stammdaten", 10, parent="debitor", extra=TAB, options=OHNE_KOPF)
+    a = "stammdaten"
+    for nr, (name, col, dflt) in enumerate((("P51_DEBI_ID", "DEBI_ID", None), ("P51_DEBI_MAND_ID", "DEBI_MAND_ID", "MANDANT_ID")), 1):
+        s += f"""    pageItem {name} (
+        type: hidden
+        layout {{
+            sequence: {nr}
+            region: @{a}
+            slot: regionBody
+        }}
+        source {{
+            formRegion: @debitor
+            column: {col}
+            dataType: number
+""" + ("            primaryKey: true\n" if nr == 1 else "") + """        }
+""" + (f"""        default {{
+            type: item
+            item: {dflt}
+        }}
+""" if dflt else "") + """        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+"""
+    for nr, name in enumerate(("P51_TITEL", "P51_BKUM_ID", "P51_DZAH_ID", "P51_RDS_START", "P51_MELDUNG"), 3):
+        s += f"""    pageItem {name} (
+        type: hidden
+        layout {{
+            sequence: {nr}
+            region: @{a}
+            slot: regionBody
+        }}
+""" + ("" if name in ("P51_TITEL", "P51_RDS_START", "P51_MELDUNG") else """        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+""") + "    )\n\n"
+    s += item("P51_DEBI_NAME", "textField", "Name (Zahler)", 10, a, col="DEBI_NAME", req=True, maxlen=200, spalten=6, **f)
+    s += item("P51_DEBI_BEZEICHNUNG", "textField", "Bezeichnung (z. B. Miete Wohnung Top 3)", 20, a, col="DEBI_BEZEICHNUNG",
+              maxlen=200, neue_zeile=False, spalten=6, **f)
+    s += maske(item("P51_DEBI_BETRAG", "numberField", "Zu überweisender Betrag €", 30, a, col="DEBI_BETRAG", dtype="number",
+                    req=True, spalten=3, **f), "999G999G990D00")
+    s += item("P51_DEBI_INTERVALL", "selectList", "Intervall", 40, a, col="DEBI_INTERVALL", req=True, neue_zeile=False,
+              spalten=3, extra=lov("lov-debitor-intervall") + """        default {
+            type: static
+            staticValue: MONATLICH
+        }
+""", **f)
+    s += item("P51_DEBI_FAELLIG_AB", "datePicker", "Fällig ab (erste Fälligkeit)", 50, a, col="DEBI_FAELLIG_AB", dtype="date",
+              req=True, neue_zeile=False, spalten=3, **f)
+    s += item("P51_DEBI_FAELLIG_BIS", "datePicker", "Fällig bis (leer = unbefristet)", 60, a, col="DEBI_FAELLIG_BIS",
+              dtype="date", neue_zeile=False, spalten=3, **f)
+    s += item("P51_DEBI_IBAN", "textField", "IBAN des Zahlers (Bankabgleich, wird bei der ersten Zuweisung übernommen)", 70, a,
+              col="DEBI_IBAN", maxlen=34, spalten=6, **f)
+    s += item("P51_DEBI_KUND_ID", "selectList", "Kunde (optional)", 80, a, col="DEBI_KUND_ID", dtype="number",
+              neue_zeile=False, spalten=4, extra=lov("lov-kunden", "- kein Kunde -"), **f)
+    s += item("P51_DEBI_IST_AKTIV", "switch", "Aktiv", 90, a, col="DEBI_IST_AKTIV", neue_zeile=False, spalten=2,
+              extra=SWITCH("Y"), **f)
+    s += item("P51_DEBI_BEMERKUNG", "textarea", "Bemerkung", 100, a, col="DEBI_BEMERKUNG", maxlen=1000, spalten=12, **f)
+
+    # Registerkarte Zahlungen: Faelligkeiten, Zahlungseingaenge (Bank), offene Bankeingaenge zuweisen
+    s += region("zahlungen", "Zahlungen", 30, extra=TAB + NICHT_NULL("P51_DEBI_ID"), options=OHNE_KOPF)
+    def in_tab(txt, seq):
+        return txt.replace(f"            sequence: {seq}\n            slot: body\n",
+                           f"            sequence: {seq}\n            parentRegion: @zahlungen\n            slot: subRegions\n", 1)
+    s += in_tab(bericht("faelligkeiten", "Fälligkeiten", 10, """                -- Zahlungen decken die aeltesten Posten zuerst (FAKT_DEBITOR_POSTEN_V); neueste Faelligkeit oben
+                select to_char(v.FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG_AM,
+                       FAKT_HISTORIE.betrag(v.BETRAG) as BETRAG,
+                       FAKT_HISTORIE.betrag(v.BEZAHLT) as BEZAHLT,
+                       FAKT_HISTORIE.betrag(v.OFFEN) as OFFEN,
+                       '<span class="fa ' || case when v.STATUS = 'BEZAHLT' then 'fa-check-circle u-success-text'
+                                                  when v.IST_UEBERFAELLIG = 'Y' then 'fa-exclamation-triangle u-danger-text'
+                                                  when v.STATUS = 'TEILBEZAHLT' then 'fa-adjust u-warning-text'
+                                                  else 'fa-clock-o u-info-text' end || '" aria-hidden="true"></span> '
+                       || case when v.IST_UEBERFAELLIG = 'Y' and v.STATUS = 'OFFEN' then 'Überfällig'
+                               else FAKT_DEBITOR.status_text(v.STATUS) end as STATUS,
+                       to_char(v.BEZAHLT_AM, 'DD.MM.YYYY') as BEZAHLT_AM
+                  from FAKT_DEBITOR_POSTEN_V v
+                 where v.DEBI_ID = :P51_DEBI_ID
+                 order by v.FAELLIG_AM desc""",
+                 [("FAELLIG_AM", "Fällig am", False, False), ("BETRAG", "Betrag", False, True),
+                  ("BEZAHLT", "Bezahlt", False, True), ("OFFEN", "Offen", False, True),
+                  ("STATUS", "Status", True, False), ("BEZAHLT_AM", "Bezahlt am", False, False)],
+                 "Noch keine Fälligkeiten."), 10)
+    s += in_tab(bericht("eingaenge", "Zahlungseingänge laut Bankdatei", 20, """                select to_char(z.DZAH_DATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(z.DZAH_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       u.BKUM_ZUORDNUNG as ZUORDNUNG,
+                       '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_items => 'P51_DEBI_ID,P51_DZAH_ID',
+                                                                                   p_values => z.DZAH_DEBI_ID || ',' || z.DZAH_ID,
+                                                                                   p_request => 'AUFHEBEN'))
+                       || '" title="Zuweisung aufheben – die Buchung ist danach wieder offen"><span class="fa fa-unlink" aria-hidden="true"></span> Aufheben</a>' as AKTION
+                  from FAKT_DEBITOR_ZAHLUNGEN z
+                  left join FAKT_BANKUMSAETZE u on u.BKUM_ID = z.DZAH_BKUM_ID
+                 where z.DZAH_DEBI_ID = :P51_DEBI_ID
+                 order by z.DZAH_DATUM desc, z.DZAH_ID desc""",
+                 [("DATUM", "Datum", False, False), ("BETRAG", "Betrag", False, True),
+                  ("AUFTRAGGEBER", "Auftraggeber", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False),
+                  ("ZUORDNUNG", "Zuordnung", False, False), ("AKTION", "Aktion", True, False)],
+                 "Noch keine Zahlungen – Zahlungseingänge kommen aus der Bankdatei (Menüpunkt Bankdatei hochladen)."), 20)
+    s += in_tab(bericht("bank-offen", "Offene Bankeingänge zuweisen", 30, """                -- nicht zugeordnete Eingaenge des Mandanten (ohne erkannte Rechnung/Gutschrift); passender Name zuerst
+                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       FAKT_RECHNUNG.referenz_anzeige(u.BKUM_GEGEN_IBAN) as IBAN,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_items => 'P51_DEBI_ID,P51_BKUM_ID',
+                                                                                   p_values => d.DEBI_ID || ',' || u.BKUM_ID,
+                                                                                   p_request => 'ZUWEISEN'))
+                       || '" title="Diesem Debitor zuweisen"><span class="fa fa-link" aria-hidden="true"></span> Zuweisen</a>' as AKTION
+                  from FAKT_BANKUMSAETZE u
+                  join FAKT_DEBITOREN d on d.DEBI_ID = :P51_DEBI_ID
+                 where u.BKUM_MAND_ID = d.DEBI_MAND_ID
+                   and u.BKUM_RICHTUNG = 'CRDT' and u.BKUM_STATUS = 'OFFEN'
+                   and u.BKUM_RECH_ID is null and u.BKUM_GUTS_ID is null
+                 order by case when FAKT_DEBITOR.name_passt(d.DEBI_NAME, u.BKUM_GEGEN_NAME) = 'Y'
+                                 or replace(upper(u.BKUM_GEGEN_IBAN), ' ') = d.DEBI_IBAN then 0 else 1 end,
+                          u.BKUM_BUCHUNGSDATUM desc""",
+                 [("DATUM", "Datum", False, False), ("BETRAG", "Betrag", False, True),
+                  ("AUFTRAGGEBER", "Auftraggeber", False, False), ("IBAN", "IBAN", False, False),
+                  ("VERWENDUNGSZWECK", "Verwendungszweck", False, False), ("AKTION", "Aktion", True, False)],
+                 "Keine offenen Bankeingänge."), 30)
+
+    # Kopf-Buttons
+    s += button("up", "UP", "Zurück zu den Debitoren", 10, "breadcrumb", "up", "@/icon", icon="fa-arrow-up",
+                options="[\n                #DEFAULT#\n                t-Button--noUI\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 50
+            }
+            warnOnUnsavedChanges: doNotCheck
+""")
+    s += button("delete", "DELETE", "Löschen", 10, "breadcrumb", "next",
+                options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n            ]",
+                verhalten="""            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+""", bedingung=NICHT_NULL("P51_DEBI_ID") + """        confirmation {
+            message: Debitor wirklich löschen? Die zugewiesenen Bankbuchungen werden wieder offen.
+            style: danger
+        }
+""")
+    s += button("save", "SAVE", "Speichern", 20, "breadcrumb", "next", hot=True,
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
+                bedingung=NICHT_NULL("P51_DEBI_ID"))
+    s += button("create", "CREATE", "Anlegen", 30, "breadcrumb", "next", hot=True,
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: insert\n",
+                bedingung=NULL("P51_DEBI_ID"))
+
+    s += f"""    process initialize-form-debitor (
+        name: Formular Debitor initialisieren
+        type: formInitialization
+        formRegion: @debitor
+        execution {{
+            sequence: 10
+            point: beforeHeader
+        }}
+    )
+
+    process aus-buchung (
+        name: Debitor aus Bankbuchung anlegen
+        type: executeCode
+        source {{
+            plsqlCode:
+                ```plsql
+                -- Button "Debitor anlegen" auf Seite 30: anlegen, Buchung zuweisen, danach im Formular bearbeiten
+                begin
+                    :P51_DEBI_ID := FAKT_DEBITOR.aus_buchung(:P51_BKUM_ID);
+                    apex_application.g_print_success_message := 'Debitor aus der Bankbuchung angelegt und zugewiesen – bitte Angaben prüfen und speichern.';
+                exception
+                    when others then
+                        if sqlcode <> -20280 then raise; end if;
+                        -- Seite neu geladen: Buchung ist schon zugewiesen -> diesen Debitor zeigen
+                        select max(BKUM_DEBI_ID) into :P51_DEBI_ID from FAKT_BANKUMSAETZE where BKUM_ID = :P51_BKUM_ID;
+                end;
+                ```
+        }}
+        execution {{
+            sequence: 5
+            point: beforeHeader
+        }}
+        serverSideCondition {{
+            type: expression
+            language: plsql
+            plsqlExpression: :REQUEST = 'ANLEGEN' and :P51_BKUM_ID is not null and :P51_DEBI_ID is null
+        }}
+    )
+
+    process kopf (
+        name: Mandant prüfen, Titel, Posten, Zuweisen/Aufheben
+        type: executeCode
+        source {{
+            plsqlCode:
+                ```plsql
+                begin
+                    if :P51_DEBI_ID is not null and :P51_DEBI_MAND_ID <> :MANDANT_ID then
+                        raise_application_error(-20240, 'Dieser Debitor gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                    end if;
+                    :P51_TITEL := case when :P51_DEBI_ID is null then 'Neuer Debitor' else 'Debitor ' || :P51_DEBI_NAME end;
+                    if :P51_DEBI_ID is null then
+                        :P51_BKUM_ID := null;
+                    else
+                        -- Link "Zuweisen" bzw. "Aufheben" (Request aus der URL); ein Neuladen der Seite schadet nicht
+                        if :REQUEST = 'ZUWEISEN' and :P51_BKUM_ID is not null then
+                            begin
+                                FAKT_DEBITOR.zuweisen(:P51_BKUM_ID, :P51_DEBI_ID);
+                                apex_application.g_print_success_message := 'Zahlungseingang zugewiesen.';
+                            exception
+                                when others then
+                                    if sqlcode <> -20280 then raise; end if;   -- schon zugewiesen
+                            end;
+                        elsif :REQUEST = 'AUFHEBEN' and :P51_DZAH_ID is not null then
+                            FAKT_DEBITOR.aufheben(:P51_DZAH_ID);
+                            apex_application.g_print_success_message := 'Zuweisung aufgehoben – die Buchung ist wieder offen.';
+                        end if;
+                        -- nach Zuweisen/Aufheben die Registerkarte Zahlungen zeigen (thg.js)
+                        :P51_RDS_START := case when :REQUEST in ('ZUWEISEN', 'AUFHEBEN') then 'Zahlungen' end;
+                        :P51_BKUM_ID := null;
+                        :P51_DZAH_ID := null;
+                        FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID, :P51_DEBI_ID);
+                    end if;
+                end;
+                ```
+        }}
+        execution {{
+            sequence: 20
+            point: beforeHeader
+        }}
+    )
+
+    process zahlungen-freigeben (
+        name: Vor dem Löschen Zuweisungen aufheben
+        type: executeCode
+        source {{
+            plsqlCode:
+                ```plsql
+                for z in (select DZAH_ID from FAKT_DEBITOR_ZAHLUNGEN where DZAH_DEBI_ID = :P51_DEBI_ID) loop
+                    FAKT_DEBITOR.aufheben(z.DZAH_ID);
+                end loop;
+                :P51_MELDUNG := 'Debitor gelöscht.';
+                ```
+        }}
+        execution {{
+            sequence: 5
+        }}
+        serverSideCondition {{
+            whenButtonPressed: @delete
+        }}
+    )
+
+    process meldung (
+        name: Meldung beim Speichern
+        type: executeCode
+        source {{
+            plsqlCode:
+                ```plsql
+                :P51_MELDUNG := 'Debitor gespeichert.';
+                ```
+        }}
+        execution {{
+            sequence: 6
+        }}
+        serverSideCondition {{
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }}
+    )
+
+    process process-form-debitor (
+        name: Formular Debitor verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @debitor
+        execution {{
+            sequence: 10
+        }}
+        successMessage {{
+            successMessage: &P51_MELDUNG.
+        }}
+    )
+
+    process planen (
+        name: Posten planen, Bank abgleichen
+        type: executeCode
+        source {{
+            plsqlCode:
+                ```plsql
+                declare
+                    l_anz pls_integer;
+                begin
+                    FAKT_DEBITOR.planen(:P51_DEBI_ID);
+                    -- offene Eingaenge mit passender IBAN bzw. passendem Namen gleich zuweisen
+                    l_anz := FAKT_BANK.abgleichen(:MANDANT_ID);
+                    if l_anz > 0 then
+                        apex_application.g_print_success_message := 'Debitor gespeichert. Bankabgleich: ' || l_anz || ' Zahlungseingänge zugeordnet.';
+                    end if;
+{FEHLER}
+                ```
+        }}
+        execution {{
+            sequence: 20
+        }}
+        serverSideCondition {{
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }}
+    )
+
+    branch nach-speichern (
+        name: Debitor wieder öffnen
+        execution {{
+            sequence: 10
+        }}
+        behavior {{
+            target: {{
+                page: 51
+                items: {{
+                    P51_DEBI_ID: &P51_DEBI_ID.
+                }}
+            }}
+        }}
+        serverSideCondition {{
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }}
+    )
+
+    branch nach-loeschen (
+        name: Zur Liste
+        execution {{
+            sequence: 20
+        }}
+        behavior {{
+            target: {{
+                page: 50
+            }}
+        }}
+        serverSideCondition {{
+            type: requestIsContainedInValue
+            value: DELETE
+        }}
+    )
+
+)
+"""
+    return s
+
+
 def startseite():
     return fdl.dashboard()
 
@@ -4323,6 +4885,28 @@ def listen(lists_apx):
             pages: [
                 40
                 41
+            ]
+        }
+    )
+
+    entry debitoren (
+        label: Debitoren
+        icon {
+            imageIconCssClasses: fa-users
+        }
+        layout {
+            sequence: 23
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                50
+                51
             ]
         }
     )
@@ -4511,6 +5095,38 @@ def breadcrumbs():
         }
     )
 
+    entry debitoren (
+        name: Debitoren
+        pageNumber: 50
+        execution {
+            sequence: 36
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+    )
+
+    entry debitor (
+        name: Debitor
+        pageNumber: 51
+        execution {
+            sequence: 37
+        }
+        appearance {
+            parentEntry: @debitoren
+        }
+        link {
+            target: {
+                page: 51
+            }
+        }
+    )
+
     entry bankdatei (
         name: Bankdatei hochladen
         pageNumber: 30
@@ -4565,7 +5181,8 @@ def breadcrumbs():
 
 LOVS_ABO = ["lov-mandanten", "lov-mitarbeiter", "lov-artikel", "lov-mwst-prozent", "lov-einheiten-code",
             "lov-kunden", "lov-zahlungsbedingungen", "lov-laender",
-            "lov-artikelgruppen", "lov-einheiten", "lov-mwst-saetze"]   # Artikelseiten 20-22
+            "lov-artikelgruppen", "lov-einheiten", "lov-mwst-saetze",   # Artikelseiten 20-22
+            "lov-debitor-intervall"]   # Debitoren Seite 51
 
 
 def lovs_abonnieren():
@@ -4576,7 +5193,12 @@ def lovs_abonnieren():
     for sid in LOVS_ABO:
         muster = rf"lov {re.escape(sid)} \(.*?\n\)\n"
         m = re.search(muster, portal, flags=re.S)
-        blk = m.group(0).replace("    columnMapping {", f"    subscription {{\n        master: @/20000/{sid}\n    }}\n    columnMapping {{", 1)
+        abo = f"    subscription {{\n        master: @/20000/{sid}\n    }}\n"
+        blk = m.group(0)
+        if "    columnMapping {" in blk:
+            blk = blk.replace("    columnMapping {", abo + "    columnMapping {", 1)
+        else:   # statische LOV: Subscription nach der Quelle
+            blk = blk.replace("        location: staticValues\n    }\n", "        location: staticValues\n    }\n" + abo, 1)
         if f"lov {sid} (" in s:   # schon abonniert: Definition auf den Stand des Portals bringen
             s = re.sub(muster, lambda _: blk, s, count=1, flags=re.S)
         else:
@@ -4670,6 +5292,8 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00042-gutschrift-pdf.apx").write_text(seite_42(), encoding="utf-8")
     pdf_seiten()
     (FIN / "pages" / "p00043-gutschrift-anzeigen.apx").write_text(seite_43(), encoding="utf-8")
+    (FIN / "pages" / "p00050-debitoren.apx").write_text(seite_50(), encoding="utf-8")
+    (FIN / "pages" / "p00051-debitor.apx").write_text(seite_51(), encoding="utf-8")
     # Artikelstamm (Seiten aus gen_artikel.py, umnummeriert 10/11/12 -> 20/21/22)
     (FIN / "pages" / "p00020-artikel.apx").write_text(ga.in_finanz(ga.seite_10()), encoding="utf-8")
     (FIN / "pages" / "p00021-artikel-bearbeiten.apx").write_text(ga.in_finanz(ga.seite_11()), encoding="utf-8")

@@ -155,6 +155,28 @@ list navigation-menu (
         }
     )
 
+    entry debitoren (
+        label: Debitoren
+        icon {
+            imageIconCssClasses: fa-users
+        }
+        layout {
+            sequence: 23
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                50
+                51
+            ]
+        }
+    )
+
     entry bankdatei (
         label: Bankdatei hochladen
         icon {

@@ -78,6 +78,38 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry debitoren (
+        name: Debitoren
+        pageNumber: 50
+        execution {
+            sequence: 36
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+    )
+
+    entry debitor (
+        name: Debitor
+        pageNumber: 51
+        execution {
+            sequence: 37
+        }
+        appearance {
+            parentEntry: @debitoren
+        }
+        link {
+            target: {
+                page: 51
+            }
+        }
+    )
+
     entry bankdatei (
         name: Bankdatei hochladen
         pageNumber: 30

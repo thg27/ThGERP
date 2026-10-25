@@ -1,0 +1,396 @@
+page 50 (
+    name: Debitoren
+    alias: DEBITOREN
+    title: Debitoren
+    appearance {
+        pageTemplate: @/left-side-column
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Debitoren
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 5
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                t-BreadcrumbRegion--useRegionTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region facets (
+        name: Facetten
+        type: facetedSearch
+        source {
+            filteredRegion: @debitoren
+        }
+        layout {
+            sequence: 20
+            slot: leftColumn
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            compactNosThreshold: 10000
+            displayChartForTopNValues: 10
+        }
+
+        facet P50_SEARCH (
+            type: search
+            label {
+                label: Suche
+            }
+            layout {
+                sequence: 10
+            }
+        )
+
+        facet P50_AKTIV (
+            type: checkboxGroup
+            label {
+                label: Aktiv
+            }
+            lov {
+                type: distinctValues
+            }
+            layout {
+                sequence: 20
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+            }
+            source {
+                databaseColumn: AKTIV
+            }
+        )
+
+        facet P50_INTERVALL (
+            type: checkboxGroup
+            label {
+                label: Intervall
+            }
+            lov {
+                type: distinctValues
+            }
+            layout {
+                sequence: 30
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+            }
+            source {
+                databaseColumn: INTERVALL
+            }
+        )
+
+        facet P50_RUECKSTAND (
+            type: checkboxGroup
+            label {
+                label: Mit Rückstand
+            }
+            lov {
+                type: distinctValues
+            }
+            layout {
+                sequence: 40
+            }
+            listEntries {
+                maxDisplayedEntries: 7
+            }
+            source {
+                databaseColumn: MIT_RUECKSTAND
+            }
+        )
+
+    )
+
+    region debitoren (
+        name: Debitoren
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Debitoren des im Portal gewaehlten Mandanten; Rueckstand = ueberfaellige offene Posten
+                select '<a class="thg-kundennr" href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_clear_cache => '51',
+                                                                                                      p_items => 'P51_DEBI_ID',
+                                                                                                      p_values => d.DEBI_ID))
+                       || '">' || apex_escape.html(d.DEBI_NAME) || '</a>' as NAME_LINK,
+                       d.DEBI_NAME,
+                       d.DEBI_BEZEICHNUNG as BEZEICHNUNG,
+                       FAKT_HISTORIE.betrag(d.DEBI_BETRAG) as BETRAG,
+                       FAKT_DEBITOR.intervall_text(d.DEBI_INTERVALL) as INTERVALL,
+                       to_char(d.NAECHSTE_FAELLIGKEIT, 'DD.MM.YYYY') as NAECHSTE,
+                       case when d.RUECKSTAND > 0 then '<span class="u-danger-text">' || FAKT_HISTORIE.betrag(d.RUECKSTAND) || '</span>'
+                            else '<span class="u-success-text">–</span>' end as RUECKSTAND,
+                       to_char(d.LETZTE_ZAHLUNG, 'DD.MM.YYYY') as LETZTE_ZAHLUNG,
+                       FAKT_RECHNUNG.referenz_anzeige(d.DEBI_IBAN) as IBAN,
+                       case d.DEBI_IST_AKTIV when 'Y' then 'Ja' else 'Nein' end as AKTIV,
+                       case when d.RUECKSTAND > 0 then 'Ja' else 'Nein' end as MIT_RUECKSTAND
+                  from FAKT_DEBITOREN_V d
+                 where d.DEBI_MAND_ID = :MANDANT_ID
+                 order by upper(d.DEBI_NAME)
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--scrollBody
+            ]
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Keine Debitoren gefunden.
+        }
+
+        column NAME_LINK (
+            type: plainText
+            heading {
+                heading: Debitor
+            }
+            layout {
+                sequence: 10
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column DEBI_NAME (
+            type: hidden
+            layout {
+                sequence: 20
+            }
+        )
+
+        column BEZEICHNUNG (
+            type: plainText
+            heading {
+                heading: Bezeichnung
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column INTERVALL (
+            type: plainText
+            heading {
+                heading: Intervall
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column NAECHSTE (
+            type: plainText
+            heading {
+                heading: Nächste Fälligkeit
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column RUECKSTAND (
+            type: plainText
+            heading {
+                heading: Rückstand
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LETZTE_ZAHLUNG (
+            type: plainText
+            heading {
+                heading: Letzte Zahlung
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column IBAN (
+            type: plainText
+            heading {
+                heading: IBAN des Zahlers
+            }
+            layout {
+                sequence: 90
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AKTIV (
+            type: hidden
+            layout {
+                sequence: 100
+            }
+        )
+
+        column MIT_RUECKSTAND (
+            type: hidden
+            layout {
+                sequence: 110
+            }
+        )
+
+    )
+
+    button reset (
+        buttonName: RESET
+        label: Zurücksetzen
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                t-Button--noUI
+                t-Button--iconLeft
+                t-Button--gapRight
+            ]
+            icon: fa-undo-alt
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 50
+                clearCache: 50
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button neu (
+        buttonName: CREATE
+        label: Neuer Debitor
+        layout {
+            sequence: 20
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconRight
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 51
+                clearCache: 51
+            }
+        }
+    )
+
+    process posten-erzeugen (
+        name: Fällige Posten erzeugen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID);
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+)

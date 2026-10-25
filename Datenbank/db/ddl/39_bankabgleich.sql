@@ -13,7 +13,7 @@
 --      Package FAKT_BANK: einlesen (Datei pruefen, Konto muss zum Mandanten gehoeren), abgleichen
 --        Zuordnung: 1. RF-Zahlungsreferenz, 2. Rechnungsnummer im Text, 3. offener Betrag + Auftraggeber passt zum Kunden.
 --        Offene Rechnung: Zahlung anlegen (Trigger setzen Status/Historie) bzw. gleich hohe Zahlung +-7 Tage verknuepfen.
--- Voraussetzung: 17/18 (Mandanten, Bankverbindungen), 20/21, 36/38 (Zahlungsreferenz)
+-- Voraussetzung: 17/18 (Mandanten, Bankverbindungen), 20/21, 36/38 (Zahlungsreferenz); FAKT_BANK braucht FAKT_DEBITOR (45)
 -- Erzeugt: 2026-10-25
 -- Wiederholbar (DDL_UTIL; create or replace).
 -- =====================================================================
@@ -76,7 +76,7 @@ begin
     DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_UK', 'U', 'BKUM_MAND_ID, BKUM_SCHLUESSEL');
     DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_RICHTUNG_CK', 'C', q'~BKUM_RICHTUNG in ('CRDT', 'DBIT')~');
     DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_STATUS_CK', 'C',
-                         q'~BKUM_STATUS in ('OFFEN', 'ZUGEORDNET', 'BEREITS_BEZAHLT', 'AUSGANG', 'IGNORIERT')~');
+                         q'~BKUM_STATUS in ('OFFEN', 'ZUGEORDNET', 'BEREITS_BEZAHLT', 'AUSGANG', 'IGNORIERT', 'DEBITOR')~');
     DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_MAND_FK', 'R', 'BKUM_MAND_ID references ADMIN_MANDANTEN (MAND_ID)');
     DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_BKDT_FK', 'R', 'BKUM_BKDT_ID references FAKT_BANKDATEIEN (BKDT_ID) on delete set null');
     DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_RECH_FK', 'R', 'BKUM_RECH_ID references FAKT_RECHNUNGEN (RECH_ID) on delete set null');
@@ -621,7 +621,8 @@ create or replace package body FAKT_BANK as
                  where BKUM_ID = u.BKUM_ID;
             end if;
         end loop;
-        return l_zugeordnet;
+        -- danach Debitoren ohne Rechnung (z. B. Mieter): IBAN bzw. Name des Zahlers (Skript 45)
+        return l_zugeordnet + FAKT_DEBITOR.abgleichen(p_mand_id);
     end abgleichen;
 
     function status_text(p_status in varchar2) return varchar2 deterministic is
@@ -631,6 +632,7 @@ create or replace package body FAKT_BANK as
                              when 'BEREITS_BEZAHLT' then 'Rechnung bereits bezahlt'
                              when 'AUSGANG'         then 'Ausgang'
                              when 'IGNORIERT'       then 'Ignoriert'
+                             when 'DEBITOR'         then 'Zugewiesen zu Debitor'
                              else initcap(p_status) end;
     end status_text;
 

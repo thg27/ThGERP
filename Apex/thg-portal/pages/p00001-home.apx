@@ -341,8 +341,15 @@ page 1 (
             list: @module
         }
         layout {
-            sequence: 50
+            sequence: 25
             slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        advanced {
+            htmlDomId: thg-module-einzeilig
         }
         componentAppearance {
             listTemplate: @/cards
@@ -351,7 +358,7 @@ page 1 (
                 u-colors
                 t-Cards--featured force-fa-lg
                 t-Cards--displayIcons
-                t-Cards--3cols
+                t-Cards--cols
                 t-Cards--animColorFill
             ]
         }

@@ -49,6 +49,9 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | FAKT | FAKT_GUTSCHRIFTEN | GUTS | Erhaltene Gutschriften (Gutschriftverfahren) |
 | FAKT | FAKT_GUTSCHRIFT_HISTORIE | GHIS | Historie der Gutschrift (wer, wann, was) |
 | FAKT | FAKT_GUTSCHRIFT_DOKUMENTE | GDOK | Dokumente der Gutschrift (Stundenzettel u.a.) |
+| FAKT | FAKT_DEBITOREN | DEBI | Debitoren ohne Rechnung (z. B. Mieter) mit Betrag und Intervall |
+| FAKT | FAKT_DEBITOR_POSTEN | DPOS | Fällige Beträge eines Debitors |
+| FAKT | FAKT_DEBITOR_ZAHLUNGEN | DZAH | Zahlungen eines Debitors (aus der Bankdatei) |
 
 ## Gruppencodes
 

@@ -353,3 +353,25 @@ body.thg-rds-alle .t-Region.thg-ohne-titel > .t-Region-header .t-Region-title {
 .t-BreadcrumbRegion .t-Breadcrumb-item:has(+ .t-Breadcrumb-item.is-active)::after {
     display: none;
 }
+
+/* Portal-Startseite: Modul-Kacheln immer in einer Zeile, gleich breit (unabhaengig von der Anzahl); schmal untereinander */
+#thg-module-einzeilig {
+    margin-block-end: 48px !important;   /* gleicher Abstand zu den Diagrammen wie unter den Kennzahlen */
+}
+#thg-module-einzeilig .t-Cards {
+    display: flex;
+    flex-wrap: nowrap;
+}
+#thg-module-einzeilig .t-Cards .t-Cards-item {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+}
+@media (max-width: 640px) {
+    #thg-module-einzeilig .t-Cards {
+        flex-wrap: wrap;
+    }
+    #thg-module-einzeilig .t-Cards .t-Cards-item {
+        flex-basis: 100%;
+    }
+}
