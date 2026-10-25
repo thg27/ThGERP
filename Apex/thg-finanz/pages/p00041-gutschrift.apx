@@ -87,6 +87,31 @@ page 41 (
         }
     )
 
+    region pdf (
+        name: Gutschrift des Ausstellers direkt hochladen
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Üblicher Ablauf: Kunde wählen und <b>Anlegen</b>, dann unter <b>Dokumente</b> den Stundenzettel hochladen
+                (vergibt Gutschriftnummer und -datum), an den Aussteller senden und dessen Gutschrift hochladen. Liegt die
+                Gutschrift des Ausstellers schon vor, kann sie hier direkt hochgeladen werden – die Angaben werden ausgelesen.</p>
+                ```
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P41_GUTS_ID
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
     region angaben (
         name: Gutschrift
         type: staticContent
@@ -107,36 +132,11 @@ page 41 (
         }
     )
 
-    region pdf (
-        name: PDF der Gutschrift
-        type: staticContent
-        source {
-            htmlCode:
-                ```html
-                <p>PDF der Gutschrift hochladen: Aussteller, Gutschriftnummer, Datum, fällig am, Betrag und Verwendungszweck
-                werden ausgelesen und vorbelegt – bitte prüfen und speichern. Ist die Gutschrift schon vorhanden, kommt nur ein
-                Hinweis.</p>
-                ```
-        }
-        serverSideCondition {
-            type: itemIsNull
-            item: P41_GUTS_ID
-        }
-        layout {
-            sequence: 10
-            slot: body
-        }
-        appearance {
-            template: @/standard
-            templateOptions: #DEFAULT#
-        }
-    )
-
     pageItem P41_GUTS_ID (
         type: hidden
         layout {
             sequence: 1
-            region: @gutschrift
+            region: @angaben
             slot: regionBody
         }
         source {
@@ -154,7 +154,7 @@ page 41 (
         type: hidden
         layout {
             sequence: 2
-            region: @gutschrift
+            region: @angaben
             slot: regionBody
         }
         source {
@@ -175,7 +175,16 @@ page 41 (
         type: hidden
         layout {
             sequence: 3
-            region: @gutschrift
+            region: @angaben
+            slot: regionBody
+        }
+    )
+
+    pageItem P41_HAT_PDF (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @angaben
             slot: regionBody
         }
     )
@@ -183,7 +192,7 @@ page 41 (
     pageItem P41_DATEI (
         type: fileUpload
         label {
-            label: Gutschrift (PDF)
+            label: Gutschrift des Ausstellers (PDF)
             alignment: left
         }
         display {
@@ -207,6 +216,122 @@ page 41 (
         }
     )
 
+    pageItem P41_GUTS_INTERN_NUMMER (
+        type: displayOnly
+        label {
+            label: Gutschriftnummer
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @angaben
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            cssClasses: thg-hervorheben
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_INTERN_NUMMER
+            dataType: varchar2
+        }
+    )
+
+    pageItem P41_GUTS_DATUM (
+        type: displayOnly
+        label {
+            label: Gutschriftdatum
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @angaben
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            cssClasses: thg-hervorheben
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_DATUM
+            dataType: date
+        }
+    )
+
+    pageItem P41_GUTS_STATUS (
+        type: displayOnly
+        label {
+            label: Status
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @angaben
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_STATUS
+            dataType: varchar2
+        }
+        settings {
+            basedOn: lov
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select FAKT_GUTSCHRIFT.status_text(column_value) d, column_value r
+                  from table(sys.odcivarchar2list('ENTWURF', 'GESENDET', 'OFFEN', 'BEZAHLT'))
+                ```
+        }
+        default {
+            type: static
+            staticValue: ENTWURF
+        }
+    )
+
+    pageItem P41_GUTS_BEZAHLT_AM (
+        type: datePicker
+        label {
+            label: Bezahlt am (Bankabgleich oder von Hand)
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @angaben
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_BEZAHLT_AM
+            dataType: date
+        }
+    )
+
     pageItem P41_GUTS_KUND_ID (
         type: selectList
         label {
@@ -214,7 +339,7 @@ page 41 (
             alignment: left
         }
         layout {
-            sequence: 10
+            sequence: 50
             region: @angaben
             slot: regionBody
             columnSpan: 6
@@ -248,7 +373,7 @@ page 41 (
             alignment: left
         }
         layout {
-            sequence: 20
+            sequence: 60
             region: @angaben
             slot: regionBody
             startNewRow: false
@@ -272,11 +397,11 @@ page 41 (
     pageItem P41_GUTS_NUMMER (
         type: textField
         label {
-            label: Gutschriftnummer
+            label: Nummer beim Aussteller
             alignment: left
         }
         layout {
-            sequence: 30
+            sequence: 70
             region: @angaben
             slot: regionBody
             columnSpan: 3
@@ -296,14 +421,14 @@ page 41 (
         }
     )
 
-    pageItem P41_GUTS_DATUM (
+    pageItem P41_GUTS_AUSSTELLER_DATUM (
         type: datePicker
         label {
-            label: Gutschriftdatum
+            label: Datum beim Aussteller
             alignment: left
         }
         layout {
-            sequence: 40
+            sequence: 80
             region: @angaben
             slot: regionBody
             startNewRow: false
@@ -311,16 +436,13 @@ page 41 (
             alignment: left
         }
         appearance {
-            template: @/required-floating
+            template: @/optional-floating
             templateOptions: #DEFAULT#
         }
         source {
             formRegion: @gutschrift
-            column: GUTS_DATUM
+            column: GUTS_AUSSTELLER_DATUM
             dataType: date
-        }
-        validation {
-            valueRequired: true
         }
     )
 
@@ -331,7 +453,7 @@ page 41 (
             alignment: left
         }
         layout {
-            sequence: 50
+            sequence: 90
             region: @angaben
             slot: regionBody
             startNewRow: false
@@ -349,35 +471,6 @@ page 41 (
         }
     )
 
-    pageItem P41_GUTS_BETRAG (
-        type: numberField
-        label {
-            label: Betrag
-            alignment: left
-        }
-        layout {
-            sequence: 60
-            region: @angaben
-            slot: regionBody
-            startNewRow: false
-            columnSpan: 3
-            alignment: left
-        }
-        appearance {
-            template: @/required-floating
-            templateOptions: #DEFAULT#
-            formatMask: 999G999G990D00
-        }
-        source {
-            formRegion: @gutschrift
-            column: GUTS_BETRAG
-            dataType: number
-        }
-        validation {
-            valueRequired: true
-        }
-    )
-
     pageItem P41_GUTS_SKONTO_PROZENT (
         type: numberField
         label {
@@ -385,9 +478,10 @@ page 41 (
             alignment: left
         }
         layout {
-            sequence: 65
+            sequence: 100
             region: @angaben
             slot: regionBody
+            startNewRow: false
             columnSpan: 3
             alignment: left
         }
@@ -403,6 +497,57 @@ page 41 (
         }
     )
 
+    pageItem P41_GUTS_NETTO (
+        type: numberField
+        label {
+            label: Netto €
+            alignment: left
+        }
+        layout {
+            sequence: 110
+            region: @angaben
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            formatMask: 999G999G990D00
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_NETTO
+            dataType: number
+        }
+    )
+
+    pageItem P41_GUTS_BETRAG (
+        type: numberField
+        label {
+            label: Betrag (brutto) €
+            alignment: left
+        }
+        layout {
+            sequence: 120
+            region: @angaben
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            formatMask: 999G999G990D00
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_BETRAG
+            dataType: number
+        }
+    )
+
     pageItem P41_GUTS_ZAHLBETRAG (
         type: displayOnly
         label {
@@ -410,7 +555,7 @@ page 41 (
             alignment: left
         }
         layout {
-            sequence: 66
+            sequence: 130
             region: @angaben
             slot: regionBody
             startNewRow: false
@@ -436,7 +581,7 @@ page 41 (
             alignment: left
         }
         layout {
-            sequence: 70
+            sequence: 140
             region: @angaben
             slot: regionBody
             columnSpan: 12
@@ -463,7 +608,7 @@ page 41 (
             alignment: left
         }
         layout {
-            sequence: 80
+            sequence: 150
             region: @angaben
             slot: regionBody
             columnSpan: 12
@@ -483,88 +628,15 @@ page 41 (
         }
     )
 
-    pageItem P41_GUTS_STATUS (
-        type: displayOnly
-        label {
-            label: Status
-            alignment: left
-        }
-        layout {
-            sequence: 90
-            region: @angaben
-            slot: regionBody
-            columnSpan: 3
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @gutschrift
-            column: GUTS_STATUS
-            dataType: varchar2
-        }
-        settings {
-            basedOn: lov
-        }
-        lov {
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select FAKT_GUTSCHRIFT.status_text(column_value) d, column_value r
-                  from table(sys.odcivarchar2list('OFFEN', 'BEZAHLT'))
-                ```
-        }
-        default {
-            type: static
-            staticValue: OFFEN
-        }
-    )
-
-    pageItem P41_GUTS_BEZAHLT_AM (
-        type: datePicker
-        label {
-            label: Bezahlt am (Bankabgleich oder von Hand)
-            alignment: left
-        }
-        layout {
-            sequence: 100
-            region: @angaben
-            slot: regionBody
-            startNewRow: false
-            columnSpan: 3
-            alignment: left
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        source {
-            formRegion: @gutschrift
-            column: GUTS_BEZAHLT_AM
-            dataType: date
-        }
-    )
-
     region dokumente (
         name: Dokumente
-        type: classicReport
-        source {
-            location: localDatabase
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 43, p_clear_cache => '43',
-                                                                                   p_items => 'P43_GUTS_ID', p_values => g.GUTS_ID))
-                       || '" title="Anzeigen"><span class="fa fa-file-pdf-o" aria-hidden="true"></span></a>' as ANZEIGEN,
-                       g.GUTS_DATEINAME as DATEI,
-                       to_char(round(dbms_lob.getlength(g.GUTS_DATEI) / 1024), 'FM999G999G990') || ' KB' as GROESSE,
-                       to_char(from_tz(g.GUTS_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
-                       g.GUTS_CREATED_BY as VON
-                  from FAKT_GUTSCHRIFTEN g
-                 where g.GUTS_ID = :P41_GUTS_ID and g.GUTS_DATEI is not null
-                ```
+        type: staticContent
+        advanced {
+            regionDisplaySelector: true
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P41_GUTS_ID
         }
         layout {
             sequence: 40
@@ -577,12 +649,159 @@ page 41 (
                 t-Region--removeHeader js-removeLandmark
             ]
         }
-        advanced {
-            regionDisplaySelector: true
+    )
+
+    region dok-hochladen (
+        name: Dokument hochladen
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @dokumente
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P41_DOKUMENT (
+        type: fileUpload
+        label {
+            label: Datei
+            alignment: left
+        }
+        display {
+            displayAs: inlineDropzone
+            dropzoneTitle: Datei hierher ziehen
+            dropzoneDesc: Stundenzettel, Gutschrift des Ausstellers (PDF) oder sonstiges Dokument
+        }
+        storage {
+            type: appTempFiles
+        }
+        layout {
+            sequence: 10
+            region: @dok-hochladen
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button stundenzettel (
+        buttonName: STUNDENZETTEL
+        label: Als Stundenzettel hochladen
+        layout {
+            sequence: 10
+            region: @dok-hochladen
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-clock-o
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button aussteller (
+        buttonName: AUSSTELLER
+        label: Als Gutschrift des Ausstellers hochladen
+        layout {
+            sequence: 20
+            region: @dok-hochladen
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-file-pdf-o
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
         }
         serverSideCondition {
-            type: itemIsNotNull
-            item: P41_GUTS_ID
+            type: itemIsNull
+            item: P41_HAT_PDF
+        }
+    )
+
+    button sonstiges (
+        buttonName: SONSTIGES
+        label: Als sonstiges Dokument
+        layout {
+            sequence: 30
+            region: @dok-hochladen
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-paperclip
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    region dok-liste (
+        name: Abgelegte Dokumente
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 43, p_clear_cache => '43',
+                                                                                   p_items => 'P43_GUTS_ID,P43_GDOK_ID',
+                                                                                   p_values => d.GUTS_ID || ',' || d.GDOK_ID))
+                       || '" title="Anzeigen"><span class="fa fa-file-pdf-o" aria-hidden="true"></span></a>' as ANZEIGEN,
+                       d.ART, d.DATEI,
+                       to_char(round(d.GROESSE / 1024), 'FM999G999G990') || ' KB' as GROESSE,
+                       to_char(from_tz(d.AM, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
+                       d.VON
+                  from (select g.GUTS_ID, null as GDOK_ID, 'Gutschrift des Ausstellers' as ART, g.GUTS_DATEINAME as DATEI,
+                               dbms_lob.getlength(g.GUTS_DATEI) as GROESSE,
+                               coalesce((select max(h.GHIS_ZEITPUNKT) from FAKT_GUTSCHRIFT_HISTORIE h
+                                          where h.GHIS_GUTS_ID = g.GUTS_ID and h.GHIS_AKTION = 'Hochgeladen'), g.GUTS_CREATED_ON) as AM,
+                               g.GUTS_CREATED_BY as VON
+                          from FAKT_GUTSCHRIFTEN g
+                         where g.GUTS_ID = :P41_GUTS_ID and g.GUTS_DATEI is not null
+                        union all
+                        select k.GDOK_GUTS_ID, k.GDOK_ID, case k.GDOK_ART when 'STUNDENZETTEL' then 'Stundenzettel' else 'Sonstiges' end,
+                               k.GDOK_DATEINAME, k.GDOK_GROESSE, k.GDOK_CREATED_ON, k.GDOK_CREATED_BY
+                          from FAKT_GUTSCHRIFT_DOKUMENTE k
+                         where k.GDOK_GUTS_ID = :P41_GUTS_ID) d
+                 order by d.AM
+                ```
+        }
+        layout {
+            sequence: 20
+            parentRegion: @dokumente
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
         }
         componentAppearance {
             template: @/standard
@@ -602,7 +821,7 @@ page 41 (
             numberOfRows: 50
         }
         messages {
-            whenNoDataFound: Kein PDF gespeichert.
+            whenNoDataFound: Noch keine Dokumente – bitte den Stundenzettel hochladen.
         }
 
         column ANZEIGEN (
@@ -621,13 +840,26 @@ page 41 (
             }
         )
 
+        column ART (
+            type: plainText
+            heading {
+                heading: Art
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
         column DATEI (
             type: plainText
             heading {
                 heading: Datei
             }
             layout {
-                sequence: 20
+                sequence: 30
             }
             sorting {
                 sortable: false
@@ -641,7 +873,7 @@ page 41 (
                 alignment: end
             }
             layout {
-                sequence: 30
+                sequence: 40
                 columnAlignment: end
             }
             sorting {
@@ -655,7 +887,7 @@ page 41 (
                 heading: Hochgeladen am
             }
             layout {
-                sequence: 40
+                sequence: 50
             }
             sorting {
                 sortable: false
@@ -668,7 +900,7 @@ page 41 (
                 heading: Von
             }
             layout {
-                sequence: 50
+                sequence: 60
             }
             sorting {
                 sortable: false
@@ -689,18 +921,25 @@ page 41 (
                        coalesce(m.MITA_KUERZEL, upper(substr(nvl(m.MITA_NAME, h.GHIS_BENUTZER), 1, 2))) as USER_AVATAR,
                        'u-color-1' as USER_COLOR,
                        to_char(from_tz(h.GHIS_ZEITPUNKT, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as EVENT_DATE,
-                       case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt') then 'Dokument'
+                       case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt', 'Stundenzettel hochgeladen', 'Dokument hochgeladen',
+                                                   'Dokument gelöscht') then 'Dokument'
                             when h.GHIS_AKTION in ('Bezahlt', 'Zahlung zurückgenommen') then 'Zahlung'
+                            when h.GHIS_AKTION in ('An Aussteller gesendet', 'Gutschrift erhalten') then 'Versand'
                             else 'Gutschrift' end as EVENT_TYPE,
-                       'fa ' || case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt') then 'fa-upload'
+                       'fa ' || case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt', 'Dokument hochgeladen') then 'fa-upload'
+                                     when h.GHIS_AKTION = 'Stundenzettel hochgeladen' then 'fa-clock-o'
+                                     when h.GHIS_AKTION = 'Dokument gelöscht' then 'fa-trash-o'
+                                     when h.GHIS_AKTION = 'Nummer vergeben' then 'fa-hashtag'
+                                     when h.GHIS_AKTION = 'An Aussteller gesendet' then 'fa-paper-plane-o'
+                                     when h.GHIS_AKTION = 'Gutschrift erhalten' then 'fa-inbox'
                                      when h.GHIS_AKTION = 'Bezahlt' then 'fa-eur'
                                      when h.GHIS_AKTION = 'Zahlung zurückgenommen' then 'fa-undo'
                                      when h.GHIS_AKTION = 'Angelegt' then 'fa-plus-circle'
                                      else 'fa-pencil' end as EVENT_ICON,
-                       case when h.GHIS_AKTION in ('Hochgeladen', 'PDF ersetzt') then 'u-info'
-                            when h.GHIS_AKTION = 'Bezahlt' then 'u-success'
-                            when h.GHIS_AKTION = 'Zahlung zurückgenommen' then 'u-warning'
-                            else 'u-color-14' end as EVENT_STATUS,
+                       case when h.GHIS_AKTION = 'Bezahlt' then 'u-success'
+                            when h.GHIS_AKTION in ('Zahlung zurückgenommen', 'Dokument gelöscht') then 'u-warning'
+                            when h.GHIS_AKTION in ('Geändert') then 'u-color-14'
+                            else 'u-info' end as EVENT_STATUS,
                        h.GHIS_AKTION as EVENT_TITLE,
                        h.GHIS_DETAIL as EVENT_DESC,
                        null as EVENT_MODIFIERS,
@@ -903,6 +1142,31 @@ page 41 (
 
     )
 
+    button up (
+        buttonName: UP
+        label: Zurück zu den Gutschriften
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: up
+        }
+        appearance {
+            buttonTemplate: @/icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+            icon: fa-arrow-up
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 40
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
     button auslesen (
         buttonName: AUSLESEN
         label: PDF hochladen und auslesen
@@ -930,31 +1194,6 @@ page 41 (
         }
     )
 
-    button up (
-        buttonName: UP
-        label: Zurück zu den Gutschriften
-        layout {
-            sequence: 10
-            region: @breadcrumb
-            slot: up
-        }
-        appearance {
-            buttonTemplate: @/icon
-            templateOptions: [
-                #DEFAULT#
-                t-Button--noUI
-            ]
-            icon: fa-arrow-up
-        }
-        behavior {
-            action: redirectThisApp
-            target: {
-                page: 40
-            }
-            warnOnUnsavedChanges: doNotCheck
-        }
-    )
-
     button delete (
         buttonName: DELETE
         label: Löschen
@@ -974,7 +1213,6 @@ page 41 (
         behavior {
             executeValidations: false
             warnOnUnsavedChanges: doNotCheck
-            databaseAction: delete
             requiresConfirmation: true
         }
         serverSideCondition {
@@ -982,8 +1220,35 @@ page 41 (
             item: P41_GUTS_ID
         }
         confirmation {
-            message: Gutschrift wirklich löschen?
+            message: Gutschrift wirklich löschen? Nur ein Entwurf ohne Nummer oder die zuletzt vergebene Gutschrift kann gelöscht werden.
             style: danger
+        }
+    )
+
+    button gesendet (
+        buttonName: GESENDET
+        label: An Aussteller gesendet
+        layout {
+            sequence: 15
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-paper-plane-o
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P41_GUTS_STATUS = 'ENTWURF' and :P41_GUTS_INTERN_NUMMER is not null
         }
     )
 
@@ -1053,7 +1318,12 @@ page 41 (
                     raise_application_error(-20240, 'Diese Gutschrift gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                 end if;
                 :P41_TITEL := case when :P41_GUTS_ID is null then 'Neue Gutschrift'
-                                   else 'Gutschrift ' || coalesce(:P41_GUTS_NUMMER, :P41_GUTS_AUSSTELLER) end;
+                                   when :P41_GUTS_INTERN_NUMMER is null then 'Gutschrift (Entwurf)'
+                                   else 'Gutschrift ' || :P41_GUTS_INTERN_NUMMER end;
+                :P41_HAT_PDF := null;
+                for g in (select 'Y' as J from FAKT_GUTSCHRIFTEN where GUTS_ID = :P41_GUTS_ID and GUTS_DATEI is not null) loop
+                    :P41_HAT_PDF := g.J;
+                end loop;
                 ```
         }
         execution {
@@ -1063,7 +1333,7 @@ page 41 (
     )
 
     process pdf-auslesen (
-        name: PDF hochladen und auslesen
+        name: Neue Gutschrift aus dem PDF des Ausstellers
         type: executeCode
         source {
             plsqlCode:
@@ -1074,11 +1344,11 @@ page 41 (
                     l_mime varchar2(255);
                 begin
                     if :P41_DATEI is null then
-                        raise_application_error(-20270, 'Bitte das PDF der Gutschrift auswählen.');
+                        raise_application_error(-20274, 'Bitte eine Datei auswählen.');
                     end if;
                     select blob_content, filename, mime_type into l_blob, l_name, l_mime
                       from apex_application_temp_files where name = :P41_DATEI;
-                    :P41_GUTS_ID := FAKT_GUTSCHRIFT.aus_pdf(:MANDANT_ID, l_name, l_mime, l_blob, :P41_GUTS_ID);
+                    :P41_GUTS_ID := FAKT_GUTSCHRIFT.aus_pdf(:MANDANT_ID, l_name, l_mime, l_blob);
                 exception
                     when others then
                         if sqlcode between -20299 and -20200 then
@@ -1101,23 +1371,120 @@ page 41 (
         }
     )
 
-    process bankeingang-freigeben (
-        name: Beim Löschen den Bankeingang wieder freigeben
+    process aussteller-hochladen (
+        name: Gutschrift des Ausstellers hochladen
         type: executeCode
         source {
             plsqlCode:
                 ```plsql
-                update FAKT_BANKUMSAETZE
-                   set BKUM_STATUS = 'OFFEN', BKUM_GUTS_ID = null, BKUM_ZUORDNUNG = null
-                 where BKUM_GUTS_ID = :P41_GUTS_ID and BKUM_MAND_ID = :MANDANT_ID;
-                delete from FAKT_GUTSCHRIFT_HISTORIE where GHIS_GUTS_ID = :P41_GUTS_ID;
+                declare
+                    l_blob blob;
+                    l_name varchar2(400);
+                    l_mime varchar2(255);
+                begin
+                    if :P41_DOKUMENT is null then
+                        raise_application_error(-20274, 'Bitte eine Datei auswählen.');
+                    end if;
+                    select blob_content, filename, mime_type into l_blob, l_name, l_mime
+                      from apex_application_temp_files where name = :P41_DOKUMENT;
+                    :P41_GUTS_ID := FAKT_GUTSCHRIFT.aus_pdf(:MANDANT_ID, l_name, l_mime, l_blob, :P41_GUTS_ID);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 6
+        }
+        serverSideCondition {
+            whenButtonPressed: @aussteller
+        }
+        successMessage {
+            successMessage: Gutschrift des Ausstellers übernommen – bitte die Angaben prüfen.
+        }
+    )
+
+    process stundenzettel-hochladen (
+        name: Stundenzettel hochladen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_blob blob;
+                    l_name varchar2(400);
+                    l_mime varchar2(255);
+                begin
+                    if :P41_DOKUMENT is null then
+                        raise_application_error(-20274, 'Bitte eine Datei auswählen.');
+                    end if;
+                    select blob_content, filename, mime_type into l_blob, l_name, l_mime
+                      from apex_application_temp_files where name = :P41_DOKUMENT;
+                    FAKT_GUTSCHRIFT.dokument_ablegen(:P41_GUTS_ID, 'STUNDENZETTEL', l_name, l_mime, l_blob);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 7
+        }
+        serverSideCondition {
+            whenButtonPressed: @stundenzettel
+        }
+        successMessage {
+            successMessage: Stundenzettel abgelegt.
+        }
+    )
+
+    process sonstiges-hochladen (
+        name: Sonstiges Dokument hochladen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_blob blob;
+                    l_name varchar2(400);
+                    l_mime varchar2(255);
+                begin
+                    if :P41_DOKUMENT is null then
+                        raise_application_error(-20274, 'Bitte eine Datei auswählen.');
+                    end if;
+                    select blob_content, filename, mime_type into l_blob, l_name, l_mime
+                      from apex_application_temp_files where name = :P41_DOKUMENT;
+                    FAKT_GUTSCHRIFT.dokument_ablegen(:P41_GUTS_ID, 'SONSTIGES', l_name, l_mime, l_blob);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
                 ```
         }
         execution {
             sequence: 8
         }
         serverSideCondition {
-            whenButtonPressed: @delete
+            whenButtonPressed: @sonstiges
+        }
+        successMessage {
+            successMessage: Dokument abgelegt.
         }
     )
 
@@ -1130,10 +1497,70 @@ page 41 (
         }
         serverSideCondition {
             type: requestIsContainedInValue
-            value: CREATE,SAVE,DELETE
+            value: CREATE,SAVE,GESENDET
         }
         successMessage {
             successMessage: Gutschrift gespeichert.
+        }
+    )
+
+    process gesendet (
+        name: An Aussteller gesendet
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    FAKT_GUTSCHRIFT.gesendet(:P41_GUTS_ID);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 15
+        }
+        serverSideCondition {
+            whenButtonPressed: @gesendet
+        }
+        successMessage {
+            successMessage: Als an den Aussteller gesendet markiert.
+        }
+    )
+
+    process gutschrift-loeschen (
+        name: Gutschrift löschen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    FAKT_GUTSCHRIFT.loeschen(:P41_GUTS_ID);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 12
+        }
+        serverSideCondition {
+            whenButtonPressed: @delete
+        }
+        successMessage {
+            successMessage: Gutschrift gelöscht.
         }
     )
 
@@ -1143,9 +1570,9 @@ page 41 (
         source {
             plsqlCode:
                 ```plsql
-                -- offener Bankeingang mit gleichem Verwendungszweck/Betrag -> Gutschrift bezahlt
+                -- offener Bankeingang mit gleicher Nummer/gleichem Verwendungszweck -> Gutschrift bezahlt
                 if FAKT_BANK.abgleichen(:MANDANT_ID) > 0 then
-                    apex_application.g_print_success_message := 'Gutschrift gespeichert. Bankabgleich: Zahlungseingang zugeordnet.';
+                    apex_application.g_print_success_message := 'Gespeichert. Bankabgleich: Zahlungseingang zugeordnet.';
                 end if;
                 ```
         }
@@ -1154,7 +1581,7 @@ page 41 (
         }
         serverSideCondition {
             type: requestIsContainedInValue
-            value: CREATE,SAVE
+            value: CREATE,SAVE,AUSLESEN,AUSSTELLER
         }
     )
 
@@ -1173,7 +1600,7 @@ page 41 (
         }
         serverSideCondition {
             type: requestIsContainedInValue
-            value: AUSLESEN,CREATE,SAVE
+            value: AUSLESEN,AUSSTELLER,STUNDENZETTEL,SONSTIGES,CREATE,SAVE,GESENDET
         }
     )
 

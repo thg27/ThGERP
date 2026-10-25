@@ -50,5 +50,6 @@ whenever sqlerror exit failure rollback
 @@40_gutschriften.sql
 @@41_kunde_hays.sql
 @@42_gutschrift_historie.sql
+@@43_gutschrift_ablauf.sql
 
 prompt Installation abgeschlossen.

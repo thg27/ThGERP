@@ -260,8 +260,10 @@ create or replace package body FAKT_RECHNUNG as
     function naechste_nummer(p_mand_id in number, p_belegart in varchar2, p_jahr in number) return varchar2 is
         l_nkrs FAKT_NUMMERNKREISE%rowtype;
     begin
-        insert into FAKT_NUMMERNKREISE (NKRS_MAND_ID, NKRS_BELEGART, NKRS_JAHR)
-        select p_mand_id, p_belegart, p_jahr from dual
+        -- neuer Nummernkreis: Rechnungen "2026 - 1", Gutschriften "GS 2026 - 1"
+        insert into FAKT_NUMMERNKREISE (NKRS_MAND_ID, NKRS_BELEGART, NKRS_JAHR, NKRS_FORMAT)
+        select p_mand_id, p_belegart, p_jahr,
+               case p_belegart when 'GUTSCHRIFT' then 'GS {JAHR} - {NR}' else '{JAHR} - {NR}' end from dual
          where not exists (select 1 from FAKT_NUMMERNKREISE
                             where NKRS_MAND_ID = p_mand_id and NKRS_BELEGART = p_belegart and NKRS_JAHR = p_jahr);
         select * into l_nkrs

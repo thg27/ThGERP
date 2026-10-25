@@ -48,6 +48,7 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | FAKT | FAKT_BANKUMSAETZE | BKUM | Bankbuchungen mit Zuordnung zu Rechnungen |
 | FAKT | FAKT_GUTSCHRIFTEN | GUTS | Erhaltene Gutschriften (Gutschriftverfahren) |
 | FAKT | FAKT_GUTSCHRIFT_HISTORIE | GHIS | Historie der Gutschrift (wer, wann, was) |
+| FAKT | FAKT_GUTSCHRIFT_DOKUMENTE | GDOK | Dokumente der Gutschrift (Stundenzettel u.a.) |
 
 ## Gruppencodes
 

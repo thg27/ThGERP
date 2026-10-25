@@ -185,15 +185,18 @@ begin
   GUTS_MAND_ID number not null,
   GUTS_KUND_ID number,
   GUTS_AUSSTELLER varchar2(200 char),
+  GUTS_INTERN_NUMMER varchar2(30 char),
   GUTS_NUMMER varchar2(50 char),
   GUTS_DATUM date,
+  GUTS_AUSSTELLER_DATUM date,
   GUTS_FAELLIG_AM date,
+  GUTS_NETTO number(14,2),
   GUTS_BETRAG number(14,2),
   GUTS_SKONTO_PROZENT number(5,2),
   GUTS_ZAHLBETRAG number(14,2),
   GUTS_VERWENDUNGSZWECK varchar2(140 char),
   GUTS_BEMERKUNG varchar2(1000 char),
-  GUTS_STATUS varchar2(20 char) default 'OFFEN' not null,
+  GUTS_STATUS varchar2(20 char) default 'ENTWURF' not null,
   GUTS_BEZAHLT_AM date,
   GUTS_DATEINAME varchar2(400 char),
   GUTS_MIME_TYPE varchar2(255 char),
@@ -206,20 +209,86 @@ begin
   GUTS_ROW_VERSION number not null,
   constraint GUTS_PK primary key (GUTS_ID)
 )~');
-    DDL_UTIL.constraint_('FAKT_GUTSCHRIFTEN', 'GUTS_STATUS_CK', 'C', q'~GUTS_STATUS in ('OFFEN', 'BEZAHLT')~');
+    -- Status erweitert (2026-10-25: ENTWURF, GESENDET): alte Pruefung ersetzen
+    for c in (select constraint_name from user_constraints
+               where constraint_name = 'GUTS_STATUS_CK' and search_condition_vc not like '%ENTWURF%') loop
+        execute immediate 'alter table FAKT_GUTSCHRIFTEN drop constraint GUTS_STATUS_CK';
+        execute immediate q'~alter table FAKT_GUTSCHRIFTEN modify (GUTS_STATUS default 'ENTWURF')~';
+    end loop;
+    DDL_UTIL.constraint_('FAKT_GUTSCHRIFTEN', 'GUTS_STATUS_CK', 'C', q'~GUTS_STATUS in ('ENTWURF', 'GESENDET', 'OFFEN', 'BEZAHLT')~');
     DDL_UTIL.constraint_('FAKT_GUTSCHRIFTEN', 'GUTS_MAND_FK', 'R', 'GUTS_MAND_ID references ADMIN_MANDANTEN (MAND_ID)');
     DDL_UTIL.constraint_('FAKT_GUTSCHRIFTEN', 'GUTS_KUND_FK', 'R', 'GUTS_KUND_ID references KUND_KUNDEN (KUND_ID)');
     DDL_UTIL.index_('FAKT_GUTSCHRIFTEN', 'GUTS_MAND_I', 'GUTS_MAND_ID, GUTS_STATUS');
     DDL_UTIL.index_('FAKT_GUTSCHRIFTEN', 'GUTS_KUND_I', 'GUTS_KUND_ID');
     DDL_UTIL.spalte('FAKT_GUTSCHRIFTEN', 'GUTS_SKONTO_PROZENT', 'number(5,2)', 'Y');
+    DDL_UTIL.spalte('FAKT_GUTSCHRIFTEN', 'GUTS_INTERN_NUMMER', 'varchar2(30 char)', 'Y');
+    DDL_UTIL.spalte('FAKT_GUTSCHRIFTEN', 'GUTS_AUSSTELLER_DATUM', 'date', 'Y');
+    DDL_UTIL.spalte('FAKT_GUTSCHRIFTEN', 'GUTS_NETTO', 'number(14,2)', 'Y');
     DDL_UTIL.spalte('FAKT_GUTSCHRIFTEN', 'GUTS_ZAHLBETRAG', 'number(14,2)', 'Y');
     DDL_UTIL.trigger_pruefen('GUTS_BIU', 'FAKT_GUTSCHRIFTEN');
     -- Bankbuchung -> Gutschrift
     DDL_UTIL.spalte('FAKT_BANKUMSAETZE', 'BKUM_GUTS_ID', 'number', 'Y');
     DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_GUTS_FK', 'R', 'BKUM_GUTS_ID references FAKT_GUTSCHRIFTEN (GUTS_ID) on delete set null');
     DDL_UTIL.index_('FAKT_BANKUMSAETZE', 'BKUM_GUTS_I', 'BKUM_GUTS_ID');
+    -- Dokumente der Gutschrift (Stundenzettel u.a.; das PDF der Gutschrift des Ausstellers steht in GUTS_DATEI)
+    DDL_UTIL.tabelle('FAKT_GUTSCHRIFT_DOKUMENTE', q'~create table FAKT_GUTSCHRIFT_DOKUMENTE (
+  GDOK_ID number not null,
+  GDOK_GUTS_ID number not null,
+  GDOK_ART varchar2(20 char) default 'STUNDENZETTEL' not null,
+  GDOK_DATEINAME varchar2(400 char) not null,
+  GDOK_MIME_TYPE varchar2(255 char),
+  GDOK_GROESSE number,
+  GDOK_DATEI blob not null,
+  GDOK_CREATED_ON timestamp not null,
+  GDOK_CREATED_BY varchar2(255 char) not null,
+  GDOK_UPDATED_ON timestamp,
+  GDOK_UPDATED_BY varchar2(255 char),
+  GDOK_ROW_VERSION number not null,
+  constraint GDOK_PK primary key (GDOK_ID)
+)~');
+    DDL_UTIL.constraint_('FAKT_GUTSCHRIFT_DOKUMENTE', 'GDOK_ART_CK', 'C', q'~GDOK_ART in ('STUNDENZETTEL', 'SONSTIGES')~');
+    DDL_UTIL.constraint_('FAKT_GUTSCHRIFT_DOKUMENTE', 'GDOK_GUTS_FK', 'R', 'GDOK_GUTS_ID references FAKT_GUTSCHRIFTEN (GUTS_ID) on delete cascade');
+    DDL_UTIL.index_('FAKT_GUTSCHRIFT_DOKUMENTE', 'GDOK_GUTS_I', 'GDOK_GUTS_ID');
+    DDL_UTIL.trigger_pruefen('GDOK_BIU', 'FAKT_GUTSCHRIFT_DOKUMENTE');
 end;
 /
+
+create or replace trigger GDOK_BIU
+  before insert or update on FAKT_GUTSCHRIFT_DOKUMENTE
+  for each row
+begin
+  if inserting then
+    :new.GDOK_ID := coalesce(:new.GDOK_ID, to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'));
+    :new.GDOK_CREATED_ON  := systimestamp;
+    :new.GDOK_CREATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
+    :new.GDOK_UPDATED_ON  := null;
+    :new.GDOK_UPDATED_BY  := null;
+    :new.GDOK_ROW_VERSION := 1;
+  elsif updating then
+    :new.GDOK_ID          := :old.GDOK_ID;  -- Primaerschluessel ist unveraenderlich
+    :new.GDOK_CREATED_ON  := :old.GDOK_CREATED_ON;
+    :new.GDOK_CREATED_BY  := :old.GDOK_CREATED_BY;
+    :new.GDOK_UPDATED_ON  := systimestamp;
+    :new.GDOK_UPDATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
+    :new.GDOK_ROW_VERSION := nvl(:old.GDOK_ROW_VERSION, 0) + 1;
+  end if;
+  :new.GDOK_GROESSE := dbms_lob.getlength(:new.GDOK_DATEI);
+end GDOK_BIU;
+/
+
+comment on table FAKT_GUTSCHRIFT_DOKUMENTE is 'Dokumente der Gutschrift (Stundenzettel u.a.) [Alias GDOK]';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_GUTS_ID is 'FK: Gutschrift';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_ART is 'STUNDENZETTEL, SONSTIGES';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_DATEINAME is 'Dateiname';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_MIME_TYPE is 'MIME-Typ';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_GROESSE is 'Groesse in Bytes (Trigger)';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_DATEI is 'Datei';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_CREATED_ON is 'Audit: angelegt am (hochgeladen am)';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_CREATED_BY is 'Audit: angelegt von';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column FAKT_GUTSCHRIFT_DOKUMENTE.GDOK_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
 
 create or replace trigger GUTS_BIU
   before insert or update on FAKT_GUTSCHRIFTEN
@@ -240,8 +309,14 @@ begin
     :new.GUTS_UPDATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
     :new.GUTS_ROW_VERSION := nvl(:old.GUTS_ROW_VERSION, 0) + 1;
   end if;
-  -- Status aus dem Zahlungsdatum (Bankabgleich oder von Hand)
-  :new.GUTS_STATUS := case when :new.GUTS_BEZAHLT_AM is not null then 'BEZAHLT' else 'OFFEN' end;
+  -- Status: Bezahlt (Zahlungsdatum aus Bankabgleich oder von Hand) > Offen (Gutschrift des Ausstellers liegt vor)
+  -- > Gesendet (Stundenzettel an den Aussteller) > Entwurf
+  :new.GUTS_STATUS := case when :new.GUTS_BEZAHLT_AM is not null then 'BEZAHLT'
+                           when :new.GUTS_DATEI is not null then 'OFFEN'
+                           when :new.GUTS_STATUS = 'GESENDET' then 'GESENDET'
+                           else 'ENTWURF' end;
+  -- Netto ohne Angabe = Betrag (Gutschriftverfahren meist Reverse Charge, 0 % USt)
+  :new.GUTS_NETTO := coalesce(:new.GUTS_NETTO, :new.GUTS_BETRAG);
   -- erwartete Zahlung: Betrag abzueglich Skonto (z.B. Hays: 3 % bei Zahlung innerhalb von 7 Tagen)
   :new.GUTS_ZAHLBETRAG := round(:new.GUTS_BETRAG * (1 - nvl(:new.GUTS_SKONTO_PROZENT, 0) / 100), 2);
   -- Aussteller vom Kunden, wenn leer
@@ -256,15 +331,18 @@ comment on column FAKT_GUTSCHRIFTEN.GUTS_ID is 'Primaerschluessel (SYS_GUID)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_MAND_ID is 'FK: Mandant (Empfaenger der Gutschrift)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_KUND_ID is 'FK: Kunde (Aussteller), optional';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_AUSSTELLER is 'Aussteller der Gutschrift (Name, aus dem PDF bzw. vom Kunden)';
-comment on column FAKT_GUTSCHRIFTEN.GUTS_NUMMER is 'Gutschriftnummer des Ausstellers';
-comment on column FAKT_GUTSCHRIFTEN.GUTS_DATUM is 'Gutschriftdatum';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_INTERN_NUMMER is 'Interne Gutschriftnummer (Nummernkreis GUTSCHRIFT, z.B. GS 2026 - 1), vergeben beim ersten Stundenzettel bzw. PDF';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_NUMMER is 'Nummer beim Aussteller (z.B. Hays-Belegnummer)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_AUSSTELLER_DATUM is 'Datum der Gutschrift beim Aussteller (Belegdatum)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_NETTO is 'Nettobetrag (Umsatz im Dashboard)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_DATUM is 'Internes Gutschriftdatum (mit der internen Nummer vergeben)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_FAELLIG_AM is 'Faellig am (Auszahlung erwartet)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_BETRAG is 'Betrag der Gutschrift (Auszahlungsbetrag brutto)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_SKONTO_PROZENT is 'Skonto in Prozent, das der Aussteller bei der Zahlung abzieht';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_ZAHLBETRAG is 'Erwartete Zahlung = Betrag abzueglich Skonto (Trigger)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_VERWENDUNGSZWECK is 'Verwendungszweck wie auf dem Kontoauszug (Bankabgleich)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_BEMERKUNG is 'Bemerkung';
-comment on column FAKT_GUTSCHRIFTEN.GUTS_STATUS is 'OFFEN, BEZAHLT (per Bankabgleich oder von Hand)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_STATUS is 'ENTWURF, GESENDET (Stundenzettel an Aussteller), OFFEN (Gutschrift erhalten), BEZAHLT (Trigger)';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_BEZAHLT_AM is 'Zahlungseingang am';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_DATEINAME is 'Dateiname des PDF';
 comment on column FAKT_GUTSCHRIFTEN.GUTS_MIME_TYPE is 'MIME-Typ des PDF';

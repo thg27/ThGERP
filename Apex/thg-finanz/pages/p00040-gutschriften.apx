@@ -179,12 +179,15 @@ page 40 (
             sqlQuery:
                 ```sql
                 select g.GUTS_ID,
-                       coalesce(g.GUTS_NUMMER, '(ohne Nummer)') as NUMMER,
+                       coalesce(g.GUTS_INTERN_NUMMER, '(Entwurf)') as NUMMER,
+                       g.GUTS_NUMMER as AUSSTELLER_NR,
                        g.GUTS_DATUM,
                        to_char(g.GUTS_DATUM, 'YYYY') as JAHR,
                        to_char(g.GUTS_DATUM, 'YYYY-MM') as MONAT,
                        FAKT_GUTSCHRIFT.status_text(g.GUTS_STATUS) as STATUS,
                        case when g.GUTS_STATUS = 'BEZAHLT' then 'fa-check-circle u-success-text'
+                            when g.GUTS_STATUS = 'ENTWURF' then 'fa-pencil u-warning-text'
+                            when g.GUTS_STATUS = 'GESENDET' then 'fa-paper-plane-o u-info-text'
                             when g.GUTS_FAELLIG_AM < trunc(sysdate) then 'fa-exclamation-triangle u-danger-text'
                             else 'fa-clock-o u-info-text' end as STATUS_ICON,
                        case when g.GUTS_STATUS = 'OFFEN' and g.GUTS_FAELLIG_AM < trunc(sysdate) then 'Ja' else 'Nein' end as UEBERFAELLIG,
@@ -198,7 +201,7 @@ page 40 (
                   from FAKT_GUTSCHRIFTEN g
                   left join KUND_KUNDEN k on k.KUND_ID = g.GUTS_KUND_ID
                  where g.GUTS_MAND_ID = :MANDANT_ID   -- nur Gutschriften des im Portal gewaehlten Mandanten
-                 order by g.GUTS_DATUM desc nulls first, g.GUTS_CREATED_ON desc
+                 order by g.GUTS_DATUM desc nulls first, to_number(regexp_substr(g.GUTS_INTERN_NUMMER, '[0-9]+$')) desc nulls first
                 ```
         }
         layout {
@@ -319,6 +322,19 @@ page 40 (
             type: hidden
             layout {
                 sequence: 37
+            }
+        )
+
+        column AUSSTELLER_NR (
+            type: plainText
+            heading {
+                heading: Nr. beim Aussteller
+            }
+            layout {
+                sequence: 38
+            }
+            sorting {
+                sortable: false
             }
         )
 

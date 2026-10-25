@@ -46,10 +46,11 @@ def dashboard():
             type: sqlQuery
             sqlQuery:
                 ```sql
-                -- Rechnungen des im Portal gewaehlten Mandanten; Umsatz = GEDRUCKT/GESENDET/TEILBEZAHLT/BEZAHLT netto (ohne Entwuerfe, stornierte)
+                -- Rechnungen und erhaltene Gutschriften (FAKT_BELEGE_V) des im Portal gewaehlten Mandanten;
+                -- Umsatz = GEDRUCKT/GESENDET/TEILBEZAHLT/BEZAHLT netto (ohne Entwuerfe, stornierte)
                 with r as (
                     select RECH_STATUS, RECH_DATUM, RECH_SUMME_NETTO, OFFEN, IST_UEBERFAELLIG
-                      from FAKT_RECHNUNGEN_V
+                      from FAKT_BELEGE_V
                      where RECH_MAND_ID = :MANDANT_ID
                 ), u as (
                     select * from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
@@ -187,6 +188,11 @@ def dashboard():
                 ```sql
                 select r.RECH_ID,
                        r.RECH_NUMMER,
+                       -- Rechnung (Seite 11) bzw. Gutschrift (Seite 41)
+                       case r.BELEGART when 'GUTSCHRIFT'
+                            then apex_page.get_url(p_page => 41, p_clear_cache => 41, p_items => 'P41_GUTS_ID', p_values => r.RECH_ID)
+                            else apex_page.get_url(p_page => 11, p_clear_cache => 11, p_items => 'P11_RECH_ID', p_values => r.RECH_ID)
+                       end as BELEG_URL,
                        r.RECH_DATUM,
                        r.RECH_FAELLIG_AM,
                        case when r.IST_UEBERFAELLIG = 'Y' then 'UEBERFAELLIG'
@@ -201,7 +207,7 @@ def dashboard():
                        -- Kunde im Kundenstamm (20020 Seite 11, mit Pruefsumme)
                        apex_page.get_url(p_application => '20020', p_page => 11, p_clear_cache => 11,
                                          p_items => 'P11_KUND_ID', p_values => r.RECH_KUND_ID) as KUND_URL
-                  from FAKT_RECHNUNGEN_V r
+                  from FAKT_BELEGE_V r
                  where r.RECH_MAND_ID = :MANDANT_ID
                    and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')
                  order by r.RECH_FAELLIG_AM nulls last, r.RECH_NUMMER
@@ -247,25 +253,25 @@ def dashboard():
         )
 
         column RECH_NUMMER (
-            type: link
+            type: plainText
             heading {
                 heading: Rechnung
+            }
+            columnFormatting {
+                htmlExpression: <a href="#BELEG_URL#"><span class="thg-kundennr">#RECH_NUMMER#</span></a>
             }
             layout {
                 sequence: 20
             }
-            link {
-                target: {
-                    page: 11
-                    items: {
-                        P11_RECH_ID: #RECH_ID#
-                    }
-                    clearCache: 11
-                }
-                linkText: <span class="thg-kundennr">#RECH_NUMMER#</span>
-            }
             sorting {
                 sortable: false
+            }
+        )
+
+        column BELEG_URL (
+            type: hidden
+            layout {
+                sequence: 21
             }
         )
 
@@ -414,7 +420,7 @@ def dashboard():
                            || to_char(nvl(sum(r.RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
                       from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
                               from dual connect by level <= 12) m
-                      left join FAKT_RECHNUNGEN r
+                      left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
                        and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= m.monat
@@ -456,7 +462,7 @@ def dashboard():
                            || to_char(nvl(sum(r.RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
                       from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
                               from dual connect by level <= 12) m
-                      left join FAKT_RECHNUNGEN r
+                      left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
                        and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= add_months(m.monat, -12)
@@ -527,7 +533,7 @@ def dashboard():
                            sum(RECH_SUMME_NETTO) as VALUE,
                            KUND_NUMMER || ' – ' || KUNDE || ': '
                            || to_char(sum(RECH_SUMME_NETTO), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
-                      from FAKT_RECHNUNGEN_V
+                      from FAKT_BELEGE_V
                      where RECH_MAND_ID = :MANDANT_ID
                        and RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
                        and RECH_DATUM >= add_months(trunc(sysdate), -12)

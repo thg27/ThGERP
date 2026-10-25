@@ -25,6 +25,7 @@ begin
     DDL_UTIL.index_('FAKT_GUTSCHRIFT_HISTORIE', 'GHIS_GUTS_I', 'GHIS_GUTS_ID, GHIS_ZEITPUNKT');
     DDL_UTIL.trigger_pruefen('GHIS_BI', 'FAKT_GUTSCHRIFT_HISTORIE');
     DDL_UTIL.trigger_pruefen('GUTS_HIST_AIU', 'FAKT_GUTSCHRIFTEN');
+    DDL_UTIL.trigger_pruefen('GDOK_HIST_AID', 'FAKT_GUTSCHRIFT_DOKUMENTE');
 end;
 /
 
@@ -43,7 +44,7 @@ comment on column FAKT_GUTSCHRIFT_HISTORIE.GHIS_ID is 'Primaerschluessel (SYS_GU
 comment on column FAKT_GUTSCHRIFT_HISTORIE.GHIS_GUTS_ID is 'Gutschrift (ohne FK)';
 comment on column FAKT_GUTSCHRIFT_HISTORIE.GHIS_ZEITPUNKT is 'Zeitpunkt (Serverzeit UTC)';
 comment on column FAKT_GUTSCHRIFT_HISTORIE.GHIS_BENUTZER is 'Benutzer (APEX-Anmeldung bzw. Datenbankbenutzer)';
-comment on column FAKT_GUTSCHRIFT_HISTORIE.GHIS_AKTION is 'Ereignis: Hochgeladen, Angelegt, Geaendert, Bezahlt, Zahlung zurueckgenommen, PDF ersetzt';
+comment on column FAKT_GUTSCHRIFT_HISTORIE.GHIS_AKTION is 'Ereignis: Angelegt, Stundenzettel hochgeladen, Nummer vergeben, An Aussteller gesendet, Hochgeladen, Gutschrift erhalten, Geaendert, Bezahlt …';
 comment on column FAKT_GUTSCHRIFT_HISTORIE.GHIS_DETAIL is 'Details: geaenderte Felder mit altem und neuem Wert';
 
 create or replace trigger GUTS_HIST_AIU
@@ -64,18 +65,32 @@ begin
               || '; Betrag: ' || nvl(FAKT_HISTORIE.betrag(:new.GUTS_BETRAG), '–'));
     return;
   end if;
-  if nvl(:old.GUTS_DATEINAME, '-') <> nvl(:new.GUTS_DATEINAME, '-')
-     or (:new.GUTS_DATEI is not null and :old.GUTS_DATEI is null) then
+  if :old.GUTS_DATEINAME is null and :new.GUTS_DATEINAME is not null then
+    protokoll('Hochgeladen', 'Gutschrift des Ausstellers: ' || :new.GUTS_DATEINAME);
+  elsif nvl(:old.GUTS_DATEINAME, '-') <> nvl(:new.GUTS_DATEINAME, '-') then
     protokoll('PDF ersetzt', 'Datei: ' || nvl(:old.GUTS_DATEINAME, '–') || ' → ' || :new.GUTS_DATEINAME);
   end if;
+  if :old.GUTS_INTERN_NUMMER is null and :new.GUTS_INTERN_NUMMER is not null then
+    protokoll('Nummer vergeben', :new.GUTS_INTERN_NUMMER || nvl2(:new.GUTS_DATUM, ' vom ' || to_char(:new.GUTS_DATUM, 'DD.MM.YYYY'), null));
+  end if;
   if :old.GUTS_STATUS <> :new.GUTS_STATUS then
-    protokoll(case :new.GUTS_STATUS when 'BEZAHLT' then 'Bezahlt' else 'Zahlung zurückgenommen' end,
-              case when :new.GUTS_BEZAHLT_AM is not null then 'am ' || to_char(:new.GUTS_BEZAHLT_AM, 'DD.MM.YYYY') end);
+    protokoll(case when :new.GUTS_STATUS = 'BEZAHLT' then 'Bezahlt'
+                   when :old.GUTS_STATUS = 'BEZAHLT' then 'Zahlung zurückgenommen'
+                   when :new.GUTS_STATUS = 'GESENDET' then 'An Aussteller gesendet'
+                   when :new.GUTS_STATUS = 'OFFEN' then 'Gutschrift erhalten'
+                   else 'Status ' || FAKT_GUTSCHRIFT.status_text(:new.GUTS_STATUS) end,
+              case when :new.GUTS_STATUS = 'BEZAHLT' then 'am ' || to_char(:new.GUTS_BEZAHLT_AM, 'DD.MM.YYYY')
+                   when :new.GUTS_STATUS = 'OFFEN' and :old.GUTS_STATUS <> 'BEZAHLT' then
+                       'Nummer beim Aussteller: ' || nvl(:new.GUTS_NUMMER, '–') || '; Betrag: '
+                       || nvl(FAKT_HISTORIE.betrag(:new.GUTS_BETRAG), '–') || '; fällig am '
+                       || nvl(to_char(:new.GUTS_FAELLIG_AM, 'DD.MM.YYYY'), '–') end);
   end if;
   l_det := FAKT_HISTORIE.d('Kunde', FAKT_HISTORIE.kunde(:old.GUTS_KUND_ID), FAKT_HISTORIE.kunde(:new.GUTS_KUND_ID))
         || FAKT_HISTORIE.d('Aussteller', :old.GUTS_AUSSTELLER, :new.GUTS_AUSSTELLER)
-        || FAKT_HISTORIE.d('Nummer', :old.GUTS_NUMMER, :new.GUTS_NUMMER)
-        || FAKT_HISTORIE.d('Datum', :old.GUTS_DATUM, :new.GUTS_DATUM)
+        || FAKT_HISTORIE.d('Nummer beim Aussteller', :old.GUTS_NUMMER, :new.GUTS_NUMMER)
+        || case when :old.GUTS_INTERN_NUMMER is not null then FAKT_HISTORIE.d('Gutschriftdatum', :old.GUTS_DATUM, :new.GUTS_DATUM) end
+        || FAKT_HISTORIE.d('Datum beim Aussteller', :old.GUTS_AUSSTELLER_DATUM, :new.GUTS_AUSSTELLER_DATUM)
+        || FAKT_HISTORIE.d('Netto', FAKT_HISTORIE.betrag(:old.GUTS_NETTO), FAKT_HISTORIE.betrag(:new.GUTS_NETTO))
         || FAKT_HISTORIE.d('Fällig am', :old.GUTS_FAELLIG_AM, :new.GUTS_FAELLIG_AM)
         || FAKT_HISTORIE.d('Betrag', FAKT_HISTORIE.betrag(:old.GUTS_BETRAG), FAKT_HISTORIE.betrag(:new.GUTS_BETRAG))
         || FAKT_HISTORIE.d('Skonto %', :old.GUTS_SKONTO_PROZENT, :new.GUTS_SKONTO_PROZENT)
@@ -87,6 +102,22 @@ begin
     protokoll('Geändert', l_det);
   end if;
 end GUTS_HIST_AIU;
+/
+
+-- Dokumente (Stundenzettel u.a.)
+create or replace trigger GDOK_HIST_AID
+  after insert or delete on FAKT_GUTSCHRIFT_DOKUMENTE
+  for each row
+begin
+  if inserting then
+    insert into FAKT_GUTSCHRIFT_HISTORIE (GHIS_GUTS_ID, GHIS_AKTION, GHIS_DETAIL)
+    values (:new.GDOK_GUTS_ID, case :new.GDOK_ART when 'STUNDENZETTEL' then 'Stundenzettel hochgeladen' else 'Dokument hochgeladen' end,
+            :new.GDOK_DATEINAME);
+  else
+    insert into FAKT_GUTSCHRIFT_HISTORIE (GHIS_GUTS_ID, GHIS_AKTION, GHIS_DETAIL)
+    values (:old.GDOK_GUTS_ID, 'Dokument gelöscht', :old.GDOK_DATEINAME);
+  end if;
+end GDOK_HIST_AID;
 /
 
 -- vorhandene Gutschriften: Hochladen nachtragen (einmalig, Zeitpunkt/Benutzer der Anlage)

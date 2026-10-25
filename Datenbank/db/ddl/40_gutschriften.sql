@@ -1,8 +1,12 @@
 -- =====================================================================
 -- ThGERP (Gruppe FAKT) – App THG-FINANZ (20050)
 -- 40 – Erhaltene Gutschriften (Gutschriftverfahren, z.B. Hays; Tabelle FAKT_GUTSCHRIFTEN in Skript 39):
---      Package FAKT_GUTSCHRIFT: aus_pdf (PDF -> Text mit DBMS_VECTOR_CHAIN.UTL_TO_TEXT, Felder per Muster auslesen und
---      Gutschrift anlegen bzw. leere Felder ergaenzen).
+--      Package FAKT_GUTSCHRIFT – Ablauf: Gutschrift anlegen (Kunde) -> Stundenzettel hochladen (dokument_ablegen: interne
+--      Nummer "GS 2026 - 1" aus dem Nummernkreis GUTSCHRIFT und Gutschriftdatum) -> an den Aussteller senden (gesendet)
+--      -> Gutschrift des Ausstellers hochladen (aus_pdf: Text mit DBMS_VECTOR_CHAIN.UTL_TO_TEXT, Nummer beim Aussteller,
+--      Datum, faellig am, Netto/Betrag, Skonto, Verwendungszweck) -> Bankabgleich (Skript 39) -> bezahlt.
+--      Doppelte Gutschrift (gleiche Datei bzw. gleiche Nummer beim Aussteller) -> nur Hinweis.
+--      loeschen: nur ohne interne Nummer oder die zuletzt vergebene (Nummer wird wieder frei).
 -- Voraussetzung: 39
 -- Erzeugt: 2026-10-25
 -- Wiederholbar (DDL_UTIL; create or replace).
@@ -14,13 +18,20 @@ set serveroutput on size unlimited
 create or replace package FAKT_GUTSCHRIFT as
     -- PDF einer Gutschrift einlesen: Text auslesen (DBMS_VECTOR_CHAIN.UTL_TO_TEXT) und Aussteller/Kunde, Nummer
     -- (Belegnummer), Datum, faellig am ("voraussichtlich am"), Betrag (Bruttobetrag), Skonto %, Verwendungszweck
-    -- (/GSV/<Belegnummer>/<Vertragsnummer>) per Muster ermitteln. p_guts_id leer: neue Gutschrift anlegen; sonst PDF ersetzen und
-    -- nur leere Felder ergaenzen. Liefert die ID der Gutschrift.
+    -- (/GSV/<Belegnummer>/<Vertragsnummer>) per Muster ermitteln. p_guts_id leer: neue Gutschrift anlegen (mit interner
+    -- Nummer); sonst in die Gutschrift uebernehmen (nur einmal je Gutschrift). Liefert die ID der Gutschrift.
     function aus_pdf(p_mand_id in number, p_dateiname in varchar2, p_mime_type in varchar2, p_datei in blob,
                      p_guts_id in number default null) return number;
+    -- Dokument (Stundenzettel u.a.) zur Gutschrift ablegen; vergibt beim ersten Dokument interne Nummer und Datum
+    procedure dokument_ablegen(p_guts_id in number, p_art in varchar2, p_dateiname in varchar2, p_mime_type in varchar2,
+                               p_datei in blob);
+    -- Stundenzettel an den Aussteller gesendet (Entwurf -> Gesendet; spaeter per E-Mail aus der Anwendung)
+    procedure gesendet(p_guts_id in number);
+    -- Gutschrift loeschen: nur ohne interne Nummer oder die zuletzt vergebene; Bankbuchung wird wieder frei
+    procedure loeschen(p_guts_id in number);
     function status_text(p_status in varchar2) return varchar2 deterministic;
-    -- Dateiname des PDF (PDF-Fenster Seite 43)
-    function dateiname(p_guts_id in number) return varchar2;
+    -- Dateiname fuer das PDF-Fenster (Seite 43): Dokument p_gdok_id bzw. Gutschrift des Ausstellers
+    function dateiname(p_guts_id in number, p_gdok_id in number default null) return varchar2;
 end FAKT_GUTSCHRIFT;
 /
 
@@ -57,6 +68,20 @@ create or replace package body FAKT_GUTSCHRIFT as
         return case when l_t is not null then regexp_substr(l_t, p_wert, 1, 1, 'i') end;
     end nach_label;
 
+    -- interne Nummer und Gutschriftdatum vergeben, falls noch leer
+    procedure nummer_vergeben(p_guts_id in number) is
+        l_mand  FAKT_GUTSCHRIFTEN.GUTS_MAND_ID%type;
+        l_nr    FAKT_GUTSCHRIFTEN.GUTS_INTERN_NUMMER%type;
+        l_heute constant date := trunc(cast(systimestamp at time zone 'Europe/Vienna' as date));
+    begin
+        select GUTS_MAND_ID, GUTS_INTERN_NUMMER into l_mand, l_nr from FAKT_GUTSCHRIFTEN where GUTS_ID = p_guts_id for update;
+        if l_nr is null then
+            l_nr := FAKT_RECHNUNG.naechste_nummer(l_mand, 'GUTSCHRIFT', extract(year from l_heute));
+            update FAKT_GUTSCHRIFTEN set GUTS_INTERN_NUMMER = l_nr, GUTS_DATUM = coalesce(GUTS_DATUM, l_heute)
+             where GUTS_ID = p_guts_id;
+        end if;
+    end nummer_vergeben;
+
     function aus_pdf(p_mand_id in number, p_dateiname in varchar2, p_mime_type in varchar2, p_datei in blob,
                      p_guts_id in number default null) return number is
         l_clob    clob;
@@ -68,6 +93,7 @@ create or replace package body FAKT_GUTSCHRIFT as
         l_datum   date;
         l_faellig date;
         l_betrag  number;
+        l_netto   number;
         l_zweck   FAKT_GUTSCHRIFTEN.GUTS_VERWENDUNGSZWECK%type;
         l_skonto  number;
         l_vertrag varchar2(50);
@@ -105,6 +131,7 @@ create or replace package body FAKT_GUTSCHRIFT as
                         regexp_substr(l_text, '(Gutschrifts?(nummer|-?nr\.?| nr\.?)|Beleg(nummer|-?nr\.?)|Dokument(nummer|-?nr\.?))[: ]*[A-Z0-9][A-Z0-9/-]{2,}',
                                       1, 1, 'i'),
                         '[A-Z0-9][A-Z0-9/-]{2,}$', 1, 1, 'i');
+        -- Datum der Gutschrift beim Aussteller (das interne Gutschriftdatum kommt mit der internen Nummer)
         l_datum := datum(coalesce(nach_label(l_text, 'Gutschriftsdatum|Gutschrift vom|Belegdatum|Datum', c_datum),
                                   regexp_substr(l_text, c_datum)));
         l_faellig := datum(nach_label(l_text, 'voraussichtlich am|fällig am|fällig bis|fällig|zahlbar bis|zahlbar am|Valuta|Auszahlung am|Zahlungsziel', c_datum));
@@ -120,6 +147,7 @@ create or replace package body FAKT_GUTSCHRIFT as
                 l_betrag := greatest(nvl(l_betrag, 0), nvl(betrag(regexp_substr(l_text, c_betrag, 1, i)), 0));
             end loop;
         end if;
+        l_netto := betrag(nach_label(l_text, 'Nettobetrag|Summe netto|Netto', c_betrag));
         -- Skonto, das der Aussteller abzieht ("unter Abzug von 3% Skonto")
         l_skonto := to_number(replace(regexp_substr(regexp_substr(l_text, '[0-9]+([.,][0-9]+)? ?% ?Skonto', 1, 1, 'i'),
                                                     '[0-9]+([.,][0-9]+)?'), ',', '.'),
@@ -130,52 +158,131 @@ create or replace package body FAKT_GUTSCHRIFT as
                                    case when l_nummer is not null and l_vertrag is not null
                                         then '/GSV/' || l_nummer || '/' || l_vertrag end), 1, 140);
 
+        -- schon vorhanden? gleiche Datei (Inhalt) bzw. gleiche Nummer beim selben Aussteller -> nur Hinweis
+        for g in (select coalesce(GUTS_INTERN_NUMMER, GUTS_NUMMER) as NR, GUTS_NUMMER, GUTS_AUSSTELLER,
+                         to_char(from_tz(GUTS_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as AM
+                    from FAKT_GUTSCHRIFTEN
+                   where GUTS_MAND_ID = p_mand_id
+                     and GUTS_ID <> nvl(l_id, -1)
+                     and ((l_nummer is not null and GUTS_NUMMER = substr(l_nummer, 1, 50)
+                           and (GUTS_KUND_ID = l_kund or l_kund is null or GUTS_KUND_ID is null))
+                          or (dbms_lob.getlength(GUTS_DATEI) = dbms_lob.getlength(p_datei)
+                              and dbms_lob.compare(GUTS_DATEI, p_datei) = 0))
+                   fetch first 1 rows only) loop
+            raise_application_error(-20271, 'Die Gutschrift ' || nvl(g.GUTS_NUMMER, '(ohne Nummer)')
+                                            || nvl2(g.GUTS_AUSSTELLER, ' von ' || g.GUTS_AUSSTELLER, null)
+                                            || ' ist bereits vorhanden (' || g.NR || ', hochgeladen am ' || g.AM
+                                            || ') – es wurde nichts übernommen.');
+        end loop;
+
         if l_id is null then
-            -- schon vorhanden? gleiche Datei (Inhalt) bzw. gleiche Gutschriftnummer desselben Ausstellers -> nur Hinweis
-            for g in (select GUTS_NUMMER, GUTS_AUSSTELLER,
-                             to_char(from_tz(GUTS_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as AM
-                        from FAKT_GUTSCHRIFTEN
-                       where GUTS_MAND_ID = p_mand_id
-                         and ((l_nummer is not null and GUTS_NUMMER = substr(l_nummer, 1, 50)
-                               and (GUTS_KUND_ID = l_kund or l_kund is null or GUTS_KUND_ID is null))
-                              or (dbms_lob.getlength(GUTS_DATEI) = dbms_lob.getlength(p_datei)
-                                  and dbms_lob.compare(GUTS_DATEI, p_datei) = 0))
-                       fetch first 1 rows only) loop
-                raise_application_error(-20271, 'Die Gutschrift ' || nvl(g.GUTS_NUMMER, '(ohne Nummer)')
-                                                || nvl2(g.GUTS_AUSSTELLER, ' von ' || g.GUTS_AUSSTELLER, null)
-                                                || ' ist bereits vorhanden (hochgeladen am ' || g.AM || ') – es wurde nichts angelegt.');
-            end loop;
-            insert into FAKT_GUTSCHRIFTEN (GUTS_MAND_ID, GUTS_KUND_ID, GUTS_AUSSTELLER, GUTS_NUMMER, GUTS_DATUM, GUTS_FAELLIG_AM,
-                                           GUTS_BETRAG, GUTS_SKONTO_PROZENT, GUTS_VERWENDUNGSZWECK, GUTS_DATEINAME, GUTS_MIME_TYPE,
-                                           GUTS_DATEI, GUTS_TEXT)
-            values (p_mand_id, l_kund, substr(l_ausst, 1, 200), substr(l_nummer, 1, 50), l_datum, l_faellig, l_betrag, l_skonto,
-                    l_zweck, p_dateiname, p_mime_type, p_datei, l_clob)
+            insert into FAKT_GUTSCHRIFTEN (GUTS_MAND_ID, GUTS_KUND_ID, GUTS_AUSSTELLER, GUTS_NUMMER, GUTS_AUSSTELLER_DATUM,
+                                           GUTS_FAELLIG_AM, GUTS_NETTO, GUTS_BETRAG, GUTS_SKONTO_PROZENT, GUTS_VERWENDUNGSZWECK,
+                                           GUTS_DATEINAME, GUTS_MIME_TYPE, GUTS_DATEI, GUTS_TEXT)
+            values (p_mand_id, l_kund, substr(l_ausst, 1, 200), substr(l_nummer, 1, 50), l_datum, l_faellig, l_netto, l_betrag,
+                    l_skonto, l_zweck, p_dateiname, p_mime_type, p_datei, l_clob)
             returning GUTS_ID into l_id;
         else
+            select count(*) into l_anz from FAKT_GUTSCHRIFTEN
+             where GUTS_ID = l_id and GUTS_MAND_ID = p_mand_id and GUTS_DATEI is null;
+            if l_anz = 0 then
+                raise_application_error(-20272, 'Die Gutschrift des Ausstellers ist bei dieser Gutschrift bereits hochgeladen.');
+            end if;
+            -- Angaben des Ausstellers uebernehmen (von Hand Erfasstes bleibt)
             update FAKT_GUTSCHRIFTEN
                set GUTS_DATEINAME = p_dateiname, GUTS_MIME_TYPE = p_mime_type, GUTS_DATEI = p_datei, GUTS_TEXT = l_clob,
                    GUTS_KUND_ID = coalesce(GUTS_KUND_ID, l_kund),
                    GUTS_AUSSTELLER = coalesce(GUTS_AUSSTELLER, substr(l_ausst, 1, 200)),
                    GUTS_NUMMER = coalesce(GUTS_NUMMER, substr(l_nummer, 1, 50)),
-                   GUTS_DATUM = coalesce(GUTS_DATUM, l_datum),
+                   GUTS_AUSSTELLER_DATUM = coalesce(GUTS_AUSSTELLER_DATUM, l_datum),
                    GUTS_FAELLIG_AM = coalesce(GUTS_FAELLIG_AM, l_faellig),
+                   GUTS_NETTO = coalesce(GUTS_NETTO, l_netto),
                    GUTS_BETRAG = coalesce(GUTS_BETRAG, l_betrag),
                    GUTS_SKONTO_PROZENT = coalesce(GUTS_SKONTO_PROZENT, l_skonto),
                    GUTS_VERWENDUNGSZWECK = coalesce(GUTS_VERWENDUNGSZWECK, l_zweck)
-             where GUTS_ID = l_id and GUTS_MAND_ID = p_mand_id;
+             where GUTS_ID = l_id;
         end if;
+        nummer_vergeben(l_id);
         return l_id;
     end aus_pdf;
 
+    procedure dokument_ablegen(p_guts_id in number, p_art in varchar2, p_dateiname in varchar2, p_mime_type in varchar2,
+                               p_datei in blob) is
+        l_anz pls_integer;
+    begin
+        if p_datei is null or dbms_lob.getlength(p_datei) = 0 then
+            raise_application_error(-20274, 'Bitte eine Datei auswählen.');
+        end if;
+        select count(*) into l_anz from FAKT_GUTSCHRIFT_DOKUMENTE
+         where GDOK_GUTS_ID = p_guts_id and GDOK_GROESSE = dbms_lob.getlength(p_datei)
+           and dbms_lob.compare(GDOK_DATEI, p_datei) = 0;
+        if l_anz > 0 then
+            raise_application_error(-20275, 'Diese Datei ist bei der Gutschrift bereits abgelegt – es wurde nichts übernommen.');
+        end if;
+        insert into FAKT_GUTSCHRIFT_DOKUMENTE (GDOK_GUTS_ID, GDOK_ART, GDOK_DATEINAME, GDOK_MIME_TYPE, GDOK_DATEI)
+        values (p_guts_id, nvl(p_art, 'STUNDENZETTEL'), p_dateiname, p_mime_type, p_datei);
+        nummer_vergeben(p_guts_id);
+    end dokument_ablegen;
+
+    procedure gesendet(p_guts_id in number) is
+        g FAKT_GUTSCHRIFTEN%rowtype;
+    begin
+        select * into g from FAKT_GUTSCHRIFTEN where GUTS_ID = p_guts_id for update;
+        if g.GUTS_STATUS <> 'ENTWURF' then
+            raise_application_error(-20276, 'Nur ein Entwurf kann als gesendet markiert werden.');
+        end if;
+        if g.GUTS_INTERN_NUMMER is null then
+            raise_application_error(-20277, 'Bitte zuerst den Stundenzettel hochladen.');
+        end if;
+        update FAKT_GUTSCHRIFTEN set GUTS_STATUS = 'GESENDET' where GUTS_ID = p_guts_id;
+    end gesendet;
+
+    procedure loeschen(p_guts_id in number) is
+        g        FAKT_GUTSCHRIFTEN%rowtype;
+        l_nkrs   FAKT_NUMMERNKREISE%rowtype;
+        l_letzte varchar2(30);
+    begin
+        select * into g from FAKT_GUTSCHRIFTEN where GUTS_ID = p_guts_id for update;
+        if g.GUTS_INTERN_NUMMER is not null then
+            select * into l_nkrs from FAKT_NUMMERNKREISE
+             where NKRS_MAND_ID = g.GUTS_MAND_ID and NKRS_BELEGART = 'GUTSCHRIFT'
+               and NKRS_JAHR = to_number(regexp_substr(g.GUTS_INTERN_NUMMER, '[0-9]{4}'))
+               for update;
+            l_letzte := replace(replace(l_nkrs.NKRS_FORMAT, '{JAHR}', to_char(l_nkrs.NKRS_JAHR)), '{NR}', to_char(l_nkrs.NKRS_LETZTE_NUMMER));
+            if l_letzte <> g.GUTS_INTERN_NUMMER then
+                raise_application_error(-20273, 'Gelöscht werden kann nur ein Entwurf ohne Nummer oder die zuletzt vergebene Gutschrift ('
+                                                || l_letzte || ').');
+            end if;
+            FAKT_RECHNUNG.g_intern := true;
+            update FAKT_NUMMERNKREISE set NKRS_LETZTE_NUMMER = NKRS_LETZTE_NUMMER - 1 where NKRS_ID = l_nkrs.NKRS_ID;
+            FAKT_RECHNUNG.g_intern := false;
+        end if;
+        update FAKT_BANKUMSAETZE set BKUM_STATUS = 'OFFEN', BKUM_GUTS_ID = null, BKUM_ZUORDNUNG = null
+         where BKUM_GUTS_ID = p_guts_id;
+        delete from FAKT_GUTSCHRIFT_DOKUMENTE where GDOK_GUTS_ID = p_guts_id;   -- vor der Historie (Trigger protokolliert)
+        execute immediate 'delete from FAKT_GUTSCHRIFT_HISTORIE where GHIS_GUTS_ID = :1' using p_guts_id;   -- Skript 42
+        delete from FAKT_GUTSCHRIFTEN where GUTS_ID = p_guts_id;
+    exception
+        when others then
+            FAKT_RECHNUNG.g_intern := false;
+            raise;
+    end loeschen;
+
     function status_text(p_status in varchar2) return varchar2 deterministic is
     begin
-        return case p_status when 'OFFEN' then 'Offen' when 'BEZAHLT' then 'Bezahlt' else initcap(p_status) end;
+        return case p_status when 'ENTWURF' then 'Entwurf' when 'GESENDET' then 'Gesendet'
+                             when 'OFFEN' then 'Offen' when 'BEZAHLT' then 'Bezahlt' else initcap(p_status) end;
     end status_text;
 
-    function dateiname(p_guts_id in number) return varchar2 is
-        l_name FAKT_GUTSCHRIFTEN.GUTS_DATEINAME%type;
+    function dateiname(p_guts_id in number, p_gdok_id in number default null) return varchar2 is
+        l_name varchar2(400);
     begin
-        select max(GUTS_DATEINAME) into l_name from FAKT_GUTSCHRIFTEN where GUTS_ID = p_guts_id;
+        if p_gdok_id is not null then
+            select max(GDOK_DATEINAME) into l_name from FAKT_GUTSCHRIFT_DOKUMENTE
+             where GDOK_ID = p_gdok_id and GDOK_GUTS_ID = p_guts_id;
+        else
+            select max(GUTS_DATEINAME) into l_name from FAKT_GUTSCHRIFTEN where GUTS_ID = p_guts_id;
+        end if;
         return l_name;
     end dateiname;
 
