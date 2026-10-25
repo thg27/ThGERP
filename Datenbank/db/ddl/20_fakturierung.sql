@@ -85,6 +85,7 @@ begin
   RECH_SUMME_NETTO number(12,2) default 0 not null,
   RECH_SUMME_MWST number(12,2) default 0 not null,
   RECH_SUMME_BRUTTO number(12,2) default 0 not null,
+  RECH_ZAHLUNGSREFERENZ varchar2(25 char),
   RECH_ALT_ID number,
   RECH_CREATED_ON timestamp not null,
   RECH_CREATED_BY varchar2(255 char) not null,
@@ -129,6 +130,7 @@ begin
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_SUMME_NETTO', 'number(12,2)', 'N', q'~0~');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_SUMME_MWST', 'number(12,2)', 'N', q'~0~');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_SUMME_BRUTTO', 'number(12,2)', 'N', q'~0~');
+    DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_ZAHLUNGSREFERENZ', 'varchar2(25 char)', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_ALT_ID', 'number', 'Y');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_CREATED_ON', 'timestamp', 'N');
     DDL_UTIL.spalte('FAKT_RECHNUNGEN', 'RECH_CREATED_BY', 'varchar2(255 char)', 'N');
@@ -259,6 +261,7 @@ begin
     DDL_UTIL.index_('FAKT_RECHNUNGEN', 'RECH_ZBED_I', q'~RECH_ZBED_ID~');
     DDL_UTIL.index_('FAKT_RECHNUNGEN', 'RECH_EMPF_LAND_I', q'~RECH_EMPF_LAND_CODE~');
     DDL_UTIL.index_('FAKT_RECHNUNGEN', 'RECH_DATUM_I', q'~RECH_DATUM~');
+    DDL_UTIL.index_('FAKT_RECHNUNGEN', 'RECH_ZAHLUNGSREFERENZ_UI', q'~RECH_ZAHLUNGSREFERENZ~', true);
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_RECH_FK', 'R', 'RPOS_RECH_ID references FAKT_RECHNUNGEN (RECH_ID)');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_HAUPT_RPOS_FK', 'R', 'RPOS_HAUPT_RPOS_ID references FAKT_RECHNUNGSPOSITIONEN (RPOS_ID) on delete cascade');
     DDL_UTIL.constraint_('FAKT_RECHNUNGSPOSITIONEN', 'RPOS_ARTI_FK', 'R', 'RPOS_ARTI_ID references ARTI_ARTIKEL (ARTI_ID)');
@@ -433,6 +436,7 @@ comment on column FAKT_RECHNUNGEN.RECH_WAEHRUNG is 'Waehrung (ISO 4217)';
 comment on column FAKT_RECHNUNGEN.RECH_SUMME_NETTO is 'Summe netto (aus den Positionen, ohne optionale)';
 comment on column FAKT_RECHNUNGEN.RECH_SUMME_MWST is 'Summe Umsatzsteuer';
 comment on column FAKT_RECHNUNGEN.RECH_SUMME_BRUTTO is 'Gesamtbetrag';
+comment on column FAKT_RECHNUNGEN.RECH_ZAHLUNGSREFERENZ is 'Zahlungsreferenz (RF-Referenz ISO 11649, ohne Leerzeichen), beim Abschliessen erzeugt';
 comment on column FAKT_RECHNUNGEN.RECH_ALT_ID is 'ID im Altsystem (Kingbill DokumentRechnung.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme';
 comment on column FAKT_RECHNUNGEN.RECH_CREATED_ON is 'Audit: angelegt am';
 comment on column FAKT_RECHNUNGEN.RECH_CREATED_BY is 'Audit: angelegt von';

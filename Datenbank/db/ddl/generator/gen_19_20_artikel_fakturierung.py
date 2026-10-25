@@ -155,6 +155,7 @@ FAKT = [
     ('RECH_SUMME_NETTO', BETRAG, 'N', '0', 'Summe netto (aus den Positionen, ohne optionale)'),
     ('RECH_SUMME_MWST', BETRAG, 'N', '0', 'Summe Umsatzsteuer'),
     ('RECH_SUMME_BRUTTO', BETRAG, 'N', '0', 'Gesamtbetrag'),
+    ('RECH_ZAHLUNGSREFERENZ', 'varchar2(25 char)', 'Y', None, 'Zahlungsreferenz (RF-Referenz ISO 11649, ohne Leerzeichen), beim Abschliessen erzeugt'),
     ('RECH_ALT_ID', 'number', 'Y', None, 'ID im Altsystem (Kingbill DokumentRechnung.ID, je Mandant eine Kingbill-Datenbank), fuer die Datenuebernahme'),
   ], [  # Eindeutigkeit von RECH_ALT_ID je Mandant: Unique-Index RECH_ALT_ID_UI in Skript 30
       ('RECH_STATUS_CK', 'C', "RECH_STATUS in ('ENTWURF', 'GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT')"),
@@ -172,7 +173,8 @@ FAKT = [
   [('RECH_NUMMER_UI', "case when RECH_NUMMER is not null then RECH_MAND_ID end, RECH_NUMMER", True),
    ('RECH_MAND_I', 'RECH_MAND_ID'), ('RECH_KUND_I', 'RECH_KUND_ID'), ('RECH_KSTO_I', 'RECH_KSTO_ID'),
    ('RECH_ANSP_I', 'RECH_ANSP_ID'), ('RECH_MITA_I', 'RECH_MITA_ID'), ('RECH_ZBED_I', 'RECH_ZBED_ID'),
-   ('RECH_EMPF_LAND_I', 'RECH_EMPF_LAND_CODE'), ('RECH_DATUM_I', 'RECH_DATUM')], ''),
+   ('RECH_EMPF_LAND_I', 'RECH_EMPF_LAND_CODE'), ('RECH_DATUM_I', 'RECH_DATUM'),
+   ('RECH_ZAHLUNGSREFERENZ_UI', 'RECH_ZAHLUNGSREFERENZ', True)], ''),
 
  # Haupt- und Unterpositionen (Skript 26): Hauptposition = RPOS_HAUPT_RPOS_ID leer; mit Unterpositionen ist ihre Summe
  # die Summe der Unterpositionen abzgl. Rabatt bzw. die Pauschalsumme, ohne Unterpositionen Menge x Einzelpreis

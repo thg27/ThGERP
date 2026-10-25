@@ -1947,6 +1947,45 @@ page 11 (
         }
     )
 
+    pageItem P11_KUND_IST_QR_CODE (
+        type: switch
+        label {
+            label: QR-Code auf der Rechnung
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @recht-konditionen
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        validation {
+            valueRequired: true
+        }
+        source {
+            formRegion: @kunde
+            column: KUND_IST_QR_CODE
+            dataType: varchar2
+        }
+        settings {
+            useDefaults: false
+            onValue: Y
+            onLabel: Ja
+            offValue: N
+            offLabel: Nein
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
     pageItem P11_KUND_EMAIL_RECHNUNG (
         type: textField
         label {

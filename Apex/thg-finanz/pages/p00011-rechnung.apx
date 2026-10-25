@@ -1123,6 +1123,29 @@ page 11 (
         }
     )
 
+    pageItem P11_ZAHLUNGSREFERENZ (
+        type: displayOnly
+        label {
+            label: Zahlungsreferenz
+            alignment: left
+        }
+        layout {
+            sequence: 130
+            region: @allgemein
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
     pageItem P11_RECH_KUND_ID (
         type: selectList
         label {
@@ -3369,6 +3392,12 @@ page 11 (
                 -- naechsten Speichern der Rechnung
                 :P11_RECH_VORTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_VORTEXT);
                 :P11_RECH_SCHLUSSTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_SCHLUSSTEXT);
+                -- Zahlungsreferenz in Vierergruppen (wie am Ausdruck)
+                :P11_ZAHLUNGSREFERENZ := null;
+                for z in (select FAKT_RECHNUNG.referenz_anzeige(RECH_ZAHLUNGSREFERENZ) as REF
+                            from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID) loop
+                    :P11_ZAHLUNGSREFERENZ := z.REF;
+                end loop;
                 ```
         }
         execution {

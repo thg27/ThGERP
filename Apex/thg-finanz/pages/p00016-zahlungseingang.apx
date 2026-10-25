@@ -204,6 +204,13 @@ page 16 (
         validation {
             maxLength: 140
         }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select FAKT_RECHNUNG.referenz_anzeige(RECH_ZAHLUNGSREFERENZ) from FAKT_RECHNUNGEN where RECH_ID = :P16_RECH_ID
+                ```
+        }
     )
 
     pageItem P16_ZAHL_BEMERKUNG (

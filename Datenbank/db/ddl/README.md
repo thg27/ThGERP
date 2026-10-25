@@ -8,7 +8,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 
 | Datei | Inhalt |
 |---|---|
-| 00_install.sql | ruft 01–37 auf (ohne 14 und 25), bricht bei Fehler ab |
+| 00_install.sql | ruft 01–38 auf (ohne 14 und 25), bricht bei Fehler ab |
 | 01_tabellen.sql | Tabellen, PK/UK/Check-Constraints |
 | 02_fremdschluessel.sql | Fremdschlüssel + FK-Indizes |
 | 03_indizes.sql | fachliche Unique-Indizes, Suchindizes |
@@ -45,6 +45,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 35_rechnung_dokumente.sql | Dokumente der Rechnung: Tabelle FAKT_RECHNUNG_DOKUMENTE (RDOK), Package FAKT_RECHNUNG_DOKUMENT – jeder Rechnungsdruck als PDF-Version abgelegt (neue Version beim ersten Druck und nach „Rechnung bearbeiten“/Storno), ältere Drucke bleiben; wiederholbar |
 | 36_zahlungsreferenz.sql | Zahlungsreferenz je Zahlungseingang (`ZAHL_REFERENZ`, 140 Zeichen, Index für die automatische Zuordnung), Referenz in der Historie (ruft 33 auf); wiederholbar |
 | 37_zahlung_ohne_skonto_mahnspesen.sql | Spalten ZAHL_SKONTO und ZAHL_MAHNSPESEN entfernt (nur wenn leer); Bezahlt/Status nur aus ZAHL_BETRAG, ruft 21 und 33 auf; wiederholbar |
+| 38_zahlungsreferenz_rechnung.sql | Zahlungsreferenz der Rechnung (RF-Referenz ISO 11649: Firma, Kundennummer, Jahr, Nummer), eindeutig, beim Abschließen erzeugt, auf dem Ausdruck; ruft 21 auf; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

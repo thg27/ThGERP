@@ -7,7 +7,8 @@
 --      Absenderzeile, Empfaenger (Kopie in der Rechnung), Nummer/Datum/Bearbeiter, Vortext,
 --      Haupt-/Unterpositionen (Zwischensumme, Rabatt, Pauschale; Beschreibung als Rich Text -> Zeilen,
 --      Aufzaehlungen), Summen je Steuersatz,
---      Zahlungsbedingungen, Schlusstext; Fuss auf jeder Seite: Firmendaten, Banken, Firmenbuch, Seite x von y
+--      Zahlungsbedingungen, Zahlungsreferenz (fett) mit EPC-QR-Code "Zahlen mit Code" rechts darunter (APEX_BARCODE),
+--      Schlusstext; Fuss auf jeder Seite: Firmendaten, Banken, Firmenbuch, Seite x von y
 -- Erzeugt: 2026-09-30, Layout an die Kingbill-Rechnungen angeglichen 2026-10-24
 -- Wiederholbar (create or replace).
 -- Voraussetzung: 15 (AS_PDF), 17/18 (Mandanten), 20/21 (Fakturierung)
@@ -635,6 +636,53 @@ as
     end fuss;
 
     -- ---------------------------------------------------------------- PDF
+    -- EPC-QR-Code ("Zahlen mit Code", EPC069-12 Version 002) rechts unter dem Text zur Zahlungsreferenz: Empfaenger
+    -- (Firmenname des Mandanten), IBAN/BIC der bevorzugten Bankverbindung, offener Betrag, Zahlungsreferenz (RF).
+    -- Nicht bei Entwurf/Storno, ohne Referenz, ohne Bankverbindung, wenn nichts mehr offen ist oder beim Kunden abgeschaltet.
+    procedure qr_code(p_r FAKT_RECHNUNGEN%rowtype)
+    is
+        c_groesse constant number := 85;            -- Kantenlaenge in pt (ca. 3 cm)
+        l_offen   number;
+        l_daten   varchar2(1000);
+        l_img     pls_integer;
+        l_lf      constant varchar2(1) := chr(10);
+    begin
+        if p_r.RECH_ZAHLUNGSREFERENZ is null or p_r.RECH_STATUS in ('ENTWURF', 'STORNIERT') then
+            return;
+        end if;
+        select p_r.RECH_SUMME_BRUTTO - nvl(sum(ZAHL_BETRAG), 0) into l_offen
+          from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = p_r.RECH_ID;
+        if l_offen < 0.01 or l_offen > 999999999.99 then
+            return;
+        end if;
+        for b in (select m.MAND_NAME, k.MBNK_IBAN, k.MBNK_BIC
+                    from ADMIN_MANDANTEN m
+                    join ADMIN_MANDANT_BANKVERBINDUNGEN k on k.MBNK_MAND_ID = m.MAND_ID and k.MBNK_IST_AKTIV = 'Y'
+                   where m.MAND_ID = p_r.RECH_MAND_ID
+                     -- je Kunde abschaltbar (Kundenstamm: "QR-Code auf der Rechnung")
+                     and exists (select 1 from KUND_KUNDEN where KUND_ID = p_r.RECH_KUND_ID and KUND_IST_QR_CODE = 'Y')
+                   order by case k.MBNK_IST_BEVORZUGT when 'Y' then 0 else 1 end, k.MBNK_SORTIERUNG
+                   fetch first 1 rows only)
+        loop
+            -- Zeilen: Kennung, Version, Zeichensatz (1 = UTF-8), SEPA-Ueberweisung, BIC, Empfaenger (max. 70), IBAN,
+            -- Betrag, Zweck (leer), strukturierte Referenz (RF)
+            l_daten := 'BCD' || l_lf || '002' || l_lf || '1' || l_lf || 'SCT' || l_lf
+                       || replace(b.MBNK_BIC, ' ') || l_lf
+                       || substr(b.MAND_NAME, 1, 70) || l_lf
+                       || replace(upper(b.MBNK_IBAN), ' ') || l_lf
+                       || 'EUR' || to_char(round(l_offen, 2), 'FM999999990.00', 'NLS_NUMERIC_CHARACTERS=''.,''') || l_lf
+                       || l_lf
+                       || p_r.RECH_ZAHLUNGSREFERENZ || l_lf;
+            l_img := as_pdf.load_image(apex_barcode.get_qrcode_png(p_value => l_daten, p_scale => 6, p_quiet => 1,
+                                                                   p_eclevel => 'M'));
+            platz(c_groesse + 16);
+            as_pdf.put_image(l_img, c_rechts - c_groesse, g_y - c_groesse, p_width => c_groesse, p_height => c_groesse);
+            g_y := g_y - c_groesse - 9;
+            txt_r(c_rechts - (c_groesse - as_pdf.str_len('Zahlen mit Code', g_normal, 7)) / 2, 'Zahlen mit Code', g_normal, 7);
+            g_y := g_y - 12;
+        end loop;
+    end qr_code;
+
     function pdf(p_rech_id in number) return blob
     is
         l_r FAKT_RECHNUNGEN%rowtype;
@@ -655,6 +703,15 @@ as
         positionen(l_r);
         summen(l_r);
         absatz(l_r.RECH_ZAHLUNGSBED_TEXT);
+        -- Zahlungsreferenz (RF-Referenz, beim Abschliessen erzeugt), fett in Vierergruppen
+        if l_r.RECH_ZAHLUNGSREFERENZ is not null then
+            platz(12);
+            block_rich(c_links, c_rechts - c_links,
+                       'Bitte bei Online-Überweisungen die Zahlungsreferenz ' || chr(1)
+                       || FAKT_RECHNUNG.referenz_anzeige(l_r.RECH_ZAHLUNGSREFERENZ) || chr(2) || ' angeben.', 9);
+            qr_code(l_r);
+            g_y := g_y - 6;
+        end if;
         absatz(l_r.RECH_SCHLUSSTEXT);
         fuss(l_r.RECH_MAND_ID);
         return as_pdf.get_pdf;
@@ -663,5 +720,14 @@ end FAKT_RECHNUNG_PDF;
 /
 
 show errors package body FAKT_RECHNUNG_PDF
+
+-- abhaengige Pakete (Skript 35) neu uebersetzen
+begin
+    for o in (select object_name from user_objects
+               where status <> 'VALID' and object_type = 'PACKAGE BODY' and object_name in ('FAKT_RECHNUNG_DOKUMENT')) loop
+        execute immediate 'alter package ' || o.object_name || ' compile body';
+    end loop;
+end;
+/
 
 prompt FAKT_RECHNUNG_PDF installiert.

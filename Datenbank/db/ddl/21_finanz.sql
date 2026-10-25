@@ -128,6 +128,11 @@ create or replace package FAKT_RECHNUNG as
     -- Vor-/Schlusstext fuer den Rich-Text-Editor: HTML unveraendert, Klartext (Altdaten, Textvorlagen) maskiert mit
     -- Zeilenumbruechen als <br> – nur fuer die Anzeige; gespeichert wird erst beim naechsten Speichern der Rechnung
     function text_html(p_text in clob) return clob;
+    -- Zahlungsreferenz der Rechnung als RF-Referenz (ISO 11649): RF + 2 Pruefziffern + Firma (1 = EDV, 2 = HOLDING) +
+    -- Kundennummer + Jahr + laufende Rechnungsnummer (5-stellig), z.B. RF752100221202600203; null ohne Rechnungsnummer
+    function zahlungsreferenz(p_rech_id in number) return varchar2;
+    -- Anzeige/Druck in Vierergruppen: RF75 2100 2212 0260 0203
+    function referenz_anzeige(p_referenz in varchar2) return varchar2 deterministic;
     -- TRUE nur waehrend das Package Nummern vergibt/zuruecksetzt (Trigger sperren manuelle Aenderungen)
     g_intern boolean := false;
 end FAKT_RECHNUNG;
@@ -274,6 +279,7 @@ create or replace package body FAKT_RECHNUNG as
         l_nr   FAKT_RECHNUNGEN.RECH_NUMMER%type;
         -- Rechnungsdatum = Tag des Abschliessens in Oesterreich (Datenbankserver laeuft in UTC)
         l_datum constant date := trunc(cast(systimestamp at time zone 'Europe/Vienna' as date));
+        l_ref   FAKT_RECHNUNGEN.RECH_ZAHLUNGSREFERENZ%type;
     begin
         select * into l_rech from FAKT_RECHNUNGEN where RECH_ID = p_rech_id for update;
         if l_rech.RECH_STATUS <> 'ENTWURF' then
@@ -296,6 +302,10 @@ create or replace package body FAKT_RECHNUNG as
                                           l_datum + nvl((select ZBED_ZIEL_TAGE from ALLG_ZAHLUNGSBEDINGUNGEN
                                                              where ZBED_ID = r.RECH_ZBED_ID), 14))
          where RECH_ID = p_rech_id;
+        -- Zahlungsreferenz aus Firma, Kunde und der eben vergebenen Nummer (erst berechnen, dann setzen – eine Funktion,
+        -- die FAKT_RECHNUNGEN liest, ist im UPDATE derselben Tabelle wegen der Trigger nicht erlaubt: ORA-04091)
+        l_ref := zahlungsreferenz(p_rech_id);
+        update FAKT_RECHNUNGEN set RECH_ZAHLUNGSREFERENZ = l_ref where RECH_ID = p_rech_id;
         g_intern := false;
     exception
         when others then
@@ -431,6 +441,42 @@ create or replace package body FAKT_RECHNUNG as
         execute immediate 'begin FAKT_HISTORIE.protokoll(:1, :2, :3); end;' using l_neu, 'Kopiert', l_herkunft;
         return l_neu;
     end kopieren;
+
+    function zahlungsreferenz(p_rech_id in number) return varchar2 is
+        l_basis varchar2(100);
+        l_ziffern varchar2(200);
+        l_rest  pls_integer := 0;
+    begin
+        select case m.MAND_CODE when 'EDV' then '1' when 'HOLDING' then '2' else '9' end
+               || regexp_replace(upper(k.KUND_NUMMER), '[^0-9A-Z]')
+               || regexp_substr(r.RECH_NUMMER, '^[0-9]{4}')
+               || lpad(regexp_substr(r.RECH_NUMMER, '[0-9]+$'), 5, '0')
+          into l_basis
+          from FAKT_RECHNUNGEN r
+          join ADMIN_MANDANTEN m on m.MAND_ID = r.RECH_MAND_ID
+          join KUND_KUNDEN k on k.KUND_ID = r.RECH_KUND_ID
+         where r.RECH_ID = p_rech_id
+           and r.RECH_NUMMER is not null;
+        l_basis := substr(l_basis, 1, 21);   -- RF-Referenz: hoechstens 25 Zeichen
+        -- Pruefziffern: Basis + "RF00", Buchstaben A=10 … Z=35, Rest modulo 97 (stueckweise), Pruefziffer = 98 - Rest
+        for i in 1 .. length(l_basis || 'RF00') loop
+            l_ziffern := l_ziffern || case when substr(l_basis || 'RF00', i, 1) between '0' and '9'
+                                           then substr(l_basis || 'RF00', i, 1)
+                                           else to_char(ascii(substr(l_basis || 'RF00', i, 1)) - 55) end;
+        end loop;
+        for i in 1 .. length(l_ziffern) loop
+            l_rest := mod(l_rest * 10 + to_number(substr(l_ziffern, i, 1)), 97);
+        end loop;
+        return 'RF' || lpad(98 - l_rest, 2, '0') || l_basis;
+    exception
+        when no_data_found then
+            return null;
+    end zahlungsreferenz;
+
+    function referenz_anzeige(p_referenz in varchar2) return varchar2 deterministic is
+    begin
+        return trim(regexp_replace(replace(p_referenz, ' '), '(.{4})', '\1 '));
+    end referenz_anzeige;
 
     function text_html(p_text in clob) return clob is
     begin

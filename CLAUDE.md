@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–37 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–38 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -71,6 +71,11 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Kingbill-ID 833 (Duplikat 188) nicht übernommen, 186 als bezahlt, 202 offen); dafür 6 Kunden ohne Kingbill-Stammsatz angelegt
   (Hohl, Ingenieurbüro Forst/Holz, C.S.M., Elektro ON Balk, Dr. Barbara Lenhard, ThG - edv GmbH). Kingbill-IDs je Mandant eindeutig (DDL 30).
   Nummernkreise: EDV 2026 = 13, HOLDING 2025 = 171, 2026 = 202.
+- Zahlungsreferenz (DDL 38): RF-Referenz `RECH_ZAHLUNGSREFERENZ` (eindeutig) = RF + Prüfziffern + Firma (1 = EDV, 2 = HOLDING) + Kundennummer
+  + Jahr + Nummer 5-stellig, erzeugt in `FAKT_RECHNUNG.abschliessen`; ältere Rechnungen haben keine. Ausdruck: „Bitte bei Online-Überweisungen
+  die Zahlungsreferenz **RF75 2100 2212 0260 0203** angeben.“ und rechts darunter EPC-QR-Code „Zahlen mit Code“ (Empfänger = Mandantenname,
+  bevorzugte IBAN, offener Betrag, Referenz; `APEX_BARCODE`) – je Kunde abschaltbar (`KUND_IST_QR_CODE`, THG-KUNDEN Rechtliches und Konditionen).
+  Anzeige auf Seite 11 (Allgemein), Vorschlag im Dialog Zahlungseingang.
 - Zahlungen (Tab auf Seite 11): Timeline – zuerst „Rechnung erstellt“ mit offenem Betrag, dann je Zahlung Betrag/Skonto/Referenz/Bemerkung
   und der danach offene Betrag; Button „Zahlungseingang“ öffnet Dialog Seite 16 (Datum Vorschlag heute, Betrag Vorschlag offener Betrag,
   Skonto, Mahnspesen, Zahlungsreferenz `ZAHL_REFERENZ` (DDL 36) für die spätere automatische Zuordnung, Bemerkung); Klick auf eine Zahlung

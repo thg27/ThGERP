@@ -928,6 +928,9 @@ def seite_11():
             staticValue: ENTWURF
         }
 """, **f)
+    # Zahlungsreferenz (RF, beim Abschliessen erzeugt) in Vierergruppen wie am Ausdruck – nur Anzeige (Prozess titel-setzen)
+    s += item("P11_ZAHLUNGSREFERENZ", "displayOnly", "Zahlungsreferenz", 130, a, neue_zeile=False, spalten=3, form=None,
+              extra="        settings {\n            sendOnPageSubmit: false\n        }\n")
 
     k = "kunde"
     s += item("P11_RECH_KUND_ID", "selectList", "Kunde", 10, k, col="RECH_KUND_ID", dtype="number", req=True,
@@ -1871,6 +1874,12 @@ def seite_11():
                 -- naechsten Speichern der Rechnung
                 :P11_RECH_VORTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_VORTEXT);
                 :P11_RECH_SCHLUSSTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_SCHLUSSTEXT);
+                -- Zahlungsreferenz in Vierergruppen (wie am Ausdruck)
+                :P11_ZAHLUNGSREFERENZ := null;
+                for z in (select FAKT_RECHNUNG.referenz_anzeige(RECH_ZAHLUNGSREFERENZ) as REF
+                            from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID) loop
+                    :P11_ZAHLUNGSREFERENZ := z.REF;
+                end loop;
                 ```
         }
         execution {
@@ -2751,7 +2760,8 @@ def seite_16():
                                       "from FAKT_ZAHLUNGEN where ZAHL_RECH_ID = r.RECH_ID), 0), 0) "
                                       "from FAKT_RECHNUNGEN r where RECH_ID = :P16_RECH_ID"), **f), "999G999G990D00")
     s += item("P16_ZAHL_REFERENZ", "textField", "Zahlungsreferenz", 50, "zahlung", col="ZAHL_REFERENZ", maxlen=140,
-              spalten=12, **f)
+              spalten=12, extra=default_sql("select FAKT_RECHNUNG.referenz_anzeige(RECH_ZAHLUNGSREFERENZ) "
+                                            "from FAKT_RECHNUNGEN where RECH_ID = :P16_RECH_ID"), **f)
     s += item("P16_ZAHL_BEMERKUNG", "textField", "Bemerkung", 60, "zahlung", col="ZAHL_BEMERKUNG", maxlen=500,
               spalten=12, **f)
     s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close", verhalten="            action: definedByDynamicAction\n")
