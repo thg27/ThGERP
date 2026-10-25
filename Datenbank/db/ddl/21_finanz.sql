@@ -125,6 +125,9 @@ create or replace package FAKT_RECHNUNG as
     procedure stornieren(p_rech_id in number, p_grund in varchar2);
     -- Anzeigetext des Status (ENTWURF -> Entwurf, GEDRUCKT -> Offen – gedruckt, GESENDET -> Offen – gesendet, ...)
     function status_text(p_status in varchar2) return varchar2 deterministic;
+    -- Vor-/Schlusstext fuer den Rich-Text-Editor: HTML unveraendert, Klartext (Altdaten, Textvorlagen) maskiert mit
+    -- Zeilenumbruechen als <br> – nur fuer die Anzeige; gespeichert wird erst beim naechsten Speichern der Rechnung
+    function text_html(p_text in clob) return clob;
     -- TRUE nur waehrend das Package Nummern vergibt/zuruecksetzt (Trigger sperren manuelle Aenderungen)
     g_intern boolean := false;
 end FAKT_RECHNUNG;
@@ -428,6 +431,16 @@ create or replace package body FAKT_RECHNUNG as
         execute immediate 'begin FAKT_HISTORIE.protokoll(:1, :2, :3); end;' using l_neu, 'Kopiert', l_herkunft;
         return l_neu;
     end kopieren;
+
+    function text_html(p_text in clob) return clob is
+    begin
+        if p_text is null or regexp_like(dbms_lob.substr(p_text, 50, 1), '^\s*<[a-zA-Z]') then
+            return p_text;
+        end if;
+        return '<p>' || replace(replace(replace(replace(replace(replace(p_text, '&', '&amp;'), '<', '&lt;'), '>', '&gt;'),
+                                                chr(13) || chr(10), chr(10)), chr(13), chr(10)), chr(10), '<br>')
+               || '</p>';
+    end text_html;
 
     function status_text(p_status in varchar2) return varchar2 deterministic is
     begin

@@ -59,6 +59,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - Dokumente (Registerkarte nach Zahlungen): `FAKT_RECHNUNG_DOKUMENTE` (DDL 35) – jeder Rechnungsdruck wird als PDF-Version abgelegt
   (`FAKT_RECHNUNG_DOKUMENT.ablegen` auf Seite 12): neue Version beim ersten Druck und nach „Rechnung bearbeiten“ bzw. Storno, ältere bleiben;
   Anzeige im PDF-Dialog Seite 13 mit `P13_RDOK_ID` (Seite 12 liefert dann den abgelegten Druck). Vorschauen werden nicht abgelegt.
+- Vor-/Schlusstext: Rich-Text-Editor (HTML, Fett/Kursiv/Listen); Klartext-Altdaten werden nur angezeigt umgewandelt
+  (`FAKT_RECHNUNG.text_html`) und erst beim nächsten Speichern der Rechnung als HTML gespeichert. PDF: Fett/Kursiv innerhalb
+  der Zeile (`block_rich`), auch in Positionsbeschreibungen.
 - Rechnungsdruck: Seite 13 (PDF-Anzeige, Drucken/Herunterladen), Paket `FAKT_RECHNUNG_PDF` (DDL 24),
   Layout wie die Kingbill-Rechnungen in `Vorlagen/Ausgangsrechnungen` (Hauptposition ohne Unterpositionen wie eine Kingbill-Position mit Einzelpreis/Menge/Einheit, „Art.-Nr.“).
 - Rechnungen EDV 2026 - 1 bis 13 aus Kingbill übernommen (2026-10-24, `Vorlagen/Access Datenbank Migration/access_rechnungen.py`, mit Zahlungen, alle bezahlt;

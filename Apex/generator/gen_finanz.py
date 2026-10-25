@@ -1138,10 +1138,14 @@ def seite_11():
         "            templateOptions: #DEFAULT#\n            cssClasses: thg-anschrift\n        }\n", 1)
 
     txt = lambda art: default_sql(f"select TXVL_TEXT from ALLG_TEXTVORLAGEN where TXVL_ART = '{art}' and TXVL_IST_STANDARD = 'Y'")
-    s += item("P11_RECH_VORTEXT", "textarea", "Vortext", 10, "vortext", col="RECH_VORTEXT", dtype="clob",
-              spalten=12, extra=txt("VORTEXT"), **f)
-    s += item("P11_RECH_SCHLUSSTEXT", "textarea", "Schlusstext", 10, "schlusstext", col="RECH_SCHLUSSTEXT",
-              dtype="clob", spalten=12, extra=txt("SCHLUSSTEXT"), **f)
+    # Vor-/Schlusstext mit Fett/Kursiv/Aufzaehlung (Rich-Text-Editor, als HTML gespeichert – nicht Markdown, das ist die
+    # Vorgabe des Editors). Klartext (Altdaten, Textvorlagen) wird nur fuer die Anzeige umgewandelt (Prozess titel-setzen,
+    # FAKT_RECHNUNG.text_html); als HTML gespeichert erst beim naechsten Speichern der Rechnung
+    rte = "        settings {\n            format: html\n            toolbar: basic\n        }\n"
+    s += item("P11_RECH_VORTEXT", "richTextEditor", "Vortext", 10, "vortext", col="RECH_VORTEXT", dtype="clob",
+              spalten=12, extra=rte + txt("VORTEXT"), **f)
+    s += item("P11_RECH_SCHLUSSTEXT", "richTextEditor", "Schlusstext", 10, "schlusstext", col="RECH_SCHLUSSTEXT",
+              dtype="clob", spalten=12, extra=rte + txt("SCHLUSSTEXT"), **f)
     # Lieferadresse als Textblock unter der Anschrift des Kunden (gleiche Darstellung, thg.css .thg-anschrift)
     s += item("P11_RECH_LIEFERADRESSE", "textarea", "Lieferadresse", 20, v,
               col="RECH_LIEFERADRESSE", maxlen=1000, **f).replace(
@@ -1952,6 +1956,10 @@ def seite_11():
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
+                -- Klartext (Altdaten, Textvorlage) fuer den Rich-Text-Editor als HTML anzeigen; gespeichert wird erst beim
+                -- naechsten Speichern der Rechnung
+                :P11_RECH_VORTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_VORTEXT);
+                :P11_RECH_SCHLUSSTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_SCHLUSSTEXT);
                 ```
         }
         execution {

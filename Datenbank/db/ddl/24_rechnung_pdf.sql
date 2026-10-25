@@ -44,6 +44,8 @@ as
 
     g_normal    pls_integer;
     g_fett      pls_integer;
+    g_kursiv    pls_integer;
+    g_fett_kursiv pls_integer;
     g_y         number;
     g_wasserzeichen varchar2(20);                    -- VORSCHAU (Entwurf) bzw. STORNIERT
 
@@ -126,7 +128,95 @@ as
         g_y := g_y - p_size * 1.25;
     end block;
 
-    -- Rich Text (HTML des Editors) bzw. einfacher Text -> Zeilen; <strong>/<b> ganzer Zeilen fett, <li> als Aufzaehlung
+    -- Text mit Wortumbruch und Fett/Kursiv innerhalb der Zeile (Marken aus zeilen(): chr(1)/chr(2) fett an/aus,
+    -- chr(4)/chr(5) kursiv an/aus); jedes Wort wird in Teile gleicher Schrift zerlegt und nebeneinander gesetzt
+    procedure block_rich(p_x number, p_breite number, p_txt varchar2, p_size number default 9)
+    is
+        type t_teil is record (txt varchar2(4000), font pls_integer);
+        type t_teile is table of t_teil index by pls_integer;
+        l_zeile   t_teile;                 -- Teile der aktuellen Zeile
+        l_wort    t_teile;                 -- Teile des aktuellen Worts
+        l_breite  number := 0;             -- Breite der aktuellen Zeile
+        l_wbreite number;
+        l_leer    number := as_pdf.str_len(' ', g_normal, p_size);
+        l_fett    boolean := false;
+        l_kursiv  boolean := false;
+        l_rest    varchar2(32767) := p_txt;
+        l_w       varchar2(32767);
+        l_akt     varchar2(4000);
+        l_c       varchar2(4 char);
+        l_pos     pls_integer;
+
+        function schrift return pls_integer is
+        begin
+            return case when l_fett and l_kursiv then g_fett_kursiv when l_fett then g_fett
+                        when l_kursiv then g_kursiv else g_normal end;
+        end schrift;
+
+        procedure teil_dazu is
+        begin
+            if l_akt is not null then
+                l_wort(l_wort.count + 1).txt := l_akt;
+                l_wort(l_wort.count).font := schrift;
+                l_wbreite := l_wbreite + as_pdf.str_len(l_akt, schrift, p_size);
+                l_akt := null;
+            end if;
+        end teil_dazu;
+
+        procedure zeile_ausgeben is
+            l_px number := p_x;
+        begin
+            for i in 1 .. l_zeile.count loop
+                txt(l_px, l_zeile(i).txt, l_zeile(i).font, p_size);
+                l_px := l_px + as_pdf.str_len(l_zeile(i).txt, l_zeile(i).font, p_size);
+            end loop;
+            g_y := g_y - p_size * 1.25;
+            l_zeile.delete;
+            l_breite := 0;
+        end zeile_ausgeben;
+    begin
+        while l_rest is not null loop
+            l_pos  := instr(l_rest, ' ');
+            l_w    := case when l_pos = 0 then l_rest else substr(l_rest, 1, l_pos - 1) end;
+            l_rest := case when l_pos = 0 then null else substr(l_rest, l_pos + 1) end;
+            l_wort.delete;
+            l_wbreite := 0;
+            for i in 1 .. nvl(length(l_w), 0) loop
+                l_c := substr(l_w, i, 1);
+                if l_c in (chr(1), chr(2), chr(4), chr(5)) then
+                    teil_dazu;
+                    if l_c = chr(1) then l_fett := true;
+                    elsif l_c = chr(2) then l_fett := false;
+                    elsif l_c = chr(4) then l_kursiv := true;
+                    else l_kursiv := false;
+                    end if;
+                else
+                    l_akt := l_akt || l_c;
+                end if;
+            end loop;
+            teil_dazu;
+            if l_wort.count > 0 then
+                if l_zeile.count > 0 and l_breite + l_leer + l_wbreite > p_breite then
+                    zeile_ausgeben;
+                end if;
+                if l_zeile.count > 0 then
+                    l_zeile(l_zeile.count + 1).txt := ' ';
+                    l_zeile(l_zeile.count).font := g_normal;
+                    l_breite := l_breite + l_leer;
+                end if;
+                for i in 1 .. l_wort.count loop
+                    l_zeile(l_zeile.count + 1) := l_wort(i);
+                end loop;
+                l_breite := l_breite + l_wbreite;
+            end if;
+        end loop;
+        if l_zeile.count > 0 then
+            zeile_ausgeben;
+        end if;
+    end block_rich;
+
+    -- Rich Text (HTML des Editors) bzw. einfacher Text -> Zeilen; <li> als Aufzaehlung. Fett/kursiv bleiben als Marken im
+    -- Text (chr(1)/chr(2) fett an/aus, chr(4)/chr(5) kursiv an/aus) und werden von block_rich wortweise ausgegeben
     function zeilen(p_text clob) return t_zeilen
     is
         l_s     varchar2(32767);
@@ -147,6 +237,8 @@ as
             l_s := regexp_replace(l_s, '<li[^>]*>', chr(10) || chr(3), 1, 0, 'i');            -- Aufzaehlung
             l_s := regexp_replace(l_s, '<(strong|b)( [^>]*)?>', chr(1), 1, 0, 'i');             -- fett an
             l_s := regexp_replace(l_s, '</(strong|b)>', chr(2), 1, 0, 'i');                     -- fett aus
+            l_s := regexp_replace(l_s, '<(em|i)( [^>]*)?>', chr(4), 1, 0, 'i');                 -- kursiv an
+            l_s := regexp_replace(l_s, '</(em|i)>', chr(5), 1, 0, 'i');                         -- kursiv aus
             l_s := regexp_replace(l_s, '<[^>]+>', '');
             l_s := utl_i18n.unescape_reference(l_s);
             l_s := replace(l_s, chr(160), ' ');
@@ -156,11 +248,11 @@ as
             exit when l_teil > length(l_s);
             l_z := trim(substr(l_s, l_teil, instr(l_s, chr(10), l_teil) - l_teil));
             l_teil := instr(l_s, chr(10), l_teil) + 1;
-            if replace(replace(replace(l_z, chr(1)), chr(2)), chr(3)) is not null then
+            if trim(translate(l_z, 'x' || chr(1) || chr(2) || chr(3) || chr(4) || chr(5), 'x')) is not null then
                 l_i := l_i + 1;
                 l_erg(l_i).punkt := instr(l_z, chr(3)) > 0;
-                l_erg(l_i).fett  := substr(replace(l_z, chr(3)), 1, 1) = chr(1);
-                l_erg(l_i).txt   := trim(replace(replace(replace(l_z, chr(1)), chr(2)), chr(3)));
+                l_erg(l_i).fett  := false;
+                l_erg(l_i).txt   := trim(replace(l_z, chr(3)));
             end if;
         end loop;
         return l_erg;
@@ -212,7 +304,7 @@ as
     begin
         for i in 1 .. l_z.count loop
             platz(12);
-            block(c_links, c_rechts - c_links, l_z(i).txt, case when l_z(i).fett then g_fett end, 9);
+            block_rich(c_links, c_rechts - c_links, l_z(i).txt, 9);
         end loop;
         if l_z.count > 0 then
             g_y := g_y - 6;
@@ -371,9 +463,9 @@ as
                 platz(12, true);
                 if l_z(i).punkt then
                     txt(c_x_text + 14, chr(14844066), g_normal, 8.5);
-                    block(c_x_text + 24, c_b_text - 24, l_z(i).txt, case when l_z(i).fett then g_fett end, 8.5);
+                    block_rich(c_x_text + 24, c_b_text - 24, l_z(i).txt, 8.5);
                 else
-                    block(c_x_text, c_b_text, l_z(i).txt, case when l_z(i).fett then g_fett end, 8.5);
+                    block_rich(c_x_text, c_b_text, l_z(i).txt, 8.5);
                 end if;
             end loop;
         end beschreibung;
@@ -553,6 +645,8 @@ as
         as_pdf.set_info(p_title => dateiname(p_rech_id), p_author => 'ThGERP');
         g_normal := as_pdf.get_font_index(p_family => 'helvetica', p_style => 'N');
         g_fett   := as_pdf.get_font_index(p_family => 'helvetica', p_style => 'B');
+        g_kursiv := as_pdf.get_font_index(p_family => 'helvetica', p_style => 'I');
+        g_fett_kursiv := as_pdf.get_font_index(p_family => 'helvetica', p_style => 'BI');
         neue_seite;
         kopf(l_r);
         absatz(l_r.RECH_VORTEXT);

@@ -1618,7 +1618,7 @@ page 11 (
     )
 
     pageItem P11_RECH_VORTEXT (
-        type: textarea
+        type: richTextEditor
         label {
             label: Vortext
             alignment: left
@@ -1639,6 +1639,10 @@ page 11 (
             column: RECH_VORTEXT
             dataType: clob
         }
+        settings {
+            format: html
+            toolbar: basic
+        }
         default {
             type: sqlQuerySingleValue
             sqlQuerySingleValue:
@@ -1649,7 +1653,7 @@ page 11 (
     )
 
     pageItem P11_RECH_SCHLUSSTEXT (
-        type: textarea
+        type: richTextEditor
         label {
             label: Schlusstext
             alignment: left
@@ -1669,6 +1673,10 @@ page 11 (
             formRegion: @rechnung
             column: RECH_SCHLUSSTEXT
             dataType: clob
+        }
+        settings {
+            format: html
+            toolbar: basic
         }
         default {
             type: sqlQuerySingleValue
@@ -3858,6 +3866,10 @@ page 11 (
                                    when :P11_RECH_NUMMER is null then 'Rechnungsentwurf'
                                    else 'Rechnung ' || :P11_RECH_NUMMER end;
                 :P11_KUND_ID_ALT := :P11_RECH_KUND_ID;
+                -- Klartext (Altdaten, Textvorlage) fuer den Rich-Text-Editor als HTML anzeigen; gespeichert wird erst beim
+                -- naechsten Speichern der Rechnung
+                :P11_RECH_VORTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_VORTEXT);
+                :P11_RECH_SCHLUSSTEXT := FAKT_RECHNUNG.text_html(:P11_RECH_SCHLUSSTEXT);
                 ```
         }
         execution {
