@@ -177,7 +177,7 @@ page 30 (
                        '<a class="t-Button t-Button--small t-Button--icon t-Button--iconLeft" href="'
                        || apex_escape.html_attribute(apex_page.get_url(p_page => 31, p_clear_cache => '31',
                                                                        p_items => 'P31_BKUM_ID', p_values => u.BKUM_ID))
-                       || '" title="Von Hand einer Rechnung bzw. Gutschrift zuordnen"><span class="t-Icon t-Icon--left fa '
+                       || '" title="Von Hand einer Rechnung, Gutschrift bzw. einem Debitor zuordnen"><span class="t-Icon t-Icon--left fa '
                        || case when u.BKUM_STATUS = 'OFFEN' then 'fa-link" aria-hidden="true"></span>Zuordnen'
                                else 'fa-pencil" aria-hidden="true"></span>Ändern' end || '</a> ' ||
                        -- nicht zuordenbarer Eingang eines Nicht-Kunden: Debitor daraus anlegen (Seite 51, Request ANLEGEN)

@@ -98,8 +98,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Zahlung anderen Datums werden zugeordnet („vorhandene Zahlung vom …“); Rechnungsnummer ohne Trennzeichen („2026201“) nur, wenn der
   Auftraggeber der Kunde ist (`FAKT_DEBITOR.ist_kunde`). Kein „Debitor anlegen“, wenn der Auftraggeber ein Kunde ist (Hinweis „Rechnung
   bzw. Gutschrift fehlt“). Zahlungseingänge als Interactive Report (Aktionsleiste: Suche, Filter, Download; Status-Farbe und Beleg-Link per HTML-Ausdruck).
-  Von Hand zuordnen: Button „Zuordnen“/„Ändern“ je Zeile → Dialog Seite 31 (Rechnungen/Gutschriften des Mandanten als Interactive Report,
-  Kunde/Betrag passend zuerst) → `FAKT_BANK.zuordnen` (gleich hohe Zahlung verknüpfen, offene Rechnung: Zahlung „Bankabgleich (von Hand)“
+  Von Hand zuordnen: Button „Zuordnen“/„Ändern“ je Zeile → Dialog Seite 31 (Regionen Zahlungseingang, „Debitor wählen“ (Zuweisen) und
+  „Rechnung bzw. Gutschrift wählen“, je Interactive Report, Zahler/Kunde/Betrag passend zuerst; Button „Neuen Debitor aus der Buchung
+  anlegen“ hebt eine Zuordnung auf und öffnet Seite 51 im Hauptfenster) → `FAKT_BANK.zuordnen` (gleich hohe Zahlung verknüpfen, offene Rechnung: Zahlung „Bankabgleich (von Hand)“
   anlegen, schon bezahlt: nur verknüpfen) bzw. „Zuordnung aufheben“ (`FAKT_BANK.aufheben`, löscht nur vom Abgleich angelegte Zahlungen);
   von Hand aufgehobene Buchungen ordnet der automatische Abgleich nicht wieder zu. Holding-Datei 202699999 (3).xml am 25.10.2026 eingelesen (HEROLD → 2026 - 202).
 - **Debitoren** (DDL 45, Menüpunkt Debitoren, Seiten 50 Liste mit Facetten / 51 Debitor mit Registerkarten Stammdaten und Zahlungen):

@@ -211,6 +211,229 @@ page 31 (
         }
     )
 
+    pageItem P31_ZIEL (
+        type: hidden
+        layout {
+            sequence: 5
+            region: @buchung
+            slot: regionBody
+        }
+    )
+
+    region debitoren (
+        name: Debitor wählen
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- aktive Debitoren des Mandanten; Zahler passt (IBAN bzw. Name) bzw. gleicher Betrag zuerst
+                select d.DEBI_ID,
+                       d.DEBI_NAME,
+                       d.DEBI_BEZEICHNUNG,
+                       d.DEBI_BETRAG,
+                       FAKT_DEBITOR.intervall_text(d.DEBI_INTERVALL) as INTERVALL,
+                       d.RUECKSTAND,
+                       d.LETZTE_ZAHLUNG,
+                       FAKT_RECHNUNG.referenz_anzeige(d.DEBI_IBAN) as IBAN,
+                       case when replace(upper(u.BKUM_GEGEN_IBAN), ' ') = d.DEBI_IBAN
+                              or FAKT_DEBITOR.name_passt(d.DEBI_NAME, u.BKUM_GEGEN_NAME) = 'Y' then 'Ja' else 'Nein' end as ZAHLER_PASST,
+                       case when u.BKUM_BETRAG = d.DEBI_BETRAG then 'Ja' else 'Nein' end as BETRAG_PASST,
+                       '<button type="button" class="t-Button t-Button--small t-Button--hot" onclick="apex.page.submit({request:''ZUORDNEN'','
+                       || 'set:{P31_BELEGART:''' || 'DEBITOR' || ''',P31_BELEG_ID:''' || d.DEBI_ID || '''}})">Zuweisen</button>' as AKTION
+                  from FAKT_DEBITOREN_V d
+                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID
+                 where d.DEBI_MAND_ID = u.BKUM_MAND_ID
+                   and d.DEBI_IST_AKTIV = 'Y'
+                 order by case when replace(upper(u.BKUM_GEGEN_IBAN), ' ') = d.DEBI_IBAN
+                                 or FAKT_DEBITOR.name_passt(d.DEBI_NAME, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
+                          case when u.BKUM_BETRAG = d.DEBI_BETRAG then 0 else 1 end,
+                          upper(d.DEBI_NAME)
+                ```
+            pageItemsToSubmit: [
+                P31_BKUM_ID
+            ]
+        }
+        layout {
+            sequence: 15
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            showNullValuesAs: -
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        messages {
+            whenNoDataFound: Keine aktiven Debitoren.
+        }
+
+        column DEBI_ID (
+            type: hidden
+            heading {
+                heading: ID
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column DEBI_NAME (
+            type: plainText
+            heading {
+                heading: Debitor
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column DEBI_BEZEICHNUNG (
+            type: plainText
+            heading {
+                heading: Bezeichnung
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column DEBI_BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 30
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FML999G999G990D00
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column INTERVALL (
+            type: plainText
+            heading {
+                heading: Intervall
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column RUECKSTAND (
+            type: plainText
+            heading {
+                heading: Rückstand
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FML999G999G990D00
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column LETZTE_ZAHLUNG (
+            type: plainText
+            heading {
+                heading: Letzte Zahlung
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD.MM.YYYY
+            }
+            source {
+                dataType: DATE
+            }
+        )
+
+        column IBAN (
+            type: plainText
+            heading {
+                heading: IBAN des Zahlers
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column ZAHLER_PASST (
+            type: plainText
+            heading {
+                heading: Zahler passt
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column BETRAG_PASST (
+            type: plainText
+            heading {
+                heading: Betrag passt
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column AKTION (
+            type: plainText
+            heading {
+                heading: Aktion
+            }
+            layout {
+                sequence: 100
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+    )
+
     region belege (
         name: Rechnung bzw. Gutschrift wählen
         type: interactiveReport
@@ -234,9 +457,8 @@ page 31 (
                        '<button type="button" class="t-Button t-Button--small t-Button--hot" onclick="apex.page.submit({request:''ZUORDNEN'','
                        || 'set:{P31_BELEGART:''' || b.BELEGART || ''',P31_BELEG_ID:''' || b.RECH_ID || '''}})">Zuordnen</button>' as AKTION
                   from FAKT_BELEGE_V b
-                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID
+                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID
                  where b.RECH_MAND_ID = u.BKUM_MAND_ID
-                   and u.BKUM_MAND_ID = :MANDANT_ID
                    and b.RECH_STATUS not in ('ENTWURF', 'STORNIERT')
                  order by case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
                           case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 0 else 1 end,
@@ -469,6 +691,80 @@ page 31 (
         confirmation {
             message: Zuordnung wirklich aufheben? Eine vom Bankabgleich angelegte Zahlung wird gelöscht.
             style: danger
+        }
+    )
+
+    button debitor-neu (
+        buttonName: DEBITOR_NEU
+        label: Neuen Debitor aus der Buchung anlegen
+        layout {
+            sequence: 15
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-user-plus
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    dynamicAction zur-debitor-seite (
+        name: Nach "Debitor anlegen" zur Debitorseite (im Hauptfenster)
+        execution {
+            sequence: 20
+        }
+        when {
+            event: ready
+        }
+        clientSideCondition {
+            type: itemIsNotNull
+            item: P31_ZIEL
+        }
+
+        action weiter (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.util.getTopApex().navigation.redirect($v("P31_ZIEL"));
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    process debitor-neu (
+        name: Zuordnung aufheben, Ziel Debitor anlegen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- bestehende Zuordnung aufheben; Seite 51 legt den Debitor aus der Buchung an (Request ANLEGEN)
+                for u in (select BKUM_STATUS from FAKT_BANKUMSAETZE
+                           where BKUM_ID = :P31_BKUM_ID and BKUM_MAND_ID = :MANDANT_ID) loop
+                    if u.BKUM_STATUS <> 'OFFEN' then
+                        FAKT_BANK.aufheben(:P31_BKUM_ID);
+                    end if;
+                    :P31_ZIEL := apex_page.get_url(p_page => 51, p_clear_cache => '51', p_items => 'P51_BKUM_ID',
+                                                   p_values => :P31_BKUM_ID, p_request => 'ANLEGEN');
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            whenButtonPressed: @debitor-neu
         }
     )
 

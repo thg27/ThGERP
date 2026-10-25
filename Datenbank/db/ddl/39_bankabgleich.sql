@@ -365,7 +365,7 @@ create or replace package FAKT_BANK as
     function status_text(p_status in varchar2) return varchar2 deterministic;
     -- Meldung des letzten Aufrufs von einlesen (z. B. "bereits hochgeladen – erneut abgeglichen")
     function meldung return varchar2;
-    -- Zahlungseingang von Hand einer Rechnung bzw. Gutschrift zuordnen (p_belegart RECHNUNG/GUTSCHRIFT, Seite 31):
+    -- Zahlungseingang von Hand einer Rechnung, Gutschrift bzw. einem Debitor zuordnen (p_belegart RECHNUNG/GUTSCHRIFT/DEBITOR, Seite 31):
     -- vorhandene gleich hohe Zahlung verknuepfen, sonst bei offener Rechnung Zahlung anlegen; bereits bezahlte Rechnung
     -- ohne passende Zahlung nur verknuepfen (keine Zahlung). Eine bestehende Zuordnung wird vorher aufgehoben.
     procedure zuordnen(p_bkum_id in number, p_belegart in varchar2, p_beleg_id in number);
@@ -731,7 +731,10 @@ create or replace package body FAKT_BANK as
         if l_u.BKUM_RICHTUNG <> 'CRDT' then
             raise_application_error(-20264, 'Nur Zahlungseingänge können zugeordnet werden.');
         end if;
-        if p_belegart = 'GUTSCHRIFT' then
+        if p_belegart = 'DEBITOR' then
+            select DEBI_MAND_ID, 'AKTIV', DEBI_NAME into l_mand, l_status, l_nr
+              from FAKT_DEBITOREN where DEBI_ID = p_beleg_id;
+        elsif p_belegart = 'GUTSCHRIFT' then
             select GUTS_MAND_ID, GUTS_STATUS, coalesce(GUTS_INTERN_NUMMER, GUTS_NUMMER) into l_mand, l_status, l_nr
               from FAKT_GUTSCHRIFTEN where GUTS_ID = p_beleg_id;
         else
@@ -749,6 +752,11 @@ create or replace package body FAKT_BANK as
             aufheben(p_bkum_id);
         end if;
 
+        if p_belegart = 'DEBITOR' then
+            -- Zahlung beim Debitor anlegen, Status DEBITOR, IBAN merken (FAKT_DEBITOR, Skript 45)
+            FAKT_DEBITOR.zuweisen(p_bkum_id, p_beleg_id);
+            return;
+        end if;
         if p_belegart = 'GUTSCHRIFT' then
             l_art := 'Von Hand zugeordnet: Gutschrift ' || l_nr || case when l_status = 'BEZAHLT' then ', war bereits als bezahlt erfasst' end;
             update FAKT_GUTSCHRIFTEN set GUTS_STATUS = 'BEZAHLT', GUTS_BEZAHLT_AM = l_u.BKUM_BUCHUNGSDATUM where GUTS_ID = p_beleg_id;

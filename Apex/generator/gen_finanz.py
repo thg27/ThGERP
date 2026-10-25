@@ -2855,7 +2855,7 @@ def seite_30():
                        '<a class="t-Button t-Button--small t-Button--icon t-Button--iconLeft" href="'
                        || apex_escape.html_attribute(apex_page.get_url(p_page => 31, p_clear_cache => '31',
                                                                        p_items => 'P31_BKUM_ID', p_values => u.BKUM_ID))
-                       || '" title="Von Hand einer Rechnung bzw. Gutschrift zuordnen"><span class="t-Icon t-Icon--left fa '
+                       || '" title="Von Hand einer Rechnung, Gutschrift bzw. einem Debitor zuordnen"><span class="t-Icon t-Icon--left fa '
                        || case when u.BKUM_STATUS = 'OFFEN' then 'fa-link" aria-hidden="true"></span>Zuordnen'
                                else 'fa-pencil" aria-hidden="true"></span>Ändern' end || '</a> ' ||
                        -- nicht zuordenbarer Eingang eines Nicht-Kunden: Debitor daraus anlegen (Seite 51, Request ANLEGEN)
@@ -3056,9 +3056,9 @@ def seite_30():
 
 
 def seite_31():
-    """Zahlungseingang zuordnen (Dialog aus Seite 30): Buchung von Hand einer Rechnung bzw. Gutschrift des Mandanten
-    zuordnen (FAKT_BANK.zuordnen) oder eine Zuordnung aufheben (FAKT_BANK.aufheben). Belege als Interactive Report,
-    passende (Kunde = Auftraggeber bzw. gleicher Betrag) zuerst."""
+    """Zahlungseingang zuordnen (Dialog aus Seite 30): Buchung von Hand einem Debitor (eigene Region) bzw. einer Rechnung/Gutschrift des Mandanten
+    zuordnen (FAKT_BANK.zuordnen) oder eine Zuordnung aufheben (FAKT_BANK.aufheben). Beide Listen als Interactive Report,
+    passende (Zahler/Kunde = Auftraggeber bzw. gleicher Betrag) zuerst."""
     s = """page 31 (
     name: Zahlungseingang zuordnen
     alias: ZAHLUNG-ZUORDNEN
@@ -3112,7 +3112,7 @@ def seite_31():
                   ("STATUS", "Status", False, False), ("ZUORDNUNG", "Zuordnung", False, False)],
                  "Buchung nicht gefunden.").replace("            slot: body\n", "            slot: contentBody\n", 1)
     for nr, (name, schutz) in enumerate((("P31_BKUM_ID", True), ("P31_BELEGART", False), ("P31_BELEG_ID", False),
-                                         ("P31_ZUGEORDNET", True)), 1):
+                                         ("P31_ZUGEORDNET", True), ("P31_ZIEL", True)), 1):
         s += f"""    pageItem {name} (
         type: hidden
         layout {{
@@ -3127,6 +3127,29 @@ def seite_31():
             valueProtected: false
         }
 """) + "    )\n\n"
+    knopf = """'<button type="button" class="t-Button t-Button--small t-Button--hot" onclick="apex.page.submit({request:''ZUORDNEN'','
+                       || 'set:{P31_BELEGART:''' || §ART || ''',P31_BELEG_ID:''' || §ID || '''}})">§TEXT</button>' as AKTION"""
+    sql_debi = """                -- aktive Debitoren des Mandanten; Zahler passt (IBAN bzw. Name) bzw. gleicher Betrag zuerst
+                select d.DEBI_ID,
+                       d.DEBI_NAME,
+                       d.DEBI_BEZEICHNUNG,
+                       d.DEBI_BETRAG,
+                       FAKT_DEBITOR.intervall_text(d.DEBI_INTERVALL) as INTERVALL,
+                       d.RUECKSTAND,
+                       d.LETZTE_ZAHLUNG,
+                       FAKT_RECHNUNG.referenz_anzeige(d.DEBI_IBAN) as IBAN,
+                       case when replace(upper(u.BKUM_GEGEN_IBAN), ' ') = d.DEBI_IBAN
+                              or FAKT_DEBITOR.name_passt(d.DEBI_NAME, u.BKUM_GEGEN_NAME) = 'Y' then 'Ja' else 'Nein' end as ZAHLER_PASST,
+                       case when u.BKUM_BETRAG = d.DEBI_BETRAG then 'Ja' else 'Nein' end as BETRAG_PASST,
+                       """ + knopf.replace("§ART", "'DEBITOR'").replace("§ID", "d.DEBI_ID").replace("§TEXT", "Zuweisen") + """
+                  from FAKT_DEBITOREN_V d
+                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID
+                 where d.DEBI_MAND_ID = u.BKUM_MAND_ID
+                   and d.DEBI_IST_AKTIV = 'Y'
+                 order by case when replace(upper(u.BKUM_GEGEN_IBAN), ' ') = d.DEBI_IBAN
+                                 or FAKT_DEBITOR.name_passt(d.DEBI_NAME, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
+                          case when u.BKUM_BETRAG = d.DEBI_BETRAG then 0 else 1 end,
+                          upper(d.DEBI_NAME)"""
     sql = """                -- Rechnungen und Gutschriften des Mandanten (ohne Entwuerfe/stornierte); Kunde = Auftraggeber bzw. gleicher
                 -- Betrag zuerst
                 select b.BELEGART,
@@ -3139,12 +3162,10 @@ def seite_31():
                        FAKT_RECHNUNG.status_text(b.RECH_STATUS) as STATUS,
                        case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 'Ja' else 'Nein' end as KUNDE_PASST,
                        case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 'Ja' else 'Nein' end as BETRAG_PASST,
-                       '<button type="button" class="t-Button t-Button--small t-Button--hot" onclick="apex.page.submit({request:''ZUORDNEN'','
-                       || 'set:{P31_BELEGART:''' || b.BELEGART || ''',P31_BELEG_ID:''' || b.RECH_ID || '''}})">Zuordnen</button>' as AKTION
+                       """ + knopf.replace("§ART", "b.BELEGART").replace("§ID", "b.RECH_ID").replace("§TEXT", "Zuordnen") + """
                   from FAKT_BELEGE_V b
-                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID
+                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID
                  where b.RECH_MAND_ID = u.BKUM_MAND_ID
-                   and u.BKUM_MAND_ID = :MANDANT_ID
                    and b.RECH_STATUS not in ('ENTWURF', 'STORNIERT')
                  order by case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
                           case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 0 else 1 end,
@@ -3170,22 +3191,23 @@ def seite_31():
             }}
         )
 """
-    s += f"""    region belege (
-        name: Rechnung bzw. Gutschrift wählen
+    def ir(sid, name, seq, abfrage, leer, spalten):
+        return f"""    region {sid} (
+        name: {name}
         type: interactiveReport
         source {{
             location: localDatabase
             type: sqlQuery
             sqlQuery:
                 ```sql
-{sql}
+{abfrage}
                 ```
             pageItemsToSubmit: [
                 P31_BKUM_ID
             ]
         }}
         layout {{
-            sequence: 20
+            sequence: {seq}
             slot: contentBody
         }}
         appearance {{
@@ -3199,18 +3221,30 @@ def seite_31():
             type: rowRangesXToY
         }}
         messages {{
-            whenNoDataFound: Keine Rechnungen oder Gutschriften gefunden.
+            whenNoDataFound: {leer}
         }}
-""" + sp("BELEGART", "Belegart", 5, "STRING", hidden=True) + sp("RECH_ID", "ID", 6, "NUMBER", hidden=True) \
-        + sp("BELEG", "Beleg", 10, "STRING") + sp("DATUM", "Datum", 20, "DATE", maske="DD.MM.YYYY") \
-        + sp("KUNDE", "Kunde", 30, "STRING") \
-        + sp("BRUTTO", "Brutto", 40, "NUMBER", maske="FML999G999G990D00", rechts=True) \
-        + sp("OFFEN", "Offen", 50, "NUMBER", maske="FML999G999G990D00", rechts=True) \
-        + sp("STATUS", "Status", 60, "STRING") + sp("KUNDE_PASST", "Kunde passt", 70, "STRING") \
-        + sp("BETRAG_PASST", "Betrag passt", 80, "STRING") + sp("AKTION", "Aktion", 90, "STRING", escape=False) + """
+""" + spalten + """
     )
 
 """
+    # Debitoren in eigener Region zwischen Zahlungseingang und Belegen
+    s += ir("debitoren", "Debitor wählen", 15, sql_debi, "Keine aktiven Debitoren.",
+            sp("DEBI_ID", "ID", 5, "NUMBER", hidden=True) + sp("DEBI_NAME", "Debitor", 10, "STRING")
+            + sp("DEBI_BEZEICHNUNG", "Bezeichnung", 20, "STRING")
+            + sp("DEBI_BETRAG", "Betrag", 30, "NUMBER", maske="FML999G999G990D00", rechts=True)
+            + sp("INTERVALL", "Intervall", 40, "STRING")
+            + sp("RUECKSTAND", "Rückstand", 50, "NUMBER", maske="FML999G999G990D00", rechts=True)
+            + sp("LETZTE_ZAHLUNG", "Letzte Zahlung", 60, "DATE", maske="DD.MM.YYYY") + sp("IBAN", "IBAN des Zahlers", 70, "STRING")
+            + sp("ZAHLER_PASST", "Zahler passt", 80, "STRING") + sp("BETRAG_PASST", "Betrag passt", 90, "STRING")
+            + sp("AKTION", "Aktion", 100, "STRING", escape=False))
+    s += ir("belege", "Rechnung bzw. Gutschrift wählen", 20, sql, "Keine Rechnungen oder Gutschriften gefunden.",
+            sp("BELEGART", "Belegart", 5, "STRING", hidden=True) + sp("RECH_ID", "ID", 6, "NUMBER", hidden=True)
+            + sp("BELEG", "Beleg", 10, "STRING") + sp("DATUM", "Datum", 20, "DATE", maske="DD.MM.YYYY")
+            + sp("KUNDE", "Kunde", 30, "STRING")
+            + sp("BRUTTO", "Brutto", 40, "NUMBER", maske="FML999G999G990D00", rechts=True)
+            + sp("OFFEN", "Offen", 50, "NUMBER", maske="FML999G999G990D00", rechts=True)
+            + sp("STATUS", "Status", 60, "STRING") + sp("KUNDE_PASST", "Kunde passt", 70, "STRING")
+            + sp("BETRAG_PASST", "Betrag passt", 80, "STRING") + sp("AKTION", "Aktion", 90, "STRING", escape=False))
     s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close", verhalten="            action: definedByDynamicAction\n")
     s += button("aufheben", "AUFHEBEN", "Zuordnung aufheben", 20, "buttons", "next",
                 options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n            ]",
@@ -3225,7 +3259,64 @@ def seite_31():
             style: danger
         }
 """)
-    s += """    dynamicAction cancel-dialog (
+    s += button("debitor-neu", "DEBITOR_NEU", "Neuen Debitor aus der Buchung anlegen", 15, "buttons", "next",
+                "@/text-with-icon", icon="fa-user-plus",
+                options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n")
+    s += """    dynamicAction zur-debitor-seite (
+        name: Nach "Debitor anlegen" zur Debitorseite (im Hauptfenster)
+        execution {
+            sequence: 20
+        }
+        when {
+            event: ready
+        }
+        clientSideCondition {
+            type: itemIsNotNull
+            item: P31_ZIEL
+        }
+
+        action weiter (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.util.getTopApex().navigation.redirect($v("P31_ZIEL"));
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    process debitor-neu (
+        name: Zuordnung aufheben, Ziel Debitor anlegen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- bestehende Zuordnung aufheben; Seite 51 legt den Debitor aus der Buchung an (Request ANLEGEN)
+                for u in (select BKUM_STATUS from FAKT_BANKUMSAETZE
+                           where BKUM_ID = :P31_BKUM_ID and BKUM_MAND_ID = :MANDANT_ID) loop
+                    if u.BKUM_STATUS <> 'OFFEN' then
+                        FAKT_BANK.aufheben(:P31_BKUM_ID);
+                    end if;
+                    :P31_ZIEL := apex_page.get_url(p_page => 51, p_clear_cache => '51', p_items => 'P51_BKUM_ID',
+                                                   p_values => :P31_BKUM_ID, p_request => 'ANLEGEN');
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            whenButtonPressed: @debitor-neu
+        }
+    )
+
+    dynamicAction cancel-dialog (
         name: Dialog abbrechen
         execution {
             sequence: 10
