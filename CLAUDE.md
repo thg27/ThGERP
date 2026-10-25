@@ -55,7 +55,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - Drucken: im Entwurf „Rechnungsvorschau“ (PDF mit Wasserzeichen VORSCHAU, beliebig oft, bleibt Entwurf) und „Rechnung drucken“ (= abschließen: Nummer und
   Rechnungsdatum, danach öffnet das PDF automatisch – Branch mit `P11_PDF_OEFFNEN`, DA `pdf-oeffnen`); abgeschlossen „Rechnung drucken“ → PDF; nach „Rechnung bearbeiten“ schließt „Rechnung drucken“ die Bearbeitung ab
   (Änderungen gespeichert, `P11_BEARBEITEN` zurückgesetzt, Historie „Bearbeitung abgeschlossen“, Rechnung wieder gesperrt).
-- Historie (Registerkarte nach Zahlungen): `FAKT_RECHNUNG_HISTORIE` (DDL 33), Trigger auf Rechnung/Positionen/Zahlungen + Druck (Seite 12) protokollieren wer/wann/was.
+- Historie (Registerkarte nach Dokumente, als Timeline – Report-Vorlage `@/timeline`, Ereignis-Typ/Icon/Farbe je Aktion): `FAKT_RECHNUNG_HISTORIE` (DDL 33), Trigger auf Rechnung/Positionen/Zahlungen + Druck (Seite 12) protokollieren wer/wann/was.
 - Dokumente (Registerkarte nach Zahlungen): `FAKT_RECHNUNG_DOKUMENTE` (DDL 35) – jeder Rechnungsdruck wird als PDF-Version abgelegt
   (`FAKT_RECHNUNG_DOKUMENT.ablegen` auf Seite 12): neue Version beim ersten Druck und nach „Rechnung bearbeiten“ bzw. Storno, ältere bleiben;
   Anzeige im PDF-Dialog Seite 13 mit `P13_RDOK_ID` (Seite 12 liefert dann den abgelegten Druck). Vorschauen werden nicht abgelegt.

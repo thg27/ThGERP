@@ -1387,7 +1387,11 @@ def seite_11():
 
 """
 
-    # Historie (nach Zahlungen): wer hat wann was geaendert (FAKT_RECHNUNG_HISTORIE, Trigger aus Skript 33)
+    # Historie (nach Zahlungen): wer hat wann was geaendert (FAKT_RECHNUNG_HISTORIE, Trigger aus Skript 33) – als Timeline
+    # (Report-Vorlage "Timeline" des Universal Theme): Avatar mit Kuerzel, Mitarbeiter, Zeitpunkt; farbiges Ereignis mit
+    # Icon (Rechnung, Position, Druck, Zahlung, Bearbeitung, Storno, Versand); Aktion als Titel, Aenderungen darunter
+    spalten = ("USER_NAME", "USER_AVATAR", "USER_COLOR", "EVENT_DATE", "EVENT_TYPE", "EVENT_ICON", "EVENT_STATUS",
+               "EVENT_TITLE", "EVENT_DESC", "EVENT_MODIFIERS", "EVENT_ATTRIBUTES")
     s += """    region historie (
         name: Historie
         type: classicReport
@@ -1396,14 +1400,54 @@ def seite_11():
             type: sqlQuery
             sqlQuery:
                 ```sql
-                -- Zeitpunkt in Wiener Zeit (Server UTC), neueste Eintraege zuerst
-                select to_char(from_tz(RHIS_ZEITPUNKT, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI:SS') as ZEITPUNKT,
-                       RHIS_BENUTZER as BENUTZER,
-                       RHIS_AKTION as AKTION,
-                       RHIS_DETAIL as DETAIL
-                  from FAKT_RECHNUNG_HISTORIE
-                 where RHIS_RECH_ID = :P11_RECH_ID
-                 order by RHIS_ZEITPUNKT desc, RHIS_ID desc
+                select nvl(m.MITA_NAME, h.RHIS_BENUTZER) as USER_NAME,
+                       upper(substr(nvl(m.MITA_NAME, h.RHIS_BENUTZER), 1, 1)
+                             || substr(regexp_substr(nvl(m.MITA_NAME, h.RHIS_BENUTZER), '[[:space:]_.]+([^[:space:]_.])', 1, 1, null, 1), 1, 1))
+                           as USER_AVATAR,
+                       'u-color-1' as USER_COLOR,
+                       to_char(from_tz(h.RHIS_ZEITPUNKT, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as EVENT_DATE,
+                       e.TYP as EVENT_TYPE,
+                       'fa ' || e.ICON as EVENT_ICON,
+                       e.FARBE as EVENT_STATUS,
+                       h.RHIS_AKTION as EVENT_TITLE,
+                       h.RHIS_DETAIL as EVENT_DESC,
+                       null as EVENT_MODIFIERS,
+                       null as EVENT_ATTRIBUTES
+                  from FAKT_RECHNUNG_HISTORIE h
+                  left join ALLG_MITARBEITER m on m.MITA_BENUTZERNAME = h.RHIS_BENUTZER
+                 cross apply (select case
+                                       when h.RHIS_AKTION like 'Zahlung%' then 'Zahlung'
+                                       when h.RHIS_AKTION like 'Position%' then 'Position'
+                                       when h.RHIS_AKTION in ('Rechnung gedruckt', 'Vorschau gedruckt', 'Dokument abgelegt',
+                                                              'Abgeschlossen') then 'Druck'
+                                       when h.RHIS_AKTION in ('Zur Bearbeitung geöffnet', 'Bearbeitung abgeschlossen') then 'Bearbeitung'
+                                       when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'Storno'
+                                       when h.RHIS_AKTION = 'Gesendet' then 'Versand'
+                                       else 'Rechnung'
+                                     end as TYP,
+                                     case
+                                       when h.RHIS_AKTION like 'Zahlung%' then 'fa-eur'
+                                       when h.RHIS_AKTION like 'Position%' then 'fa-list'
+                                       when h.RHIS_AKTION = 'Dokument abgelegt' then 'fa-file-pdf-o'
+                                       when h.RHIS_AKTION in ('Rechnung gedruckt', 'Vorschau gedruckt', 'Abgeschlossen') then 'fa-print'
+                                       when h.RHIS_AKTION = 'Zur Bearbeitung geöffnet' then 'fa-unlock'
+                                       when h.RHIS_AKTION = 'Bearbeitung abgeschlossen' then 'fa-lock'
+                                       when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'fa-ban'
+                                       when h.RHIS_AKTION = 'Gesendet' then 'fa-paper-plane-o'
+                                       when h.RHIS_AKTION in ('Angelegt', 'Kopiert') then 'fa-plus-circle'
+                                       else 'fa-pencil'
+                                     end as ICON,
+                                     case
+                                       when h.RHIS_AKTION like 'Zahlung%' then 'u-success'
+                                       when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'u-danger'
+                                       when h.RHIS_AKTION in ('Zur Bearbeitung geöffnet', 'Bearbeitung abgeschlossen') then 'u-warning'
+                                       when h.RHIS_AKTION in ('Rechnung gedruckt', 'Vorschau gedruckt', 'Dokument abgelegt',
+                                                              'Abgeschlossen', 'Gesendet') then 'u-info'
+                                       else 'u-color-14'
+                                     end as FARBE
+                                from dual) e
+                 where h.RHIS_RECH_ID = :P11_RECH_ID
+                 order by h.RHIS_ZEITPUNKT desc, h.RHIS_ID desc
                 ```
             pageItemsToSubmit: [
                 P11_RECH_ID
@@ -1422,14 +1466,8 @@ def seite_11():
             templateOptions: """ + OHNE_KOPF + """
         }
         componentAppearance {
-            template: @/standard
-            templateOptions: [
-                #DEFAULT#
-                t-Report--stretch
-                t-Report--staticRowColors
-                t-Report--rowHighlight
-                t-Report--horizontalBorders
-            ]
+            template: @/timeline
+            templateOptions: #DEFAULT#
         }
         pagination {
             type: rowRangesXToYOfZWithPagination
@@ -1448,9 +1486,6 @@ def seite_11():
 
 """ + "".join(f"""        column {c} (
             type: plainText
-            heading {{
-                heading: {h}
-            }}
             layout {{
                 sequence: {i * 10}
             }}
@@ -1459,8 +1494,7 @@ def seite_11():
             }}
         )
 
-""" for i, (c, h) in enumerate((("ZEITPUNKT", "Zeitpunkt"), ("BENUTZER", "Benutzer"), ("AKTION", "Aktion"),
-                                ("DETAIL", "Änderungen")), start=1)) + """    )
+""" for i, c in enumerate(spalten, start=1)) + """    )
 
 """
 
@@ -1857,7 +1891,10 @@ def seite_11():
                 -- Button "Rechnung bearbeiten" wieder sichtbar (Aenderungen sind vorher gespeichert)
                 if :P11_PDF_OEFFNEN = 'Y' and nvl(:P11_BEARBEITEN, 'N') = 'Y' then
                     :P11_BEARBEITEN := null;
-                    FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Bearbeitung abgeschlossen', 'Rechnung ' || :P11_RECH_NUMMER);
+                    -- Nummer aus der Tabelle (das Formular ist vor dem Kopf noch nicht geladen)
+                    for r in (select RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID) loop
+                        FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Bearbeitung abgeschlossen', 'Rechnung ' || r.RECH_NUMMER);
+                    end loop;
                 end if;
                 :P11_PDF_OEFFNEN := null;
                 -- eigene URL (mit Pruefsumme, ohne P11_PDF_OEFFNEN) zum Neuladen nach dem Schliessen des PDF-Dialogs
