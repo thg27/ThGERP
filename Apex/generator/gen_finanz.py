@@ -2851,6 +2851,13 @@ def seite_30():
                        coalesce(u.BKUM_ZUORDNUNG,
                                 case when k.KUNDE is not null then 'Auftraggeber ist Kunde ' || k.KUNDE
                                                                    || ' – passende Rechnung bzw. Gutschrift fehlt' end) as ZUORDNUNG,
+                       -- von Hand einer Rechnung/Gutschrift zuordnen bzw. Zuordnung aendern (Dialog Seite 31)
+                       '<a class="t-Button t-Button--small t-Button--icon t-Button--iconLeft" href="'
+                       || apex_escape.html_attribute(apex_page.get_url(p_page => 31, p_clear_cache => '31',
+                                                                       p_items => 'P31_BKUM_ID', p_values => u.BKUM_ID))
+                       || '" title="Von Hand einer Rechnung bzw. Gutschrift zuordnen"><span class="t-Icon t-Icon--left fa '
+                       || case when u.BKUM_STATUS = 'OFFEN' then 'fa-link" aria-hidden="true"></span>Zuordnen'
+                               else 'fa-pencil" aria-hidden="true"></span>Ändern' end || '</a> ' ||
                        -- nicht zuordenbarer Eingang eines Nicht-Kunden: Debitor daraus anlegen (Seite 51, Request ANLEGEN)
                        case when u.BKUM_STATUS = 'OFFEN' and u.BKUM_RECH_ID is null and u.BKUM_GUTS_ID is null
                              and k.KUNDE is null then
@@ -2957,7 +2964,32 @@ def seite_30():
                   ("BUCHUNGEN", "Buchungen", False, True), ("NEU", "Davon neu", False, True),
                   ("ZUGEORDNET", "Zugeordnet", False, True)],
                  "Noch keine Bankdatei hochgeladen.")
-    s += """    process bankdatei-einlesen (
+    s += """    dynamicAction nach-dialog (
+        name: Nach dem Zuordnen die Zahlungseingänge aktualisieren
+        execution {
+            sequence: 10
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }
+
+        action refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @eingaenge
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process bankdatei-einlesen (
         name: Bankdatei einlesen und abgleichen
         type: executeCode
         source {
@@ -3015,6 +3047,263 @@ def seite_30():
         }
         successMessage {
             successMessage: &P30_MELDUNG.
+        }
+    )
+
+)
+"""
+    return s
+
+
+def seite_31():
+    """Zahlungseingang zuordnen (Dialog aus Seite 30): Buchung von Hand einer Rechnung bzw. Gutschrift des Mandanten
+    zuordnen (FAKT_BANK.zuordnen) oder eine Zuordnung aufheben (FAKT_BANK.aufheben). Belege als Interactive Report,
+    passende (Kunde = Auftraggeber bzw. gleicher Betrag) zuerst."""
+    s = """page 31 (
+    name: Zahlungseingang zuordnen
+    alias: ZAHLUNG-ZUORDNEN
+    title: Zahlungseingang zuordnen
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1200
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+        warnOnUnsavedChanges: false
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 90
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+"""
+    s += bericht("buchung", "Zahlungseingang", 10, """                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       FAKT_BANK.status_text(u.BKUM_STATUS) as STATUS,
+                       u.BKUM_ZUORDNUNG as ZUORDNUNG
+                  from FAKT_BANKUMSAETZE u
+                 where u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID""",
+                 [("DATUM", "Datum", False, False), ("BETRAG", "Betrag", False, True),
+                  ("AUFTRAGGEBER", "Auftraggeber", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False),
+                  ("STATUS", "Status", False, False), ("ZUORDNUNG", "Zuordnung", False, False)],
+                 "Buchung nicht gefunden.").replace("            slot: body\n", "            slot: contentBody\n", 1)
+    for nr, (name, schutz) in enumerate((("P31_BKUM_ID", True), ("P31_BELEGART", False), ("P31_BELEG_ID", False),
+                                         ("P31_ZUGEORDNET", True)), 1):
+        s += f"""    pageItem {name} (
+        type: hidden
+        layout {{
+            sequence: {nr}
+            region: @buchung
+            slot: regionBody
+        }}
+""" + ("""        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+""" if schutz and name == "P31_BKUM_ID" else "") + ("" if schutz else """        settings {
+            valueProtected: false
+        }
+""") + "    )\n\n"
+    sql = """                -- Rechnungen und Gutschriften des Mandanten (ohne Entwuerfe/stornierte); Kunde = Auftraggeber bzw. gleicher
+                -- Betrag zuerst
+                select b.BELEGART,
+                       b.RECH_ID,
+                       case b.BELEGART when 'GUTSCHRIFT' then 'Gutschrift ' else 'Rechnung ' end || b.RECH_NUMMER as BELEG,
+                       b.RECH_DATUM as DATUM,
+                       b.KUNDE,
+                       b.RECH_SUMME_BRUTTO as BRUTTO,
+                       b.OFFEN,
+                       FAKT_RECHNUNG.status_text(b.RECH_STATUS) as STATUS,
+                       case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 'Ja' else 'Nein' end as KUNDE_PASST,
+                       case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 'Ja' else 'Nein' end as BETRAG_PASST,
+                       '<button type="button" class="t-Button t-Button--small t-Button--hot" onclick="apex.page.submit({request:''ZUORDNEN'','
+                       || 'set:{P31_BELEGART:''' || b.BELEGART || ''',P31_BELEG_ID:''' || b.RECH_ID || '''}})">Zuordnen</button>' as AKTION
+                  from FAKT_BELEGE_V b
+                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID
+                 where b.RECH_MAND_ID = u.BKUM_MAND_ID
+                   and u.BKUM_MAND_ID = :MANDANT_ID
+                   and b.RECH_STATUS not in ('ENTWURF', 'STORNIERT')
+                 order by case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
+                          case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 0 else 1 end,
+                          b.RECH_DATUM desc"""
+    def sp(name, heading, seq, dtype, maske=None, rechts=False, hidden=False, escape=True):
+        return f"""
+        column {name} (
+            type: {"hidden" if hidden else "plainText"}
+            heading {{
+                heading: {heading}
+""" + ("                alignment: end\n" if rechts else "") + f"""            }}
+            layout {{
+                sequence: {seq}
+""" + ("                columnAlignment: end\n" if rechts else "") + """            }
+""" + (f"""            appearance {{
+                formatMask: {maske}
+            }}
+""" if maske else "") + ("" if escape else """            security {
+                escapeSpecialChars: false
+            }
+""") + f"""            source {{
+                dataType: {dtype}
+            }}
+        )
+"""
+    s += f"""    region belege (
+        name: Rechnung bzw. Gutschrift wählen
+        type: interactiveReport
+        source {{
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+{sql}
+                ```
+            pageItemsToSubmit: [
+                P31_BKUM_ID
+            ]
+        }}
+        layout {{
+            sequence: 20
+            slot: contentBody
+        }}
+        appearance {{
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }}
+        componentAppearance {{
+            showNullValuesAs: -
+        }}
+        pagination {{
+            type: rowRangesXToY
+        }}
+        messages {{
+            whenNoDataFound: Keine Rechnungen oder Gutschriften gefunden.
+        }}
+""" + sp("BELEGART", "Belegart", 5, "STRING", hidden=True) + sp("RECH_ID", "ID", 6, "NUMBER", hidden=True) \
+        + sp("BELEG", "Beleg", 10, "STRING") + sp("DATUM", "Datum", 20, "DATE", maske="DD.MM.YYYY") \
+        + sp("KUNDE", "Kunde", 30, "STRING") \
+        + sp("BRUTTO", "Brutto", 40, "NUMBER", maske="FML999G999G990D00", rechts=True) \
+        + sp("OFFEN", "Offen", 50, "NUMBER", maske="FML999G999G990D00", rechts=True) \
+        + sp("STATUS", "Status", 60, "STRING") + sp("KUNDE_PASST", "Kunde passt", 70, "STRING") \
+        + sp("BETRAG_PASST", "Betrag passt", 80, "STRING") + sp("AKTION", "Aktion", 90, "STRING", escape=False) + """
+    )
+
+"""
+    s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close", verhalten="            action: definedByDynamicAction\n")
+    s += button("aufheben", "AUFHEBEN", "Zuordnung aufheben", 20, "buttons", "next",
+                options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n            ]",
+                verhalten="""            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+""", bedingung="""        serverSideCondition {
+            type: itemIsNotNull
+            item: P31_ZUGEORDNET
+        }
+        confirmation {
+            message: Zuordnung wirklich aufheben? Eine vom Bankabgleich angelegte Zahlung wird gelöscht.
+            style: danger
+        }
+""")
+    s += """    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process kopf (
+        name: Zuordnung vorhanden?
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                select max(case when BKUM_STATUS in ('ZUGEORDNET', 'DEBITOR', 'BEREITS_BEZAHLT') then 'Y' end)
+                  into :P31_ZUGEORDNET
+                  from FAKT_BANKUMSAETZE where BKUM_ID = :P31_BKUM_ID and BKUM_MAND_ID = :MANDANT_ID;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process zuordnen (
+        name: Zuordnen bzw. aufheben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    if :REQUEST = 'ZUORDNEN' then
+                        FAKT_BANK.zuordnen(:P31_BKUM_ID, :P31_BELEGART, :P31_BELEG_ID);
+                    else
+                        FAKT_BANK.aufheben(:P31_BKUM_ID);
+                    end if;
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: ZUORDNEN,AUFHEBEN
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: ZUORDNEN,AUFHEBEN
         }
     )
 
@@ -5355,6 +5644,7 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00015-stornieren.apx").write_text(seite_15(), encoding="utf-8")
     (FIN / "pages" / "p00016-zahlungseingang.apx").write_text(seite_16(), encoding="utf-8")
     (FIN / "pages" / "p00030-bankdatei.apx").write_text(seite_30(), encoding="utf-8")
+    (FIN / "pages" / "p00031-zahlung-zuordnen.apx").write_text(seite_31(), encoding="utf-8")
     (FIN / "pages" / "p00040-gutschriften.apx").write_text(seite_40(), encoding="utf-8")
     (FIN / "pages" / "p00041-gutschrift.apx").write_text(seite_41(), encoding="utf-8")
     (FIN / "pages" / "p00042-gutschrift-pdf.apx").write_text(seite_42(), encoding="utf-8")

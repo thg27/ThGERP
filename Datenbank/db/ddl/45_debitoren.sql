@@ -424,6 +424,7 @@ create or replace package body FAKT_DEBITOR as
         for u in (select * from FAKT_BANKUMSAETZE
                    where BKUM_MAND_ID = p_mand_id and BKUM_STATUS = 'OFFEN' and BKUM_RICHTUNG = 'CRDT'
                      and BKUM_RECH_ID is null and BKUM_GUTS_ID is null
+                     and nvl(BKUM_ZUORDNUNG, '-') not in ('Zuordnung von Hand aufgehoben', 'Zuweisung zum Debitor aufgehoben')
                    order by BKUM_BUCHUNGSDATUM, BKUM_ID) loop
             -- 1. IBAN des Zahlers
             select count(*), max(DEBI_ID) into l_anz, l_debi

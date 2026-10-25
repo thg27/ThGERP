@@ -1,0 +1,557 @@
+page 31 (
+    name: Zahlungseingang zuordnen
+    alias: ZAHLUNG-ZUORDNEN
+    title: Zahlungseingang zuordnen
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1200
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+        warnOnUnsavedChanges: false
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 90
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region buchung (
+        name: Zahlungseingang
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
+                       FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
+                       u.BKUM_GEGEN_NAME as AUFTRAGGEBER,
+                       trim(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK) as VERWENDUNGSZWECK,
+                       FAKT_BANK.status_text(u.BKUM_STATUS) as STATUS,
+                       u.BKUM_ZUORDNUNG as ZUORDNUNG
+                  from FAKT_BANKUMSAETZE u
+                 where u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Buchung nicht gefunden.
+        }
+
+        column DATUM (
+            type: plainText
+            heading {
+                heading: Datum
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUFTRAGGEBER (
+            type: plainText
+            heading {
+                heading: Auftraggeber
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VERWENDUNGSZWECK (
+            type: plainText
+            heading {
+                heading: Verwendungszweck
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ZUORDNUNG (
+            type: plainText
+            heading {
+                heading: Zuordnung
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    pageItem P31_BKUM_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @buchung
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P31_BELEGART (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @buchung
+            slot: regionBody
+        }
+        settings {
+            valueProtected: false
+        }
+    )
+
+    pageItem P31_BELEG_ID (
+        type: hidden
+        layout {
+            sequence: 3
+            region: @buchung
+            slot: regionBody
+        }
+        settings {
+            valueProtected: false
+        }
+    )
+
+    pageItem P31_ZUGEORDNET (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @buchung
+            slot: regionBody
+        }
+    )
+
+    region belege (
+        name: Rechnung bzw. Gutschrift wählen
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Rechnungen und Gutschriften des Mandanten (ohne Entwuerfe/stornierte); Kunde = Auftraggeber bzw. gleicher
+                -- Betrag zuerst
+                select b.BELEGART,
+                       b.RECH_ID,
+                       case b.BELEGART when 'GUTSCHRIFT' then 'Gutschrift ' else 'Rechnung ' end || b.RECH_NUMMER as BELEG,
+                       b.RECH_DATUM as DATUM,
+                       b.KUNDE,
+                       b.RECH_SUMME_BRUTTO as BRUTTO,
+                       b.OFFEN,
+                       FAKT_RECHNUNG.status_text(b.RECH_STATUS) as STATUS,
+                       case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 'Ja' else 'Nein' end as KUNDE_PASST,
+                       case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 'Ja' else 'Nein' end as BETRAG_PASST,
+                       '<button type="button" class="t-Button t-Button--small t-Button--hot" onclick="apex.page.submit({request:''ZUORDNEN'','
+                       || 'set:{P31_BELEGART:''' || b.BELEGART || ''',P31_BELEG_ID:''' || b.RECH_ID || '''}})">Zuordnen</button>' as AKTION
+                  from FAKT_BELEGE_V b
+                  join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID
+                 where b.RECH_MAND_ID = u.BKUM_MAND_ID
+                   and u.BKUM_MAND_ID = :MANDANT_ID
+                   and b.RECH_STATUS not in ('ENTWURF', 'STORNIERT')
+                 order by case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
+                          case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 0 else 1 end,
+                          b.RECH_DATUM desc
+                ```
+            pageItemsToSubmit: [
+                P31_BKUM_ID
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            showNullValuesAs: -
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        messages {
+            whenNoDataFound: Keine Rechnungen oder Gutschriften gefunden.
+        }
+
+        column BELEGART (
+            type: hidden
+            heading {
+                heading: Belegart
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column RECH_ID (
+            type: hidden
+            heading {
+                heading: ID
+            }
+            layout {
+                sequence: 6
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column BELEG (
+            type: plainText
+            heading {
+                heading: Beleg
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column DATUM (
+            type: plainText
+            heading {
+                heading: Datum
+            }
+            layout {
+                sequence: 20
+            }
+            appearance {
+                formatMask: DD.MM.YYYY
+            }
+            source {
+                dataType: DATE
+            }
+        )
+
+        column KUNDE (
+            type: plainText
+            heading {
+                heading: Kunde
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column BRUTTO (
+            type: plainText
+            heading {
+                heading: Brutto
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FML999G999G990D00
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column OFFEN (
+            type: plainText
+            heading {
+                heading: Offen
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FML999G999G990D00
+            }
+            source {
+                dataType: NUMBER
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column KUNDE_PASST (
+            type: plainText
+            heading {
+                heading: Kunde passt
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column BETRAG_PASST (
+            type: plainText
+            heading {
+                heading: Betrag passt
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+        column AKTION (
+            type: plainText
+            heading {
+                heading: Aktion
+            }
+            layout {
+                sequence: 90
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            source {
+                dataType: STRING
+            }
+        )
+
+    )
+
+    button cancel (
+        buttonName: CANCEL
+        label: Abbrechen
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button aufheben (
+        buttonName: AUFHEBEN
+        label: Zuordnung aufheben
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+                t-Button--simple
+            ]
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P31_ZUGEORDNET
+        }
+        confirmation {
+            message: Zuordnung wirklich aufheben? Eine vom Bankabgleich angelegte Zahlung wird gelöscht.
+            style: danger
+        }
+    )
+
+    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process kopf (
+        name: Zuordnung vorhanden?
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                select max(case when BKUM_STATUS in ('ZUGEORDNET', 'DEBITOR', 'BEREITS_BEZAHLT') then 'Y' end)
+                  into :P31_ZUGEORDNET
+                  from FAKT_BANKUMSAETZE where BKUM_ID = :P31_BKUM_ID and BKUM_MAND_ID = :MANDANT_ID;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process zuordnen (
+        name: Zuordnen bzw. aufheben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    if :REQUEST = 'ZUORDNEN' then
+                        FAKT_BANK.zuordnen(:P31_BKUM_ID, :P31_BELEGART, :P31_BELEG_ID);
+                    else
+                        FAKT_BANK.aufheben(:P31_BKUM_ID);
+                    end if;
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: ZUORDNEN,AUFHEBEN
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: ZUORDNEN,AUFHEBEN
+        }
+    )
+
+)

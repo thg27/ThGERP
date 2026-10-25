@@ -365,6 +365,13 @@ create or replace package FAKT_BANK as
     function status_text(p_status in varchar2) return varchar2 deterministic;
     -- Meldung des letzten Aufrufs von einlesen (z. B. "bereits hochgeladen – erneut abgeglichen")
     function meldung return varchar2;
+    -- Zahlungseingang von Hand einer Rechnung bzw. Gutschrift zuordnen (p_belegart RECHNUNG/GUTSCHRIFT, Seite 31):
+    -- vorhandene gleich hohe Zahlung verknuepfen, sonst bei offener Rechnung Zahlung anlegen; bereits bezahlte Rechnung
+    -- ohne passende Zahlung nur verknuepfen (keine Zahlung). Eine bestehende Zuordnung wird vorher aufgehoben.
+    procedure zuordnen(p_bkum_id in number, p_belegart in varchar2, p_beleg_id in number);
+    -- Zuordnung aufheben: Buchung wieder offen; vom Bankabgleich angelegte Zahlung loeschen, Debitor-Zahlung entfernen,
+    -- per Bank gesetztes "Bezahlt am" der Gutschrift zuruecknehmen
+    procedure aufheben(p_bkum_id in number);
 end FAKT_BANK;
 /
 
@@ -526,6 +533,8 @@ create or replace package body FAKT_BANK as
         for u in (select * from FAKT_BANKUMSAETZE
                    -- auch "Rechnung bereits bezahlt": vorhandene Zahlung (anderes Datum) nachtraeglich verknuepfen
                    where BKUM_MAND_ID = p_mand_id and BKUM_STATUS in ('OFFEN', 'BEREITS_BEZAHLT') and BKUM_RICHTUNG = 'CRDT'
+                     -- von Hand aufgehobene Zuordnung nicht automatisch wiederherstellen
+                     and nvl(BKUM_ZUORDNUNG, '-') not in ('Zuordnung von Hand aufgehoben', 'Zuweisung zum Debitor aufgehoben')
                    order by BKUM_BUCHUNGSDATUM, BKUM_ID) loop
             l_rech := null;
             l_art  := null;
@@ -684,6 +693,93 @@ create or replace package body FAKT_BANK as
         -- danach Debitoren ohne Rechnung (z. B. Mieter): IBAN bzw. Name des Zahlers (Skript 45)
         return l_zugeordnet + FAKT_DEBITOR.abgleichen(p_mand_id);
     end abgleichen;
+
+    procedure aufheben(p_bkum_id in number) is
+    begin
+        for u in (select * from FAKT_BANKUMSAETZE where BKUM_ID = p_bkum_id) loop
+            if u.BKUM_DEBI_ID is not null then
+                for z in (select DZAH_ID from FAKT_DEBITOR_ZAHLUNGEN where DZAH_BKUM_ID = u.BKUM_ID) loop
+                    FAKT_DEBITOR.aufheben(z.DZAH_ID);
+                end loop;
+            end if;
+            if u.BKUM_GUTS_ID is not null and instr(u.BKUM_ZUORDNUNG, 'bereits als bezahlt') = 0 then
+                -- vom Abgleich bezahlt gesetzt: wieder offen (Trigger: Status aus Datei/Datum)
+                update FAKT_GUTSCHRIFTEN set GUTS_BEZAHLT_AM = null, GUTS_STATUS = 'OFFEN'
+                 where GUTS_ID = u.BKUM_GUTS_ID and GUTS_BEZAHLT_AM = u.BKUM_BUCHUNGSDATUM;
+            end if;
+            update FAKT_BANKUMSAETZE
+               set BKUM_STATUS = 'OFFEN', BKUM_RECH_ID = null, BKUM_ZAHL_ID = null, BKUM_GUTS_ID = null, BKUM_DEBI_ID = null,
+                   BKUM_ZUORDNUNG = 'Zuordnung von Hand aufgehoben'
+             where BKUM_ID = u.BKUM_ID;
+            -- vom Bankabgleich angelegte Zahlung entfernen (Trigger: Zahlungsstatus der Rechnung, Historie)
+            if u.BKUM_ZAHL_ID is not null then
+                delete from FAKT_ZAHLUNGEN where ZAHL_ID = u.BKUM_ZAHL_ID and ZAHL_BEMERKUNG like 'Bankabgleich%';
+            end if;
+        end loop;
+    end aufheben;
+
+    procedure zuordnen(p_bkum_id in number, p_belegart in varchar2, p_beleg_id in number) is
+        l_u      FAKT_BANKUMSAETZE%rowtype;
+        l_mand   number;
+        l_status varchar2(20);
+        l_nr     varchar2(50);
+        l_zahl   number;
+        l_zdatum date;
+        l_art    varchar2(200);
+    begin
+        select * into l_u from FAKT_BANKUMSAETZE where BKUM_ID = p_bkum_id;
+        if l_u.BKUM_RICHTUNG <> 'CRDT' then
+            raise_application_error(-20264, 'Nur Zahlungseingänge können zugeordnet werden.');
+        end if;
+        if p_belegart = 'GUTSCHRIFT' then
+            select GUTS_MAND_ID, GUTS_STATUS, coalesce(GUTS_INTERN_NUMMER, GUTS_NUMMER) into l_mand, l_status, l_nr
+              from FAKT_GUTSCHRIFTEN where GUTS_ID = p_beleg_id;
+        else
+            select RECH_MAND_ID, RECH_STATUS, RECH_NUMMER into l_mand, l_status, l_nr
+              from FAKT_RECHNUNGEN where RECH_ID = p_beleg_id;
+        end if;
+        if l_mand <> l_u.BKUM_MAND_ID then
+            raise_application_error(-20265, 'Der Beleg gehört zu einem anderen Mandanten.');
+        end if;
+        if l_status in ('ENTWURF', 'STORNIERT') then
+            raise_application_error(-20266, 'Entwürfe und stornierte Belege können nicht zugeordnet werden.');
+        end if;
+        -- bestehende Zuordnung zuerst aufheben
+        if l_u.BKUM_STATUS not in ('OFFEN', 'AUSGANG', 'IGNORIERT') then
+            aufheben(p_bkum_id);
+        end if;
+
+        if p_belegart = 'GUTSCHRIFT' then
+            l_art := 'Von Hand zugeordnet: Gutschrift ' || l_nr || case when l_status = 'BEZAHLT' then ', war bereits als bezahlt erfasst' end;
+            update FAKT_GUTSCHRIFTEN set GUTS_STATUS = 'BEZAHLT', GUTS_BEZAHLT_AM = l_u.BKUM_BUCHUNGSDATUM where GUTS_ID = p_beleg_id;
+            update FAKT_BANKUMSAETZE set BKUM_STATUS = 'ZUGEORDNET', BKUM_GUTS_ID = p_beleg_id, BKUM_ZUORDNUNG = l_art
+             where BKUM_ID = p_bkum_id;
+            return;
+        end if;
+
+        -- Rechnung: gleich hohe, noch keiner Buchung gehoerende Zahlung (naechstes Datum) verknuepfen
+        select min(z.ZAHL_ID) keep (dense_rank first order by abs(z.ZAHL_DATUM - l_u.BKUM_BUCHUNGSDATUM)),
+               min(z.ZAHL_DATUM) keep (dense_rank first order by abs(z.ZAHL_DATUM - l_u.BKUM_BUCHUNGSDATUM))
+          into l_zahl, l_zdatum
+          from FAKT_ZAHLUNGEN z
+         where z.ZAHL_RECH_ID = p_beleg_id and z.ZAHL_BETRAG = l_u.BKUM_BETRAG
+           and not exists (select 1 from FAKT_BANKUMSAETZE b where b.BKUM_ZAHL_ID = z.ZAHL_ID);
+        if l_zahl is not null then
+            l_art := 'Von Hand zugeordnet: Rechnung ' || l_nr || ', vorhandene Zahlung vom ' || to_char(l_zdatum, 'DD.MM.YYYY');
+        elsif l_status in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT') then
+            insert into FAKT_ZAHLUNGEN (ZAHL_RECH_ID, ZAHL_DATUM, ZAHL_BETRAG, ZAHL_REFERENZ, ZAHL_BEMERKUNG)
+            values (p_beleg_id, l_u.BKUM_BUCHUNGSDATUM, l_u.BKUM_BETRAG,
+                    substr(coalesce(l_u.BKUM_REFERENZ, l_u.BKUM_VERWENDUNGSZWECK, l_u.BKUM_END_TO_END_ID), 1, 140),
+                    substr('Bankabgleich (von Hand): ' || l_u.BKUM_GEGEN_NAME, 1, 500))
+            returning ZAHL_ID into l_zahl;
+            l_art := 'Von Hand zugeordnet: Rechnung ' || l_nr || ', Zahlung angelegt';
+        else
+            l_art := 'Von Hand zugeordnet: Rechnung ' || l_nr || ' (war bereits bezahlt, keine Zahlung angelegt)';
+        end if;
+        update FAKT_BANKUMSAETZE
+           set BKUM_STATUS = 'ZUGEORDNET', BKUM_RECH_ID = p_beleg_id, BKUM_ZAHL_ID = l_zahl, BKUM_ZUORDNUNG = substr(l_art, 1, 200)
+         where BKUM_ID = p_bkum_id;
+    end zuordnen;
 
     function status_text(p_status in varchar2) return varchar2 deterministic is
     begin
