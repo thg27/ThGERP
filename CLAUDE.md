@@ -75,7 +75,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   (Hohl, Ingenieurbüro Forst/Holz, C.S.M., Elektro ON Balk, Dr. Barbara Lenhard, ThG - edv GmbH). Kingbill-IDs je Mandant eindeutig (DDL 30).
   Nummernkreise: EDV 2026 = 13, HOLDING 2025 = 171, 2026 = 202.
 - Zahlungsreferenz (DDL 38): RF-Referenz `RECH_ZAHLUNGSREFERENZ` (eindeutig) = RF + Prüfziffern + Firma (1 = EDV, 2 = HOLDING) + Kundennummer
-  + Jahr + Nummer 5-stellig, erzeugt in `FAKT_RECHNUNG.abschliessen`; ältere Rechnungen haben keine. Ausdruck: „Bitte bei Online-Überweisungen
+  + Jahr + Nummer 5-stellig, erzeugt in `FAKT_RECHNUNG.abschliessen`; ältere Rechnungen haben keine. Ausdruck: „Bitte bei Überweisung
   die Zahlungsreferenz **RF75 2100 2212 0260 0203** angeben.“ und rechts darunter EPC-QR-Code „Zahlen mit Code“ (Empfänger = Mandantenname,
   bevorzugte IBAN, offener Betrag, Referenz; `APEX_BARCODE`) – je Kunde abschaltbar (`KUND_IST_QR_CODE`, THG-KUNDEN Rechtliches und Konditionen).
   Anzeige auf Seite 11 (Allgemein), Vorschlag im Dialog Zahlungseingang.

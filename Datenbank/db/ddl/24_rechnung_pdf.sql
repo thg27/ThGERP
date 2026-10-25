@@ -707,7 +707,7 @@ as
         if l_r.RECH_ZAHLUNGSREFERENZ is not null then
             platz(12);
             block_rich(c_links, c_rechts - c_links,
-                       'Bitte bei Online-Überweisungen die Zahlungsreferenz ' || chr(1)
+                       'Bitte bei Überweisung die Zahlungsreferenz ' || chr(1)
                        || FAKT_RECHNUNG.referenz_anzeige(l_r.RECH_ZAHLUNGSREFERENZ) || chr(2) || ' angeben.', 9);
             qr_code(l_r);
             g_y := g_y - 6;
