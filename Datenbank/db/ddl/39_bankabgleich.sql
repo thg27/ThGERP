@@ -363,10 +363,19 @@ create or replace package FAKT_BANK as
     function abgleichen(p_mand_id in number) return pls_integer;
     -- Status als Text (Liste der Bankumsaetze)
     function status_text(p_status in varchar2) return varchar2 deterministic;
+    -- Meldung des letzten Aufrufs von einlesen (z. B. "bereits hochgeladen – erneut abgeglichen")
+    function meldung return varchar2;
 end FAKT_BANK;
 /
 
 create or replace package body FAKT_BANK as
+
+    g_meldung varchar2(1000);
+
+    function meldung return varchar2 is
+    begin
+        return g_meldung;
+    end meldung;
 
     function einlesen(p_mand_id in number, p_dateiname in varchar2, p_datei in blob) return number is
         l_xml     xmltype;
@@ -412,7 +421,13 @@ create or replace package body FAKT_BANK as
         select max(to_char(from_tz(BKDT_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI')) into l_wann
           from FAKT_BANKDATEIEN where BKDT_MAND_ID = p_mand_id and BKDT_NACHRICHT_ID = l_msg_id;
         if l_wann is not null then
-            raise_application_error(-20262, 'Diese Bankdatei wurde bereits am ' || l_wann || ' hochgeladen.');
+            -- schon hochgeladen: keine neuen Buchungen, aber die Zuordnung erneut pruefen (z. B. nachdem Rechnungen,
+            -- Gutschriften oder Debitoren erfasst wurden)
+            l_zug := abgleichen(p_mand_id);
+            g_meldung := p_dateiname || ': bereits am ' || l_wann || ' hochgeladen – keine neuen Buchungen; Zuordnung erneut geprüft, '
+                         || l_zug || ' Zahlungseingänge zugeordnet.';
+            select max(BKDT_ID) into l_bkdt from FAKT_BANKDATEIEN where BKDT_MAND_ID = p_mand_id and BKDT_NACHRICHT_ID = l_msg_id;
+            return l_bkdt;
         end if;
 
         insert into FAKT_BANKDATEIEN (BKDT_MAND_ID, BKDT_DATEINAME, BKDT_FORMAT, BKDT_NACHRICHT_ID, BKDT_ERSTELLT_AM,
@@ -488,6 +503,7 @@ create or replace package body FAKT_BANK as
         l_zug := abgleichen(p_mand_id);
         update FAKT_BANKDATEIEN set BKDT_ANZ_UMSAETZE = l_anz, BKDT_ANZ_NEU = l_neu, BKDT_ANZ_ZUGEORDNET = l_zug
          where BKDT_ID = l_bkdt;
+        g_meldung := p_dateiname || ': ' || l_anz || ' Buchungen, davon ' || l_neu || ' neu; ' || l_zug || ' Zahlungseingänge zugeordnet.';
         return l_bkdt;
     end einlesen;
 
@@ -503,20 +519,25 @@ create or replace package body FAKT_BANK as
         l_zahl    FAKT_ZAHLUNGEN.ZAHL_ID%type;
         l_zugeordnet pls_integer := 0;
         l_guts    FAKT_GUTSCHRIFTEN.GUTS_ID%type;
+        l_gstatus FAKT_GUTSCHRIFTEN.GUTS_STATUS%type;
+        l_zdatum  date;
         c_muster  constant varchar2(100) := '(20[0-9]{2})[[:space:]]*[-/][[:space:]]*0*([0-9]{1,5})([^-/0-9]|$)';
     begin
         for u in (select * from FAKT_BANKUMSAETZE
-                   where BKUM_MAND_ID = p_mand_id and BKUM_STATUS = 'OFFEN' and BKUM_RICHTUNG = 'CRDT'
+                   -- auch "Rechnung bereits bezahlt": vorhandene Zahlung (anderes Datum) nachtraeglich verknuepfen
+                   where BKUM_MAND_ID = p_mand_id and BKUM_STATUS in ('OFFEN', 'BEREITS_BEZAHLT') and BKUM_RICHTUNG = 'CRDT'
                    order by BKUM_BUCHUNGSDATUM, BKUM_ID) loop
             l_rech := null;
             l_art  := null;
             l_text := upper(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK || ' ' || u.BKUM_END_TO_END_ID);
             l_kompakt := regexp_replace(l_text, '[^0-9A-Z]');
             -- 0. erhaltene Gutschrift (Gutschriftverfahren): gleicher Betrag und Verwendungszweck bzw. Gutschriftnummer
-            --    im Text (Betrag egal – Skonto); sonst Zahlbetrag und Aussteller passt zum Auftraggeber (jeweils eindeutig)
+            --    im Text (Betrag egal – Skonto); sonst Zahlbetrag und Aussteller passt zum Auftraggeber (jeweils eindeutig).
+            --    Auch schon von Hand als bezahlt erfasste Gutschriften, solange ihnen noch keine Bankbuchung gehoert.
             select count(*), max(GUTS_ID) into l_anz, l_guts
               from FAKT_GUTSCHRIFTEN g
-             where g.GUTS_MAND_ID = p_mand_id and g.GUTS_STATUS = 'OFFEN'
+             where g.GUTS_MAND_ID = p_mand_id and g.GUTS_STATUS in ('OFFEN', 'BEZAHLT')
+               and not exists (select 1 from FAKT_BANKUMSAETZE b where b.BKUM_GUTS_ID = g.GUTS_ID)
                and ((g.GUTS_VERWENDUNGSZWECK is not null
                      and instr(l_kompakt, regexp_replace(upper(g.GUTS_VERWENDUNGSZWECK), '[^0-9A-Z]')) > 0)
                     or (length(regexp_replace(upper(g.GUTS_NUMMER), '[^0-9A-Z]')) >= 4
@@ -525,16 +546,23 @@ create or replace package body FAKT_BANK as
             if l_anz <> 1 and u.BKUM_GEGEN_NAME is not null then
                 select count(*), max(GUTS_ID) into l_anz, l_guts
                   from FAKT_GUTSCHRIFTEN g
-                 where g.GUTS_MAND_ID = p_mand_id and g.GUTS_STATUS = 'OFFEN'
+                 where g.GUTS_MAND_ID = p_mand_id and g.GUTS_STATUS in ('OFFEN', 'BEZAHLT')
+                   and not exists (select 1 from FAKT_BANKUMSAETZE b where b.BKUM_GUTS_ID = g.GUTS_ID)
                    and coalesce(g.GUTS_ZAHLBETRAG, g.GUTS_BETRAG) = u.BKUM_BETRAG
                    and (utl_match.jaro_winkler_similarity(upper(g.GUTS_AUSSTELLER), upper(u.BKUM_GEGEN_NAME)) >= 85
                         or instr(upper(u.BKUM_GEGEN_NAME), upper(regexp_substr(g.GUTS_AUSSTELLER, '[^ ,.-]{4,}'))) > 0);
                 l_art := 'Gutschrift (Betrag und Aussteller)';
             end if;
             if l_anz = 1 then
-                update FAKT_GUTSCHRIFTEN set GUTS_STATUS = 'BEZAHLT', GUTS_BEZAHLT_AM = u.BKUM_BUCHUNGSDATUM where GUTS_ID = l_guts;
+                select GUTS_STATUS into l_gstatus from FAKT_GUTSCHRIFTEN where GUTS_ID = l_guts;
+                if l_gstatus = 'BEZAHLT' then
+                    l_art := l_art || ', war bereits als bezahlt erfasst';
+                end if;
+                -- Zahlungsdatum laut Bank (auch wenn "Bezahlt am" von Hand erfasst war)
+                update FAKT_GUTSCHRIFTEN set GUTS_STATUS = 'BEZAHLT', GUTS_BEZAHLT_AM = u.BKUM_BUCHUNGSDATUM
+                 where GUTS_ID = l_guts and (GUTS_STATUS <> 'BEZAHLT' or decode(GUTS_BEZAHLT_AM, u.BKUM_BUCHUNGSDATUM, 1, 0) = 0);
                 update FAKT_BANKUMSAETZE
-                   set BKUM_STATUS = 'ZUGEORDNET', BKUM_GUTS_ID = l_guts, BKUM_ZUORDNUNG = l_art
+                   set BKUM_STATUS = 'ZUGEORDNET', BKUM_GUTS_ID = l_guts, BKUM_RECH_ID = null, BKUM_ZUORDNUNG = l_art
                  where BKUM_ID = u.BKUM_ID;
                 l_zugeordnet := l_zugeordnet + 1;
                 continue;
@@ -560,6 +588,24 @@ create or replace package body FAKT_BANK as
                       from FAKT_RECHNUNGEN where RECH_MAND_ID = p_mand_id and RECH_NUMMER = l_nr;
                     if l_anz = 1 then
                         l_art := 'Rechnungsnummer ' || l_nr;
+                        exit;
+                    end if;
+                    l_rech := null;
+                end loop;
+            end if;
+            -- 2b. Rechnungsnummer ohne Trennzeichen ("2026201/22.9." = 2026 - 201) – nur wenn der Auftraggeber der Kunde
+            --     der Rechnung ist (FAKT_DEBITOR.ist_kunde, Skript 45)
+            if l_rech is null and u.BKUM_GEGEN_NAME is not null then
+                for i in 1 .. 5 loop
+                    l_treffer := regexp_substr(l_text, '(^|[^0-9])(20[0-9]{2})([0-9]{1,5})([^0-9]|$)', 1, i, null, 2);
+                    exit when l_treffer is null;
+                    l_nr := l_treffer || ' - ' || to_number(regexp_substr(l_text, '(^|[^0-9])(20[0-9]{2})([0-9]{1,5})([^0-9]|$)', 1, i, null, 3));
+                    select count(*), max(RECH_ID) into l_anz, l_rech
+                      from FAKT_RECHNUNGEN
+                     where RECH_MAND_ID = p_mand_id and RECH_NUMMER = l_nr
+                       and FAKT_DEBITOR.ist_kunde(RECH_EMPF_NAME, u.BKUM_GEGEN_NAME) = 'Y';
+                    if l_anz = 1 then
+                        l_art := 'Rechnungsnummer ' || l_nr || ' (ohne Trennzeichen) und Kunde';
                         exit;
                     end if;
                     l_rech := null;
@@ -592,10 +638,24 @@ create or replace package body FAKT_BANK as
              where z.ZAHL_RECH_ID = l_rech and z.ZAHL_BETRAG = u.BKUM_BETRAG
                and abs(z.ZAHL_DATUM - u.BKUM_BUCHUNGSDATUM) <= 7
                and not exists (select 1 from FAKT_BANKUMSAETZE b where b.BKUM_ZAHL_ID = z.ZAHL_ID);
+            -- Rechnung schon bezahlt: gleich hohe Zahlung mit anderem Datum (z. B. aus dem Altsystem) verknuepfen
+            if l_zahl is null and l_status = 'BEZAHLT' then
+                select min(z.ZAHL_ID) keep (dense_rank first order by abs(z.ZAHL_DATUM - u.BKUM_BUCHUNGSDATUM)),
+                       min(z.ZAHL_DATUM) keep (dense_rank first order by abs(z.ZAHL_DATUM - u.BKUM_BUCHUNGSDATUM))
+                  into l_zahl, l_zdatum
+                  from FAKT_ZAHLUNGEN z
+                 where z.ZAHL_RECH_ID = l_rech and z.ZAHL_BETRAG = u.BKUM_BETRAG
+                   and not exists (select 1 from FAKT_BANKUMSAETZE b where b.BKUM_ZAHL_ID = z.ZAHL_ID);
+                if l_zahl is not null then
+                    l_art := l_art || ', vorhandene Zahlung vom ' || to_char(l_zdatum, 'DD.MM.YYYY');
+                end if;
+            elsif l_zahl is not null then
+                l_art := l_art || ', vorhandene Zahlung';
+            end if;
             if l_zahl is not null then
                 update FAKT_BANKUMSAETZE
                    set BKUM_STATUS = 'ZUGEORDNET', BKUM_RECH_ID = l_rech, BKUM_ZAHL_ID = l_zahl,
-                       BKUM_ZUORDNUNG = l_art || ', vorhandene Zahlung'
+                       BKUM_ZUORDNUNG = l_art
                  where BKUM_ID = u.BKUM_ID;
                 l_zugeordnet := l_zugeordnet + 1;
             elsif l_status in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT') then

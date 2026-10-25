@@ -2823,6 +2823,37 @@ def seite_30():
     s += button("abgleichen", "ABGLEICHEN", "Erneut abgleichen", 20, "upload", "next", "@/text-with-icon",
                 icon="fa-refresh", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
                 verhalten="            warnOnUnsavedChanges: doNotCheck\n")
+    s += """    region suche (
+        name: Suche
+        type: facetedSearch
+        source {
+            filteredRegion: @eingaenge
+        }
+        layout {
+            sequence: 15
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            compactNosThreshold: 10000
+            displayChartForTopNValues: 10
+        }
+
+        facet P30_SEARCH (
+            type: search
+            label {
+                label: Zahlungseingänge durchsuchen
+            }
+            layout {
+                sequence: 10
+            }
+        )
+    )
+
+"""
     s += bericht("eingaenge", "Zahlungseingänge", 20, """                -- Eingaenge des Mandanten, neueste zuerst; Rechnung als Link (nur wenn erkannt)
                 select to_char(u.BKUM_BUCHUNGSDATUM, 'DD.MM.YYYY') as DATUM,
                        FAKT_HISTORIE.betrag(u.BKUM_BETRAG) as BETRAG,
@@ -2849,9 +2880,12 @@ def seite_30():
                                                                                        p_values => r.RECH_ID))
                            || '">' || apex_escape.html(r.RECH_NUMMER) || '</a>'
                        end as RECHNUNG,
-                       u.BKUM_ZUORDNUNG as ZUORDNUNG,
-                       -- nicht zuordenbarer Eingang: Debitor daraus anlegen (Seite 51 mit Request ANLEGEN), danach bearbeiten
-                       case when u.BKUM_STATUS = 'OFFEN' and u.BKUM_RECH_ID is null and u.BKUM_GUTS_ID is null then
+                       coalesce(u.BKUM_ZUORDNUNG,
+                                case when k.KUNDE is not null then 'Auftraggeber ist Kunde ' || k.KUNDE
+                                                                   || ' – passende Rechnung bzw. Gutschrift fehlt' end) as ZUORDNUNG,
+                       -- nicht zuordenbarer Eingang eines Nicht-Kunden: Debitor daraus anlegen (Seite 51, Request ANLEGEN)
+                       case when u.BKUM_STATUS = 'OFFEN' and u.BKUM_RECH_ID is null and u.BKUM_GUTS_ID is null
+                             and k.KUNDE is null then
                            '<a class="t-Button t-Button--small t-Button--icon t-Button--iconLeft" href="'
                            || apex_escape.html_attribute(apex_page.get_url(p_page => 51, p_clear_cache => '51',
                                                                            p_items => 'P51_BKUM_ID', p_values => u.BKUM_ID,
@@ -2863,6 +2897,12 @@ def seite_30():
                   left join FAKT_RECHNUNGEN r on r.RECH_ID = u.BKUM_RECH_ID
                   left join FAKT_GUTSCHRIFTEN g on g.GUTS_ID = u.BKUM_GUTS_ID
                   left join FAKT_DEBITOREN d on d.DEBI_ID = u.BKUM_DEBI_ID
+                  -- Auftraggeber ist ein Kunde (Name passt): kein Debitor, sondern Rechnung/Gutschrift fehlt
+                  outer apply (select max(c.KUND_NUMMER || ' ' || c.KUND_FIRMENNAME) as KUNDE
+                                 from KUND_KUNDEN c
+                                where u.BKUM_STATUS = 'OFFEN' and u.BKUM_RECH_ID is null and u.BKUM_GUTS_ID is null
+                                  and c.KUND_FIRMENNAME is not null
+                                  and FAKT_DEBITOR.ist_kunde(c.KUND_FIRMENNAME, u.BKUM_GEGEN_NAME) = 'Y') k
                  where u.BKUM_MAND_ID = :MANDANT_ID
                    and u.BKUM_RICHTUNG = 'CRDT'
                  order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc""",
@@ -2904,10 +2944,8 @@ def seite_30():
                     select blob_content, filename into l_blob, l_name
                       from apex_application_temp_files where name = :P30_DATEI;
                     l_id := FAKT_BANK.einlesen(:MANDANT_ID, l_name, l_blob);
-                    for d in (select * from FAKT_BANKDATEIEN where BKDT_ID = l_id) loop
-                        :P30_MELDUNG := d.BKDT_DATEINAME || ': ' || d.BKDT_ANZ_UMSAETZE || ' Buchungen, davon '
-                                        || d.BKDT_ANZ_NEU || ' neu; ' || d.BKDT_ANZ_ZUGEORDNET || ' Zahlungseingänge zugeordnet.';
-                    end loop;
+                    -- neu eingelesen bzw. "bereits hochgeladen – Zuordnung erneut geprueft"
+                    :P30_MELDUNG := FAKT_BANK.meldung;
                 exception
                     when others then
                         if sqlcode between -20299 and -20200 then

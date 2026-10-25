@@ -93,7 +93,11 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   einmal – `BKUM_SCHLUESSEL`), danach `FAKT_BANK.abgleichen`: Eingänge per 1. RF-Zahlungsreferenz, 2. Rechnungsnummer im Text,
   3. offener Betrag + Auftraggeber ≈ Kunde → Zahlung anlegen („Bankabgleich: …“, Status per Trigger) bzw. gleich hohe Zahlung ±7 Tage
   verknüpfen; bezahlte Rechnung nur als Hinweis (BEREITS_BEZAHLT). Tabellen `FAKT_BANKDATEIEN` (BKDT), `FAKT_BANKUMSAETZE` (BKUM).
-  „Erneut abgleichen“ prüft offene Eingänge noch einmal. Holding-Datei 202699999 (3).xml am 25.10.2026 eingelesen (HEROLD → 2026 - 202).
+  „Erneut abgleichen“ prüft offene Eingänge noch einmal; dieselbe Datei noch einmal hochladen = erneut abgleichen (keine Fehlermeldung).
+  Auch von Hand als bezahlt erfasste Gutschriften (ohne Bankbuchung) und bezahlte Rechnungen mit gleich hoher, noch nicht verknüpfter
+  Zahlung anderen Datums werden zugeordnet („vorhandene Zahlung vom …“); Rechnungsnummer ohne Trennzeichen („2026201“) nur, wenn der
+  Auftraggeber der Kunde ist (`FAKT_DEBITOR.ist_kunde`). Kein „Debitor anlegen“, wenn der Auftraggeber ein Kunde ist (Hinweis „Rechnung
+  bzw. Gutschrift fehlt“). Suche über den Zahlungseingängen (Facettensuche P30_SEARCH). Holding-Datei 202699999 (3).xml am 25.10.2026 eingelesen (HEROLD → 2026 - 202).
 - **Debitoren** (DDL 45, Menüpunkt Debitoren, Seiten 50 Liste mit Facetten / 51 Debitor mit Registerkarten Stammdaten und Zahlungen):
   Zahler ohne Rechnung/Gutschrift (z. B. Mieter) je Mandant – Name, Bezeichnung, Betrag, Intervall (`LOV_DEBITOR_INTERVALL` im Portal),
   fällig ab/bis, IBAN des Zahlers, optional Kunde. Fällige Posten (`FAKT_DEBITOR_POSTEN`) erzeugt `FAKT_DEBITOR.posten_erzeugen` bis Ende

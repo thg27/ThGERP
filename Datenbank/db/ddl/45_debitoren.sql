@@ -271,6 +271,9 @@ create or replace package FAKT_DEBITOR as
     function abgleichen(p_mand_id in number) return pls_integer;
     -- Name des Debitors passt zum Auftraggeber der Buchung ('Y'/'N'): alle Namensteile enthalten (Reihenfolge egal) bzw. aehnlich
     function name_passt(p_name in varchar2, p_auftraggeber in varchar2) return varchar2 deterministic;
+    -- Auftraggeber ist dieser Kunde ('Y'/'N'): Name passt bzw. erstes Wort der Firma (ab 4 Zeichen) kommt im Auftraggeber
+    -- vor – die Bank kuerzt Namen ("Taibinger & Co Son"); dann kein Debitor, sondern Rechnung/Gutschrift fehlt
+    function ist_kunde(p_firma in varchar2, p_auftraggeber in varchar2) return varchar2 deterministic;
     -- Anzeigetexte
     function intervall_text(p_intervall in varchar2) return varchar2 deterministic;
     function status_text(p_status in varchar2) return varchar2 deterministic;
@@ -443,6 +446,17 @@ create or replace package body FAKT_DEBITOR as
         end loop;
         return l_zug;
     end abgleichen;
+
+    function ist_kunde(p_firma in varchar2, p_auftraggeber in varchar2) return varchar2 deterministic is
+        l_wort varchar2(200) := regexp_substr(upper(p_firma), '[[:alnum:]]+');
+    begin
+        if name_passt(p_firma, p_auftraggeber) = 'Y' then
+            return 'Y';
+        end if;
+        return case when length(l_wort) >= 4
+                         and instr(' ' || regexp_replace(upper(p_auftraggeber), '[^[:alnum:]]+', ' ') || ' ', ' ' || l_wort || ' ') > 0
+                    then 'Y' else 'N' end;
+    end ist_kunde;
 
     function intervall_text(p_intervall in varchar2) return varchar2 deterministic is
     begin
