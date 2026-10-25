@@ -1062,7 +1062,10 @@ def seite_11():
                           extra=nur_anzeige, **ohne))
     s += maske(item("P11_POS_PAUSCHAL", "numberField", "Pauschalsumme der Hauptposition (statt Summe)", 140, p, neue_zeile=False,
                     spalten=4, extra=ignorieren, **ohne), "999G999G990D00")
-    s += item("P11_POS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 150, p, spalten=12, extra=RTE_LEISTE("            warnOnUnsavedChanges: ignore\n"), **ohne)
+    # als HTML speichern wie der Artikel (Vorgabe des Editors ist Markdown, das der PDF-Druck nicht versteht)
+    s += item("P11_POS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 150, p, spalten=12,
+              extra="        settings {\n            format: html\n            toolbar: full\n        }\n"
+              + RTE_LEISTE("            warnOnUnsavedChanges: ignore\n"), **ohne)
 
     # ------------------------------------------------ Zahlungen
     # Timeline wie die Historie (Report-Vorlage "Timeline"), chronologisch: zuerst "Rechnung erstellt" mit dem offenen

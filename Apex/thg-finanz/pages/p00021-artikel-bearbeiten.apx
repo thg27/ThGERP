@@ -561,6 +561,10 @@ page 21 (
             column: ARTI_BESCHREIBUNG
             dataType: clob
         }
+        settings {
+            format: html
+            toolbar: full
+        }
     )
 
     pageItem P21_ARTI_KOMMENTAR (

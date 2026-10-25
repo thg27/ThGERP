@@ -2063,6 +2063,10 @@ page 11 (
             template: @/optional-floating
             templateOptions: #DEFAULT#
         }
+        settings {
+            format: html
+            toolbar: full
+        }
         advanced {
             warnOnUnsavedChanges: ignore
             initJavaScriptFunction:

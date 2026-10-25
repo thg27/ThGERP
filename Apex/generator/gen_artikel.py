@@ -658,7 +658,9 @@ def seite_11():
         }
 """)
     s += item("P11_ARTI_BESCHREIBUNG", "richTextEditor", "Beschreibung (wird in die Belegposition übernommen)", 90, st,
-              col="ARTI_BESCHREIBUNG", dtype="clob", spalten=12)
+              col="ARTI_BESCHREIBUNG", dtype="clob", spalten=12,
+              # als HTML speichern (Vorgabe des Editors ist Markdown); wird so in die Belegposition uebernommen
+              extra="        settings {\n            format: html\n            toolbar: full\n        }\n")
 
     s += item("P11_ARTI_KOMMENTAR", "textarea", "Kommentar (intern)", 10, "tab-kommentar", col="ARTI_KOMMENTAR",
               dtype="clob", spalten=12)
