@@ -1105,7 +1105,8 @@ def seite_11():
                        end as EVENT_TITLE,
                        TEXT as EVENT_DESC,
                        null as EVENT_MODIFIERS,
-                       null as EVENT_ATTRIBUTES
+                       null as EVENT_ATTRIBUTES,
+                       null as EVENT_LINK
                   from e
                  order by SORT, DATUM, ZAHL_ID
                 ```
@@ -1158,7 +1159,7 @@ def seite_11():
 
 """ for i, c in enumerate(("USER_NAME", "USER_AVATAR", "USER_COLOR", "EVENT_DATE", "EVENT_TYPE", "EVENT_ICON",
                                           "EVENT_STATUS", "EVENT_TITLE", "EVENT_DESC", "EVENT_MODIFIERS",
-                                          "EVENT_ATTRIBUTES"), start=1)) + """    )
+                                          "EVENT_ATTRIBUTES", "EVENT_LINK"), start=1)) + """    )
 
 """
     # Zahlungseingang erfassen (rechts oben in der Region): Dialog Seite 16 – nur offene bzw. teilbezahlte Rechnungen
@@ -1292,7 +1293,7 @@ def seite_11():
     # (Report-Vorlage "Timeline" des Universal Theme): Avatar mit Kuerzel, Mitarbeiter, Zeitpunkt; farbiges Ereignis mit
     # Icon (Rechnung, Position, Druck, Zahlung, Bearbeitung, Storno, Versand); Aktion als Titel, Aenderungen darunter
     spalten = ("USER_NAME", "USER_AVATAR", "USER_COLOR", "EVENT_DATE", "EVENT_TYPE", "EVENT_ICON", "EVENT_STATUS",
-               "EVENT_TITLE", "EVENT_DESC", "EVENT_MODIFIERS", "EVENT_ATTRIBUTES")
+               "EVENT_TITLE", "EVENT_DESC", "EVENT_MODIFIERS", "EVENT_ATTRIBUTES", "EVENT_LINK")
     s += """    region historie (
         name: Historie
         type: classicReport
@@ -1315,7 +1316,8 @@ def seite_11():
                        h.RHIS_AKTION as EVENT_TITLE,
                        h.RHIS_DETAIL as EVENT_DESC,
                        null as EVENT_MODIFIERS,
-                       null as EVENT_ATTRIBUTES
+                       null as EVENT_ATTRIBUTES,
+                       null as EVENT_LINK
                   from FAKT_RECHNUNG_HISTORIE h
                   left join ALLG_MITARBEITER m on m.MITA_BENUTZERNAME = h.RHIS_BENUTZER
                  cross apply (select case

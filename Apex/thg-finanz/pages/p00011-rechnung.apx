@@ -2095,7 +2095,8 @@ page 11 (
                        end as EVENT_TITLE,
                        TEXT as EVENT_DESC,
                        null as EVENT_MODIFIERS,
-                       null as EVENT_ATTRIBUTES
+                       null as EVENT_ATTRIBUTES,
+                       null as EVENT_LINK
                   from e
                  order by SORT, DATUM, ZAHL_ID
                 ```
@@ -2240,6 +2241,16 @@ page 11 (
             type: plainText
             layout {
                 sequence: 110
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column EVENT_LINK (
+            type: plainText
+            layout {
+                sequence: 120
             }
             sorting {
                 sortable: false
@@ -2475,7 +2486,8 @@ page 11 (
                        h.RHIS_AKTION as EVENT_TITLE,
                        h.RHIS_DETAIL as EVENT_DESC,
                        null as EVENT_MODIFIERS,
-                       null as EVENT_ATTRIBUTES
+                       null as EVENT_ATTRIBUTES,
+                       null as EVENT_LINK
                   from FAKT_RECHNUNG_HISTORIE h
                   left join ALLG_MITARBEITER m on m.MITA_BENUTZERNAME = h.RHIS_BENUTZER
                  cross apply (select case
@@ -2654,6 +2666,16 @@ page 11 (
             type: plainText
             layout {
                 sequence: 110
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column EVENT_LINK (
+            type: plainText
+            layout {
+                sequence: 120
             }
             sorting {
                 sortable: false
