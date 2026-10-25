@@ -1,0 +1,801 @@
+page 41 (
+    name: Gutschrift
+    alias: GUTSCHRIFT
+    title: Gutschrift
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: &P41_TITEL.
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 5
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                t-BreadcrumbRegion--useRegionTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region gutschrift (
+        name: Gutschrift
+        type: form
+        source {
+            location: localDatabase
+            tableName: FAKT_GUTSCHRIFTEN
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+    region pdf (
+        name: PDF der Gutschrift
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>PDF der Gutschrift hochladen: Aussteller, Gutschriftnummer, Datum, fällig am, Betrag und Verwendungszweck
+                werden ausgelesen und vorbelegt – bitte prüfen und speichern.&P41_PDF_LINK!RAW.</p>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P41_GUTS_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @gutschrift
+            slot: regionBody
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P41_GUTS_MAND_ID (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @gutschrift
+            slot: regionBody
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_MAND_ID
+            dataType: number
+        }
+        default {
+            type: item
+            item: MANDANT_ID
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P41_TITEL (
+        type: hidden
+        layout {
+            sequence: 3
+            region: @gutschrift
+            slot: regionBody
+        }
+    )
+
+    pageItem P41_PDF_LINK (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @gutschrift
+            slot: regionBody
+        }
+    )
+
+    pageItem P41_DATEI (
+        type: fileUpload
+        label {
+            label: Gutschrift (PDF)
+            alignment: left
+        }
+        display {
+            displayAs: inlineDropzone
+            dropzoneTitle: PDF der Gutschrift hierher ziehen
+            dropzoneDesc: oder klicken zum Auswählen
+        }
+        storage {
+            type: appTempFiles
+        }
+        layout {
+            sequence: 10
+            region: @pdf
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P41_GUTS_KUND_ID (
+        type: selectList
+        label {
+            label: Kunde (Aussteller)
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @gutschrift
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_KUND_ID
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-kunden
+            displayNullValue: true
+            nullDisplayValue: - Kunde wählen -
+            displayExtraValues: false
+        }
+    )
+
+    pageItem P41_GUTS_AUSSTELLER (
+        type: textField
+        label {
+            label: Aussteller laut Gutschrift
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @gutschrift
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_AUSSTELLER
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 200
+        }
+    )
+
+    pageItem P41_GUTS_NUMMER (
+        type: textField
+        label {
+            label: Gutschriftnummer
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @gutschrift
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_NUMMER
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 50
+        }
+    )
+
+    pageItem P41_GUTS_DATUM (
+        type: datePicker
+        label {
+            label: Gutschriftdatum
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @gutschrift
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_DATUM
+            dataType: date
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P41_GUTS_FAELLIG_AM (
+        type: datePicker
+        label {
+            label: Fällig am
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @gutschrift
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_FAELLIG_AM
+            dataType: date
+        }
+    )
+
+    pageItem P41_GUTS_BETRAG (
+        type: numberField
+        label {
+            label: Betrag
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @gutschrift
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            formatMask: 999G999G990D00
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_BETRAG
+            dataType: number
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P41_GUTS_SKONTO_PROZENT (
+        type: numberField
+        label {
+            label: Skonto %
+            alignment: left
+        }
+        layout {
+            sequence: 65
+            region: @gutschrift
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            formatMask: 990D99
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_SKONTO_PROZENT
+            dataType: number
+        }
+    )
+
+    pageItem P41_GUTS_ZAHLBETRAG (
+        type: displayOnly
+        label {
+            label: Zahlbetrag € (erwartete Zahlung)
+            alignment: left
+        }
+        layout {
+            sequence: 66
+            region: @gutschrift
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            formatMask: 999G999G990D00
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_ZAHLBETRAG
+            dataType: number
+        }
+    )
+
+    pageItem P41_GUTS_VERWENDUNGSZWECK (
+        type: textField
+        label {
+            label: Verwendungszweck (wie auf dem Kontoauszug)
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @gutschrift
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_VERWENDUNGSZWECK
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 140
+        }
+    )
+
+    pageItem P41_GUTS_BEMERKUNG (
+        type: textarea
+        label {
+            label: Bemerkung
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @gutschrift
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_BEMERKUNG
+            dataType: varchar2
+        }
+        validation {
+            maxLength: 1000
+        }
+    )
+
+    pageItem P41_GUTS_STATUS (
+        type: displayOnly
+        label {
+            label: Status
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @gutschrift
+            slot: regionBody
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_STATUS
+            dataType: varchar2
+        }
+        settings {
+            basedOn: lov
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select FAKT_GUTSCHRIFT.status_text(column_value) d, column_value r
+                  from table(sys.odcivarchar2list('OFFEN', 'BEZAHLT'))
+                ```
+        }
+        default {
+            type: static
+            staticValue: OFFEN
+        }
+    )
+
+    pageItem P41_GUTS_BEZAHLT_AM (
+        type: datePicker
+        label {
+            label: Bezahlt am (Bankabgleich oder von Hand)
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            region: @gutschrift
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_BEZAHLT_AM
+            dataType: date
+        }
+    )
+
+    button auslesen (
+        buttonName: AUSLESEN
+        label: PDF hochladen und auslesen
+        layout {
+            sequence: 10
+            region: @pdf
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-upload
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button up (
+        buttonName: UP
+        label: Zurück zu den Gutschriften
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: up
+        }
+        appearance {
+            buttonTemplate: @/icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--noUI
+            ]
+            icon: fa-arrow-up
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 40
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button delete (
+        buttonName: DELETE
+        label: Löschen
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+                t-Button--simple
+            ]
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P41_GUTS_ID
+        }
+        confirmation {
+            message: Gutschrift wirklich löschen?
+            style: danger
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Speichern
+        layout {
+            sequence: 20
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: update
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P41_GUTS_ID
+        }
+    )
+
+    button create (
+        buttonName: CREATE
+        label: Anlegen
+        layout {
+            sequence: 30
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: insert
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P41_GUTS_ID
+        }
+    )
+
+    process initialize-form-gutschrift (
+        name: Formular Gutschrift initialisieren
+        type: formInitialization
+        formRegion: @gutschrift
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process kopf (
+        name: Mandant prüfen, Titel und PDF-Link
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                if :P41_GUTS_ID is not null and :P41_GUTS_MAND_ID <> :MANDANT_ID then
+                    raise_application_error(-20240, 'Diese Gutschrift gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                end if;
+                :P41_TITEL := case when :P41_GUTS_ID is null then 'Neue Gutschrift'
+                                   else 'Gutschrift ' || coalesce(:P41_GUTS_NUMMER, :P41_GUTS_AUSSTELLER) end;
+                :P41_PDF_LINK := null;
+                for g in (select GUTS_DATEINAME from FAKT_GUTSCHRIFTEN where GUTS_ID = :P41_GUTS_ID and GUTS_DATEI is not null) loop
+                    :P41_PDF_LINK := ' Gespeichert: <a href="' || apex_escape.html_attribute(
+                                         apex_page.get_url(p_page => 42, p_items => 'P42_GUTS_ID', p_values => :P41_GUTS_ID))
+                                     || '" target="_blank" rel="noopener"><span class="fa fa-file-pdf-o" aria-hidden="true"></span> '
+                                     || apex_escape.html(g.GUTS_DATEINAME) || '</a> (ein neues PDF ersetzt es und ergänzt leere Felder)';
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: beforeHeader
+        }
+    )
+
+    process pdf-auslesen (
+        name: PDF hochladen und auslesen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_blob blob;
+                    l_name varchar2(400);
+                    l_mime varchar2(255);
+                begin
+                    if :P41_DATEI is null then
+                        raise_application_error(-20270, 'Bitte das PDF der Gutschrift auswählen.');
+                    end if;
+                    select blob_content, filename, mime_type into l_blob, l_name, l_mime
+                      from apex_application_temp_files where name = :P41_DATEI;
+                    :P41_GUTS_ID := FAKT_GUTSCHRIFT.aus_pdf(:MANDANT_ID, l_name, l_mime, l_blob, :P41_GUTS_ID);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            whenButtonPressed: @auslesen
+        }
+        successMessage {
+            successMessage: PDF ausgelesen – bitte die Angaben prüfen und speichern.
+        }
+    )
+
+    process bankeingang-freigeben (
+        name: Beim Löschen den Bankeingang wieder freigeben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                update FAKT_BANKUMSAETZE
+                   set BKUM_STATUS = 'OFFEN', BKUM_GUTS_ID = null, BKUM_ZUORDNUNG = null
+                 where BKUM_GUTS_ID = :P41_GUTS_ID and BKUM_MAND_ID = :MANDANT_ID;
+                ```
+        }
+        execution {
+            sequence: 8
+        }
+        serverSideCondition {
+            whenButtonPressed: @delete
+        }
+    )
+
+    process process-form-gutschrift (
+        name: Formular Gutschrift verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @gutschrift
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE,DELETE
+        }
+        successMessage {
+            successMessage: Gutschrift gespeichert.
+        }
+    )
+
+    process bank-abgleichen (
+        name: Bankabgleich (offene Eingänge)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- offener Bankeingang mit gleichem Verwendungszweck/Betrag -> Gutschrift bezahlt
+                if FAKT_BANK.abgleichen(:MANDANT_ID) > 0 then
+                    apex_application.g_print_success_message := 'Gutschrift gespeichert. Bankabgleich: Zahlungseingang zugeordnet.';
+                end if;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    branch nach-speichern (
+        name: Gutschrift wieder öffnen
+        execution {
+            sequence: 10
+        }
+        behavior {
+            target: {
+                page: 41
+                items: {
+                    P41_GUTS_ID: &P41_GUTS_ID.
+                }
+            }
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: AUSLESEN,CREATE,SAVE
+        }
+    )
+
+    branch nach-loeschen (
+        name: Zur Liste
+        execution {
+            sequence: 20
+        }
+        behavior {
+            target: {
+                page: 40
+            }
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: DELETE
+        }
+    )
+
+)

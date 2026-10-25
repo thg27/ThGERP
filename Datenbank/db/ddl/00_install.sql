@@ -47,5 +47,7 @@ whenever sqlerror exit failure rollback
 @@37_zahlung_ohne_skonto_mahnspesen.sql
 @@38_zahlungsreferenz_rechnung.sql
 @@39_bankabgleich.sql
+@@40_gutschriften.sql
+@@41_kunde_hays.sql
 
 prompt Installation abgeschlossen.

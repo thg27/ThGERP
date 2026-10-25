@@ -1,0 +1,63 @@
+page 42 (
+    name: Gutschrift PDF
+    alias: GUTSCHRIFT-PDF
+    title: Gutschrift
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region gutschrift-pdf (
+        name: Gutschrift PDF
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P42_GUTS_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @gutschrift-pdf
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    process pdf-ausliefern (
+        name: PDF ausliefern
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                for g in (select GUTS_DATEI, GUTS_DATEINAME, GUTS_MIME_TYPE from FAKT_GUTSCHRIFTEN
+                           where GUTS_ID = :P42_GUTS_ID and GUTS_MAND_ID = :MANDANT_ID and GUTS_DATEI is not null) loop
+                    apex_http.download(p_blob         => g.GUTS_DATEI,
+                                       p_content_type => nvl(g.GUTS_MIME_TYPE, 'application/pdf'),
+                                       p_filename     => g.GUTS_DATEINAME,
+                                       p_is_inline    => true);
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P42_GUTS_ID
+        }
+    )
+)

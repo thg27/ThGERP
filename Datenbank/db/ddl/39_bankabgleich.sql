@@ -7,6 +7,9 @@
 --        OFFEN (Eingang ohne Zuordnung), ZUGEORDNET (Zahlung zur Rechnung angelegt bzw. vorhandene verknuepft),
 --        BEREITS_BEZAHLT (Rechnung erkannt, war schon bezahlt), AUSGANG (Abbuchung), IGNORIERT
 --        Jede Buchung nur einmal je Mandant (BKUM_SCHLUESSEL: Bankreferenz bzw. Pruefsumme) – ueberlappende Dateien schaden nicht.
+--      FAKT_GUTSCHRIFTEN (GUTS): erhaltene Gutschriften (Gutschriftverfahren, z.B. Hays) je Mandant: Aussteller (optional
+--        Kunde), Nummer, Datum, faellig am, Betrag, Verwendungszweck wie auf dem Kontoauszug, PDF/Text, Status OFFEN/BEZAHLT
+--        (Auslesen des PDF: Skript 40); Bankbuchung -> Gutschrift: BKUM_GUTS_ID
 --      Package FAKT_BANK: einlesen (Datei pruefen, Konto muss zum Mandanten gehoeren), abgleichen
 --        Zuordnung: 1. RF-Zahlungsreferenz, 2. Rechnungsnummer im Text, 3. offener Betrag + Auftraggeber passt zum Kunden.
 --        Offene Rechnung: Zahlung anlegen (Trigger setzen Status/Historie) bzw. gleich hohe Zahlung +-7 Tage verknuepfen.
@@ -175,6 +178,105 @@ comment on column FAKT_BANKUMSAETZE.BKUM_UPDATED_ON is 'Audit: zuletzt geaendert
 comment on column FAKT_BANKUMSAETZE.BKUM_UPDATED_BY is 'Audit: zuletzt geaendert von';
 comment on column FAKT_BANKUMSAETZE.BKUM_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
 
+-- Erhaltene Gutschriften (Gutschriftverfahren, z.B. Hays) – vor FAKT_BANK, das sie im Abgleich verwendet
+begin
+    DDL_UTIL.tabelle('FAKT_GUTSCHRIFTEN', q'~create table FAKT_GUTSCHRIFTEN (
+  GUTS_ID number not null,
+  GUTS_MAND_ID number not null,
+  GUTS_KUND_ID number,
+  GUTS_AUSSTELLER varchar2(200 char),
+  GUTS_NUMMER varchar2(50 char),
+  GUTS_DATUM date,
+  GUTS_FAELLIG_AM date,
+  GUTS_BETRAG number(14,2),
+  GUTS_SKONTO_PROZENT number(5,2),
+  GUTS_ZAHLBETRAG number(14,2),
+  GUTS_VERWENDUNGSZWECK varchar2(140 char),
+  GUTS_BEMERKUNG varchar2(1000 char),
+  GUTS_STATUS varchar2(20 char) default 'OFFEN' not null,
+  GUTS_BEZAHLT_AM date,
+  GUTS_DATEINAME varchar2(400 char),
+  GUTS_MIME_TYPE varchar2(255 char),
+  GUTS_DATEI blob,
+  GUTS_TEXT clob,
+  GUTS_CREATED_ON timestamp not null,
+  GUTS_CREATED_BY varchar2(255 char) not null,
+  GUTS_UPDATED_ON timestamp,
+  GUTS_UPDATED_BY varchar2(255 char),
+  GUTS_ROW_VERSION number not null,
+  constraint GUTS_PK primary key (GUTS_ID)
+)~');
+    DDL_UTIL.constraint_('FAKT_GUTSCHRIFTEN', 'GUTS_STATUS_CK', 'C', q'~GUTS_STATUS in ('OFFEN', 'BEZAHLT')~');
+    DDL_UTIL.constraint_('FAKT_GUTSCHRIFTEN', 'GUTS_MAND_FK', 'R', 'GUTS_MAND_ID references ADMIN_MANDANTEN (MAND_ID)');
+    DDL_UTIL.constraint_('FAKT_GUTSCHRIFTEN', 'GUTS_KUND_FK', 'R', 'GUTS_KUND_ID references KUND_KUNDEN (KUND_ID)');
+    DDL_UTIL.index_('FAKT_GUTSCHRIFTEN', 'GUTS_MAND_I', 'GUTS_MAND_ID, GUTS_STATUS');
+    DDL_UTIL.index_('FAKT_GUTSCHRIFTEN', 'GUTS_KUND_I', 'GUTS_KUND_ID');
+    DDL_UTIL.spalte('FAKT_GUTSCHRIFTEN', 'GUTS_SKONTO_PROZENT', 'number(5,2)', 'Y');
+    DDL_UTIL.spalte('FAKT_GUTSCHRIFTEN', 'GUTS_ZAHLBETRAG', 'number(14,2)', 'Y');
+    DDL_UTIL.trigger_pruefen('GUTS_BIU', 'FAKT_GUTSCHRIFTEN');
+    -- Bankbuchung -> Gutschrift
+    DDL_UTIL.spalte('FAKT_BANKUMSAETZE', 'BKUM_GUTS_ID', 'number', 'Y');
+    DDL_UTIL.constraint_('FAKT_BANKUMSAETZE', 'BKUM_GUTS_FK', 'R', 'BKUM_GUTS_ID references FAKT_GUTSCHRIFTEN (GUTS_ID) on delete set null');
+    DDL_UTIL.index_('FAKT_BANKUMSAETZE', 'BKUM_GUTS_I', 'BKUM_GUTS_ID');
+end;
+/
+
+create or replace trigger GUTS_BIU
+  before insert or update on FAKT_GUTSCHRIFTEN
+  for each row
+begin
+  if inserting then
+    :new.GUTS_ID := coalesce(:new.GUTS_ID, to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'));
+    :new.GUTS_CREATED_ON  := systimestamp;
+    :new.GUTS_CREATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
+    :new.GUTS_UPDATED_ON  := null;
+    :new.GUTS_UPDATED_BY  := null;
+    :new.GUTS_ROW_VERSION := 1;
+  elsif updating then
+    :new.GUTS_ID          := :old.GUTS_ID;  -- Primaerschluessel ist unveraenderlich
+    :new.GUTS_CREATED_ON  := :old.GUTS_CREATED_ON;
+    :new.GUTS_CREATED_BY  := :old.GUTS_CREATED_BY;
+    :new.GUTS_UPDATED_ON  := systimestamp;
+    :new.GUTS_UPDATED_BY  := coalesce(sys_context('APEX$SESSION', 'APP_USER'), user);
+    :new.GUTS_ROW_VERSION := nvl(:old.GUTS_ROW_VERSION, 0) + 1;
+  end if;
+  -- Status aus dem Zahlungsdatum (Bankabgleich oder von Hand)
+  :new.GUTS_STATUS := case when :new.GUTS_BEZAHLT_AM is not null then 'BEZAHLT' else 'OFFEN' end;
+  -- erwartete Zahlung: Betrag abzueglich Skonto (z.B. Hays: 3 % bei Zahlung innerhalb von 7 Tagen)
+  :new.GUTS_ZAHLBETRAG := round(:new.GUTS_BETRAG * (1 - nvl(:new.GUTS_SKONTO_PROZENT, 0) / 100), 2);
+  -- Aussteller vom Kunden, wenn leer
+  if :new.GUTS_AUSSTELLER is null and :new.GUTS_KUND_ID is not null then
+    select max(coalesce(KUND_FIRMENNAME, KUND_KURZNAME)) into :new.GUTS_AUSSTELLER from KUND_KUNDEN where KUND_ID = :new.GUTS_KUND_ID;
+  end if;
+end GUTS_BIU;
+/
+
+comment on table FAKT_GUTSCHRIFTEN is 'Erhaltene Gutschriften (Gutschriftverfahren) je Mandant [Alias GUTS]';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_ID is 'Primaerschluessel (SYS_GUID)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_MAND_ID is 'FK: Mandant (Empfaenger der Gutschrift)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_KUND_ID is 'FK: Kunde (Aussteller), optional';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_AUSSTELLER is 'Aussteller der Gutschrift (Name, aus dem PDF bzw. vom Kunden)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_NUMMER is 'Gutschriftnummer des Ausstellers';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_DATUM is 'Gutschriftdatum';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_FAELLIG_AM is 'Faellig am (Auszahlung erwartet)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_BETRAG is 'Betrag der Gutschrift (Auszahlungsbetrag brutto)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_SKONTO_PROZENT is 'Skonto in Prozent, das der Aussteller bei der Zahlung abzieht';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_ZAHLBETRAG is 'Erwartete Zahlung = Betrag abzueglich Skonto (Trigger)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_VERWENDUNGSZWECK is 'Verwendungszweck wie auf dem Kontoauszug (Bankabgleich)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_BEMERKUNG is 'Bemerkung';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_STATUS is 'OFFEN, BEZAHLT (per Bankabgleich oder von Hand)';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_BEZAHLT_AM is 'Zahlungseingang am';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_DATEINAME is 'Dateiname des PDF';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_MIME_TYPE is 'MIME-Typ des PDF';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_DATEI is 'PDF der Gutschrift';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_TEXT is 'Aus dem PDF ausgelesener Text';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_CREATED_ON is 'Audit: angelegt am';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_CREATED_BY is 'Audit: angelegt von';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_UPDATED_ON is 'Audit: zuletzt geaendert am';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_UPDATED_BY is 'Audit: zuletzt geaendert von';
+comment on column FAKT_GUTSCHRIFTEN.GUTS_ROW_VERSION is 'Audit: Versionszaehler (optimistisches Locking)';
+comment on column FAKT_BANKUMSAETZE.BKUM_GUTS_ID is 'FK: zugeordnete Gutschrift';
+
 create or replace package FAKT_BANK as
     -- CAMT-Datei (camt.052/.053/.054) einlesen: Konto muss zum Mandanten gehoeren, Datei (Nachrichten-ID) nur einmal;
     -- neue Buchungen speichern (bereits vorhandene werden uebersprungen), danach abgleichen. Liefert die ID der Bankdatei.
@@ -322,6 +424,7 @@ create or replace package body FAKT_BANK as
         l_status  FAKT_RECHNUNGEN.RECH_STATUS%type;
         l_zahl    FAKT_ZAHLUNGEN.ZAHL_ID%type;
         l_zugeordnet pls_integer := 0;
+        l_guts    FAKT_GUTSCHRIFTEN.GUTS_ID%type;
         c_muster  constant varchar2(100) := '(20[0-9]{2})[[:space:]]*[-/][[:space:]]*0*([0-9]{1,5})([^-/0-9]|$)';
     begin
         for u in (select * from FAKT_BANKUMSAETZE
@@ -331,6 +434,34 @@ create or replace package body FAKT_BANK as
             l_art  := null;
             l_text := upper(u.BKUM_REFERENZ || ' ' || u.BKUM_VERWENDUNGSZWECK || ' ' || u.BKUM_END_TO_END_ID);
             l_kompakt := regexp_replace(l_text, '[^0-9A-Z]');
+            -- 0. erhaltene Gutschrift (Gutschriftverfahren): gleicher Betrag und Verwendungszweck bzw. Gutschriftnummer
+            --    im Text (Betrag egal – Skonto); sonst Zahlbetrag und Aussteller passt zum Auftraggeber (jeweils eindeutig)
+            select count(*), max(GUTS_ID) into l_anz, l_guts
+              from FAKT_GUTSCHRIFTEN g
+             where g.GUTS_MAND_ID = p_mand_id and g.GUTS_STATUS = 'OFFEN'
+               and ((g.GUTS_VERWENDUNGSZWECK is not null
+                     and instr(l_kompakt, regexp_replace(upper(g.GUTS_VERWENDUNGSZWECK), '[^0-9A-Z]')) > 0)
+                    or (length(regexp_replace(upper(g.GUTS_NUMMER), '[^0-9A-Z]')) >= 4
+                        and instr(l_kompakt, regexp_replace(upper(g.GUTS_NUMMER), '[^0-9A-Z]')) > 0));
+            l_art := 'Gutschrift (Gutschriftnummer/Verwendungszweck)';
+            if l_anz <> 1 and u.BKUM_GEGEN_NAME is not null then
+                select count(*), max(GUTS_ID) into l_anz, l_guts
+                  from FAKT_GUTSCHRIFTEN g
+                 where g.GUTS_MAND_ID = p_mand_id and g.GUTS_STATUS = 'OFFEN'
+                   and coalesce(g.GUTS_ZAHLBETRAG, g.GUTS_BETRAG) = u.BKUM_BETRAG
+                   and (utl_match.jaro_winkler_similarity(upper(g.GUTS_AUSSTELLER), upper(u.BKUM_GEGEN_NAME)) >= 85
+                        or instr(upper(u.BKUM_GEGEN_NAME), upper(regexp_substr(g.GUTS_AUSSTELLER, '[^ ,.-]{4,}'))) > 0);
+                l_art := 'Gutschrift (Betrag und Aussteller)';
+            end if;
+            if l_anz = 1 then
+                update FAKT_GUTSCHRIFTEN set GUTS_STATUS = 'BEZAHLT', GUTS_BEZAHLT_AM = u.BKUM_BUCHUNGSDATUM where GUTS_ID = l_guts;
+                update FAKT_BANKUMSAETZE
+                   set BKUM_STATUS = 'ZUGEORDNET', BKUM_GUTS_ID = l_guts, BKUM_ZUORDNUNG = l_art
+                 where BKUM_ID = u.BKUM_ID;
+                l_zugeordnet := l_zugeordnet + 1;
+                continue;
+            end if;
+            l_art := null;
             -- 1. RF-Zahlungsreferenz der Rechnung (Leerzeichen/Trennzeichen egal)
             select count(*), max(RECH_ID) into l_anz, l_rech
               from FAKT_RECHNUNGEN

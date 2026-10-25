@@ -2831,7 +2831,12 @@ def seite_30():
                                                              when 'BEREITS_BEZAHLT' then 'u-info-text'
                                                              when 'OFFEN' then 'u-warning-text' end || '">'
                        || apex_escape.html(FAKT_BANK.status_text(u.BKUM_STATUS)) || '</span>' as STATUS,
-                       case when r.RECH_ID is not null then
+                       case when g.GUTS_ID is not null then
+                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
+                                                                                       p_items => 'P41_GUTS_ID',
+                                                                                       p_values => g.GUTS_ID))
+                           || '">Gutschrift ' || apex_escape.html(coalesce(g.GUTS_NUMMER, g.GUTS_AUSSTELLER)) || '</a>'
+                            when r.RECH_ID is not null then
                            '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 11, p_clear_cache => '11',
                                                                                        p_items => 'P11_RECH_ID',
                                                                                        p_values => r.RECH_ID))
@@ -2840,12 +2845,13 @@ def seite_30():
                        u.BKUM_ZUORDNUNG as ZUORDNUNG
                   from FAKT_BANKUMSAETZE u
                   left join FAKT_RECHNUNGEN r on r.RECH_ID = u.BKUM_RECH_ID
+                  left join FAKT_GUTSCHRIFTEN g on g.GUTS_ID = u.BKUM_GUTS_ID
                  where u.BKUM_MAND_ID = :MANDANT_ID
                    and u.BKUM_RICHTUNG = 'CRDT'
                  order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc""",
                  [("DATUM", "Datum", False, False), ("BETRAG", "Betrag", False, True),
                   ("AUFTRAGGEBER", "Auftraggeber", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False),
-                  ("STATUS", "Status", True, False), ("RECHNUNG", "Rechnung", True, False),
+                  ("STATUS", "Status", True, False), ("RECHNUNG", "Rechnung / Gutschrift", True, False),
                   ("ZUORDNUNG", "Zuordnung", False, False)],
                  "Noch keine Zahlungseingänge – bitte eine Bankdatei hochladen.")
     s += bericht("dateien", "Hochgeladene Bankdateien", 30, """                select to_char(from_tz(d.BKDT_CREATED_ON, 'UTC') at time zone 'Europe/Vienna', 'DD.MM.YYYY HH24:MI') as HOCHGELADEN,
@@ -2930,6 +2936,477 @@ def seite_30():
 )
 """
     return s
+
+
+def seite_40():
+    """Gutschriften (Menuepunkt): erhaltene Gutschriften des Mandanten (Gutschriftverfahren, z.B. Hays) – Liste mit Status;
+    Bezahlt setzt der Bankabgleich (Verwendungszweck/Nummer und Betrag). Neue Gutschrift: Seite 41."""
+    s = KOPF(40, "Gutschriften", "GUTSCHRIFTEN") + BREADCRUMB("Gutschriften")
+    s += bericht("gutschriften", "Gutschriften", 10, """                select '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
+                                                                                   p_items => 'P41_GUTS_ID', p_values => g.GUTS_ID))
+                       || '">' || apex_escape.html(coalesce(g.GUTS_NUMMER, '(ohne Nummer)')) || '</a>' as NUMMER,
+                       to_char(g.GUTS_DATUM, 'DD.MM.YYYY') as DATUM,
+                       coalesce(k.KUND_NUMMER || ' – ' || k.KUND_FIRMENNAME, g.GUTS_AUSSTELLER) as AUSSTELLER,
+                       FAKT_HISTORIE.betrag(g.GUTS_BETRAG) as BETRAG,
+                       FAKT_HISTORIE.betrag(g.GUTS_ZAHLBETRAG) as ZAHLBETRAG,
+                       to_char(g.GUTS_FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG,
+                       '<span class="' || case g.GUTS_STATUS when 'BEZAHLT' then 'u-success-text'
+                                                             else case when g.GUTS_FAELLIG_AM < trunc(sysdate) then 'u-danger-text'
+                                                                       else 'u-warning-text' end end || '">'
+                       || apex_escape.html(FAKT_GUTSCHRIFT.status_text(g.GUTS_STATUS)) || '</span>' as STATUS,
+                       to_char(g.GUTS_BEZAHLT_AM, 'DD.MM.YYYY') as BEZAHLT_AM,
+                       g.GUTS_VERWENDUNGSZWECK as VERWENDUNGSZWECK
+                  from FAKT_GUTSCHRIFTEN g
+                  left join KUND_KUNDEN k on k.KUND_ID = g.GUTS_KUND_ID
+                 where g.GUTS_MAND_ID = :MANDANT_ID
+                 order by g.GUTS_DATUM desc nulls first, g.GUTS_CREATED_ON desc""",
+                 [("NUMMER", "Gutschrift", True, False), ("DATUM", "Datum", False, False),
+                  ("AUSSTELLER", "Aussteller", False, False), ("BETRAG", "Betrag", False, True),
+                  ("ZAHLBETRAG", "Zahlbetrag", False, True), ("FAELLIG", "Fällig am", False, False), ("STATUS", "Status", True, False),
+                  ("BEZAHLT_AM", "Bezahlt am", False, False), ("VERWENDUNGSZWECK", "Verwendungszweck", False, False)],
+                 "Noch keine Gutschriften erfasst.")
+    s += button("neu", "NEU", "Neue Gutschrift", 10, "breadcrumb", "next", "@/text-with-icon", hot=True, icon="fa-plus",
+                options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 41
+                clearCache: 41
+            }
+            warnOnUnsavedChanges: doNotCheck
+""")
+    return s + ")\n"
+
+
+def seite_41():
+    """Gutschrift: PDF hochladen -> FAKT_GUTSCHRIFT.aus_pdf legt die Gutschrift an und belegt Aussteller/Kunde, Nummer,
+    Datum, faellig am, Betrag und Verwendungszweck aus dem PDF vor (bei vorhandener Gutschrift: PDF ersetzen, nur leere
+    Felder ergaenzen). Alle Felder bleiben aenderbar; der Kunde ist Pflicht. Nach dem Speichern laeuft der Bankabgleich
+    (offener Eingang mit gleichem Verwendungszweck/Betrag -> Gutschrift bezahlt)."""
+    f = dict(form="gutschrift")
+    s = KOPF(41, "Gutschrift", "GUTSCHRIFT") + BREADCRUMB("&P41_TITEL.")
+    s += """    region gutschrift (
+        name: Gutschrift
+        type: form
+        source {
+            location: localDatabase
+            tableName: FAKT_GUTSCHRIFTEN
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        edit {
+            enabled: true
+            allowedOperations: [
+                add
+                update
+                delete
+            ]
+        }
+    )
+
+"""
+    s += region("pdf", "PDF der Gutschrift", 10, extra="""        source {
+            htmlCode:
+                ```html
+                <p>PDF der Gutschrift hochladen: Aussteller, Gutschriftnummer, Datum, fällig am, Betrag und Verwendungszweck
+                werden ausgelesen und vorbelegt – bitte prüfen und speichern.&P41_PDF_LINK!RAW.</p>
+                ```
+        }
+""")
+    s += """    pageItem P41_GUTS_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @gutschrift
+            slot: regionBody
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_ID
+            dataType: number
+            primaryKey: true
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P41_GUTS_MAND_ID (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @gutschrift
+            slot: regionBody
+        }
+        source {
+            formRegion: @gutschrift
+            column: GUTS_MAND_ID
+            dataType: number
+        }
+        default {
+            type: item
+            item: MANDANT_ID
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P41_TITEL (
+        type: hidden
+        layout {
+            sequence: 3
+            region: @gutschrift
+            slot: regionBody
+        }
+    )
+
+    pageItem P41_PDF_LINK (
+        type: hidden
+        layout {
+            sequence: 4
+            region: @gutschrift
+            slot: regionBody
+        }
+    )
+
+    pageItem P41_DATEI (
+        type: fileUpload
+        label {
+            label: Gutschrift (PDF)
+            alignment: left
+        }
+        display {
+            displayAs: inlineDropzone
+            dropzoneTitle: PDF der Gutschrift hierher ziehen
+            dropzoneDesc: oder klicken zum Auswählen
+        }
+        storage {
+            type: appTempFiles
+        }
+        layout {
+            sequence: 10
+            region: @pdf
+            slot: regionBody
+            columnSpan: 12
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+"""
+    s += item("P41_GUTS_KUND_ID", "selectList", "Kunde (Aussteller)", 10, "gutschrift", col="GUTS_KUND_ID", dtype="number",
+              req=True, spalten=6, extra=lov("lov-kunden", "- Kunde wählen -"), **f)
+    s += item("P41_GUTS_AUSSTELLER", "textField", "Aussteller laut Gutschrift", 20, "gutschrift", col="GUTS_AUSSTELLER",
+              maxlen=200, neue_zeile=False, spalten=6, **f)
+    s += item("P41_GUTS_NUMMER", "textField", "Gutschriftnummer", 30, "gutschrift", col="GUTS_NUMMER", maxlen=50, spalten=3, **f)
+    s += item("P41_GUTS_DATUM", "datePicker", "Gutschriftdatum", 40, "gutschrift", col="GUTS_DATUM", dtype="date",
+              req=True, neue_zeile=False, spalten=3, **f)
+    s += item("P41_GUTS_FAELLIG_AM", "datePicker", "Fällig am", 50, "gutschrift", col="GUTS_FAELLIG_AM", dtype="date",
+              neue_zeile=False, spalten=3, **f)
+    s += maske(item("P41_GUTS_BETRAG", "numberField", "Betrag", 60, "gutschrift", col="GUTS_BETRAG", dtype="number",
+                    req=True, neue_zeile=False, spalten=3, **f), "999G999G990D00")
+    s += maske(item("P41_GUTS_SKONTO_PROZENT", "numberField", "Skonto %", 65, "gutschrift", col="GUTS_SKONTO_PROZENT",
+                    dtype="number", spalten=3, **f), "990D99")
+    s += maske(item("P41_GUTS_ZAHLBETRAG", "displayOnly", "Zahlbetrag € (erwartete Zahlung)", 66, "gutschrift",
+                    col="GUTS_ZAHLBETRAG", dtype="number", neue_zeile=False, spalten=3, **f), "999G999G990D00")
+    s += item("P41_GUTS_VERWENDUNGSZWECK", "textField", "Verwendungszweck (wie auf dem Kontoauszug)", 70, "gutschrift",
+              col="GUTS_VERWENDUNGSZWECK", maxlen=140, spalten=12, **f)
+    s += item("P41_GUTS_BEMERKUNG", "textarea", "Bemerkung", 80, "gutschrift", col="GUTS_BEMERKUNG", maxlen=1000,
+              spalten=12, **f)
+    s += item("P41_GUTS_STATUS", "displayOnly", "Status", 90, "gutschrift", col="GUTS_STATUS", spalten=3,
+              extra="""        settings {
+            basedOn: lov
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select FAKT_GUTSCHRIFT.status_text(column_value) d, column_value r
+                  from table(sys.odcivarchar2list('OFFEN', 'BEZAHLT'))
+                ```
+        }
+        default {
+            type: static
+            staticValue: OFFEN
+        }
+""", **f)
+    s += item("P41_GUTS_BEZAHLT_AM", "datePicker", "Bezahlt am (Bankabgleich oder von Hand)", 100, "gutschrift",
+              col="GUTS_BEZAHLT_AM", dtype="date", neue_zeile=False, spalten=3, **f)
+    links = "[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]"
+    s += button("auslesen", "AUSLESEN", "PDF hochladen und auslesen", 10, "pdf", "next", "@/text-with-icon", hot=True,
+                icon="fa-upload", options=links,
+                verhalten="            executeValidations: false\n            warnOnUnsavedChanges: doNotCheck\n")
+    s += button("up", "UP", "Zurück zu den Gutschriften", 10, "breadcrumb", "up", "@/icon", icon="fa-arrow-up",
+                options="[\n                #DEFAULT#\n                t-Button--noUI\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 40
+            }
+            warnOnUnsavedChanges: doNotCheck
+""")
+    s += button("delete", "DELETE", "Löschen", 10, "breadcrumb", "next",
+                options="[\n                #DEFAULT#\n                t-Button--danger\n                t-Button--simple\n            ]",
+                verhalten="""            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+            databaseAction: delete
+            requiresConfirmation: true
+""", bedingung=NICHT_NULL("P41_GUTS_ID") + """        confirmation {
+            message: Gutschrift wirklich löschen?
+            style: danger
+        }
+""")
+    s += button("save", "SAVE", "Speichern", 20, "breadcrumb", "next", hot=True,
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: update\n",
+                bedingung=NICHT_NULL("P41_GUTS_ID"))
+    s += button("create", "CREATE", "Anlegen", 30, "breadcrumb", "next", hot=True,
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n            databaseAction: insert\n",
+                bedingung=NULL("P41_GUTS_ID"))
+    s += """    process initialize-form-gutschrift (
+        name: Formular Gutschrift initialisieren
+        type: formInitialization
+        formRegion: @gutschrift
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+    )
+
+    process kopf (
+        name: Mandant prüfen, Titel und PDF-Link
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                if :P41_GUTS_ID is not null and :P41_GUTS_MAND_ID <> :MANDANT_ID then
+                    raise_application_error(-20240, 'Diese Gutschrift gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
+                end if;
+                :P41_TITEL := case when :P41_GUTS_ID is null then 'Neue Gutschrift'
+                                   else 'Gutschrift ' || coalesce(:P41_GUTS_NUMMER, :P41_GUTS_AUSSTELLER) end;
+                :P41_PDF_LINK := null;
+                for g in (select GUTS_DATEINAME from FAKT_GUTSCHRIFTEN where GUTS_ID = :P41_GUTS_ID and GUTS_DATEI is not null) loop
+                    :P41_PDF_LINK := ' Gespeichert: <a href="' || apex_escape.html_attribute(
+                                         apex_page.get_url(p_page => 42, p_items => 'P42_GUTS_ID', p_values => :P41_GUTS_ID))
+                                     || '" target="_blank" rel="noopener"><span class="fa fa-file-pdf-o" aria-hidden="true"></span> '
+                                     || apex_escape.html(g.GUTS_DATEINAME) || '</a> (ein neues PDF ersetzt es und ergänzt leere Felder)';
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: beforeHeader
+        }
+    )
+
+    process pdf-auslesen (
+        name: PDF hochladen und auslesen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_blob blob;
+                    l_name varchar2(400);
+                    l_mime varchar2(255);
+                begin
+                    if :P41_DATEI is null then
+                        raise_application_error(-20270, 'Bitte das PDF der Gutschrift auswählen.');
+                    end if;
+                    select blob_content, filename, mime_type into l_blob, l_name, l_mime
+                      from apex_application_temp_files where name = :P41_DATEI;
+                    :P41_GUTS_ID := FAKT_GUTSCHRIFT.aus_pdf(:MANDANT_ID, l_name, l_mime, l_blob, :P41_GUTS_ID);
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_inline_in_notification);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        serverSideCondition {
+            whenButtonPressed: @auslesen
+        }
+        successMessage {
+            successMessage: PDF ausgelesen – bitte die Angaben prüfen und speichern.
+        }
+    )
+
+    process bankeingang-freigeben (
+        name: Beim Löschen den Bankeingang wieder freigeben
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                update FAKT_BANKUMSAETZE
+                   set BKUM_STATUS = 'OFFEN', BKUM_GUTS_ID = null, BKUM_ZUORDNUNG = null
+                 where BKUM_GUTS_ID = :P41_GUTS_ID and BKUM_MAND_ID = :MANDANT_ID;
+                ```
+        }
+        execution {
+            sequence: 8
+        }
+        serverSideCondition {
+            whenButtonPressed: @delete
+        }
+    )
+
+    process process-form-gutschrift (
+        name: Formular Gutschrift verarbeiten
+        type: formAutoRowProcessing
+        formRegion: @gutschrift
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE,DELETE
+        }
+        successMessage {
+            successMessage: Gutschrift gespeichert.
+        }
+    )
+
+    process bank-abgleichen (
+        name: Bankabgleich (offene Eingänge)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- offener Bankeingang mit gleichem Verwendungszweck/Betrag -> Gutschrift bezahlt
+                if FAKT_BANK.abgleichen(:MANDANT_ID) > 0 then
+                    apex_application.g_print_success_message := 'Gutschrift gespeichert. Bankabgleich: Zahlungseingang zugeordnet.';
+                end if;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: CREATE,SAVE
+        }
+    )
+
+    branch nach-speichern (
+        name: Gutschrift wieder öffnen
+        execution {
+            sequence: 10
+        }
+        behavior {
+            target: {
+                page: 41
+                items: {
+                    P41_GUTS_ID: &P41_GUTS_ID.
+                }
+            }
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: AUSLESEN,CREATE,SAVE
+        }
+    )
+
+    branch nach-loeschen (
+        name: Zur Liste
+        execution {
+            sequence: 20
+        }
+        behavior {
+            target: {
+                page: 40
+            }
+        }
+        serverSideCondition {
+            type: requestIsContainedInValue
+            value: DELETE
+        }
+    )
+
+)
+"""
+    return s
+
+
+def seite_42():
+    """PDF einer Gutschrift ausliefern (inline, neuer Tab) – nur Gutschriften des Mandanten der Sitzung."""
+    return """page 42 (
+    name: Gutschrift PDF
+    alias: GUTSCHRIFT-PDF
+    title: Gutschrift
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region gutschrift-pdf (
+        name: Gutschrift PDF
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P42_GUTS_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @gutschrift-pdf
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    process pdf-ausliefern (
+        name: PDF ausliefern
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                for g in (select GUTS_DATEI, GUTS_DATEINAME, GUTS_MIME_TYPE from FAKT_GUTSCHRIFTEN
+                           where GUTS_ID = :P42_GUTS_ID and GUTS_MAND_ID = :MANDANT_ID and GUTS_DATEI is not null) loop
+                    apex_http.download(p_blob         => g.GUTS_DATEI,
+                                       p_content_type => nvl(g.GUTS_MIME_TYPE, 'application/pdf'),
+                                       p_filename     => g.GUTS_DATEINAME,
+                                       p_is_inline    => true);
+                end loop;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P42_GUTS_ID
+        }
+    )
+)
+"""
 
 def seite_16():
     """Dialog "Zahlungseingang" (Button im Tab Zahlungen von Seite 11; Klick auf eine Zahlung der Timeline zum Aendern):
@@ -3372,6 +3849,28 @@ def listen(lists_apx):
         }
     )
 
+    entry gutschriften (
+        label: Gutschriften
+        icon {
+            imageIconCssClasses: fa-money
+        }
+        layout {
+            sequence: 22
+        }
+        link {
+            target: {
+                page: 40
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                40
+                41
+            ]
+        }
+    )
+
     entry bankdatei (
         label: Bankdatei hochladen
         icon {
@@ -3520,6 +4019,38 @@ def breadcrumbs():
         link {
             target: {
                 page: 11
+            }
+        }
+    )
+
+    entry gutschriften (
+        name: Gutschriften
+        pageNumber: 40
+        execution {
+            sequence: 33
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 40
+            }
+        }
+    )
+
+    entry gutschrift (
+        name: Gutschrift
+        pageNumber: 41
+        execution {
+            sequence: 34
+        }
+        appearance {
+            parentEntry: @gutschriften
+        }
+        link {
+            target: {
+                page: 41
             }
         }
     )
@@ -3678,6 +4209,9 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00015-stornieren.apx").write_text(seite_15(), encoding="utf-8")
     (FIN / "pages" / "p00016-zahlungseingang.apx").write_text(seite_16(), encoding="utf-8")
     (FIN / "pages" / "p00030-bankdatei.apx").write_text(seite_30(), encoding="utf-8")
+    (FIN / "pages" / "p00040-gutschriften.apx").write_text(seite_40(), encoding="utf-8")
+    (FIN / "pages" / "p00041-gutschrift.apx").write_text(seite_41(), encoding="utf-8")
+    (FIN / "pages" / "p00042-gutschrift-pdf.apx").write_text(seite_42(), encoding="utf-8")
     pdf_seiten()
     # Artikelstamm (Seiten aus gen_artikel.py, umnummeriert 10/11/12 -> 20/21/22)
     (FIN / "pages" / "p00020-artikel.apx").write_text(ga.in_finanz(ga.seite_10()), encoding="utf-8")

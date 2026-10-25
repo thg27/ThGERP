@@ -154,7 +154,12 @@ page 30 (
                                                              when 'BEREITS_BEZAHLT' then 'u-info-text'
                                                              when 'OFFEN' then 'u-warning-text' end || '">'
                        || apex_escape.html(FAKT_BANK.status_text(u.BKUM_STATUS)) || '</span>' as STATUS,
-                       case when r.RECH_ID is not null then
+                       case when g.GUTS_ID is not null then
+                           '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
+                                                                                       p_items => 'P41_GUTS_ID',
+                                                                                       p_values => g.GUTS_ID))
+                           || '">Gutschrift ' || apex_escape.html(coalesce(g.GUTS_NUMMER, g.GUTS_AUSSTELLER)) || '</a>'
+                            when r.RECH_ID is not null then
                            '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 11, p_clear_cache => '11',
                                                                                        p_items => 'P11_RECH_ID',
                                                                                        p_values => r.RECH_ID))
@@ -163,6 +168,7 @@ page 30 (
                        u.BKUM_ZUORDNUNG as ZUORDNUNG
                   from FAKT_BANKUMSAETZE u
                   left join FAKT_RECHNUNGEN r on r.RECH_ID = u.BKUM_RECH_ID
+                  left join FAKT_GUTSCHRIFTEN g on g.GUTS_ID = u.BKUM_GUTS_ID
                  where u.BKUM_MAND_ID = :MANDANT_ID
                    and u.BKUM_RICHTUNG = 'CRDT'
                  order by u.BKUM_BUCHUNGSDATUM desc, u.BKUM_ID desc
@@ -270,7 +276,7 @@ page 30 (
         column RECHNUNG (
             type: plainText
             heading {
-                heading: Rechnung
+                heading: Rechnung / Gutschrift
             }
             layout {
                 sequence: 60

@@ -1,0 +1,253 @@
+page 40 (
+    name: Gutschriften
+    alias: GUTSCHRIFTEN
+    title: Gutschriften
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Gutschriften
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 5
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                t-BreadcrumbRegion--useRegionTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region gutschriften (
+        name: Gutschriften
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select '<a href="' || apex_escape.html_attribute(apex_page.get_url(p_page => 41, p_clear_cache => '41',
+                                                                                   p_items => 'P41_GUTS_ID', p_values => g.GUTS_ID))
+                       || '">' || apex_escape.html(coalesce(g.GUTS_NUMMER, '(ohne Nummer)')) || '</a>' as NUMMER,
+                       to_char(g.GUTS_DATUM, 'DD.MM.YYYY') as DATUM,
+                       coalesce(k.KUND_NUMMER || ' – ' || k.KUND_FIRMENNAME, g.GUTS_AUSSTELLER) as AUSSTELLER,
+                       FAKT_HISTORIE.betrag(g.GUTS_BETRAG) as BETRAG,
+                       FAKT_HISTORIE.betrag(g.GUTS_ZAHLBETRAG) as ZAHLBETRAG,
+                       to_char(g.GUTS_FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG,
+                       '<span class="' || case g.GUTS_STATUS when 'BEZAHLT' then 'u-success-text'
+                                                             else case when g.GUTS_FAELLIG_AM < trunc(sysdate) then 'u-danger-text'
+                                                                       else 'u-warning-text' end end || '">'
+                       || apex_escape.html(FAKT_GUTSCHRIFT.status_text(g.GUTS_STATUS)) || '</span>' as STATUS,
+                       to_char(g.GUTS_BEZAHLT_AM, 'DD.MM.YYYY') as BEZAHLT_AM,
+                       g.GUTS_VERWENDUNGSZWECK as VERWENDUNGSZWECK
+                  from FAKT_GUTSCHRIFTEN g
+                  left join KUND_KUNDEN k on k.KUND_ID = g.GUTS_KUND_ID
+                 where g.GUTS_MAND_ID = :MANDANT_ID
+                 order by g.GUTS_DATUM desc nulls first, g.GUTS_CREATED_ON desc
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--stretch
+                t-Report--staticRowColors
+                t-Report--rowHighlight
+                t-Report--horizontalBorders
+            ]
+        }
+        pagination {
+            type: rowRangesXToYOfZWithPagination
+        }
+        reportLayout {
+            numberOfRowsType: staticValue
+            numberOfRows: 50
+        }
+        messages {
+            whenNoDataFound: Noch keine Gutschriften erfasst.
+        }
+
+        column NUMMER (
+            type: plainText
+            heading {
+                heading: Gutschrift
+            }
+            layout {
+                sequence: 10
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column DATUM (
+            type: plainText
+            heading {
+                heading: Datum
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUSSTELLER (
+            type: plainText
+            heading {
+                heading: Aussteller
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BETRAG (
+            type: plainText
+            heading {
+                heading: Betrag
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ZAHLBETRAG (
+            type: plainText
+            heading {
+                heading: Zahlbetrag
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column FAELLIG (
+            type: plainText
+            heading {
+                heading: Fällig am
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+            }
+            layout {
+                sequence: 70
+            }
+            security {
+                escapeSpecialChars: false
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column BEZAHLT_AM (
+            type: plainText
+            heading {
+                heading: Bezahlt am
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VERWENDUNGSZWECK (
+            type: plainText
+            heading {
+                heading: Verwendungszweck
+            }
+            layout {
+                sequence: 90
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    button neu (
+        buttonName: NEU
+        label: Neue Gutschrift
+        layout {
+            sequence: 10
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 41
+                clearCache: 41
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)

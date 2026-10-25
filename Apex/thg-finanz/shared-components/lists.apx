@@ -133,6 +133,28 @@ list navigation-menu (
         }
     )
 
+    entry gutschriften (
+        label: Gutschriften
+        icon {
+            imageIconCssClasses: fa-money
+        }
+        layout {
+            sequence: 22
+        }
+        link {
+            target: {
+                page: 40
+            }
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                40
+                41
+            ]
+        }
+    )
+
     entry bankdatei (
         label: Bankdatei hochladen
         icon {

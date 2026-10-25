@@ -46,6 +46,38 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry gutschriften (
+        name: Gutschriften
+        pageNumber: 40
+        execution {
+            sequence: 33
+        }
+        appearance {
+            parentEntry: @home
+        }
+        link {
+            target: {
+                page: 40
+            }
+        }
+    )
+
+    entry gutschrift (
+        name: Gutschrift
+        pageNumber: 41
+        execution {
+            sequence: 34
+        }
+        appearance {
+            parentEntry: @gutschriften
+        }
+        link {
+            target: {
+                page: 41
+            }
+        }
+    )
+
     entry bankdatei (
         name: Bankdatei hochladen
         pageNumber: 30
