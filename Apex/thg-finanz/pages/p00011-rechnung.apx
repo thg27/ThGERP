@@ -1641,7 +1641,19 @@ page 11 (
         }
         settings {
             format: html
-            toolbar: basic
+            toolbar: full
+        }
+        advanced {
+            initJavaScriptFunction:
+                ```javascript-browser
+                function (options) {
+                    options.editorOptions = options.editorOptions || {};
+                    options.editorOptions.toolbar = {
+                        items: ["heading", "|", "bold", "italic", "|", "bulletedList", "numberedList", "|", "undo", "redo"]
+                    };
+                    return options;
+                }
+                ```
         }
         default {
             type: sqlQuerySingleValue
@@ -1676,7 +1688,19 @@ page 11 (
         }
         settings {
             format: html
-            toolbar: basic
+            toolbar: full
+        }
+        advanced {
+            initJavaScriptFunction:
+                ```javascript-browser
+                function (options) {
+                    options.editorOptions = options.editorOptions || {};
+                    options.editorOptions.toolbar = {
+                        items: ["heading", "|", "bold", "italic", "|", "bulletedList", "numberedList", "|", "undo", "redo"]
+                    };
+                    return options;
+                }
+                ```
         }
         default {
             type: sqlQuerySingleValue
@@ -2203,6 +2227,16 @@ page 11 (
         }
         advanced {
             warnOnUnsavedChanges: ignore
+            initJavaScriptFunction:
+                ```javascript-browser
+                function (options) {
+                    options.editorOptions = options.editorOptions || {};
+                    options.editorOptions.toolbar = {
+                        items: ["heading", "|", "bold", "italic", "|", "bulletedList", "numberedList", "|", "undo", "redo"]
+                    };
+                    return options;
+                }
+                ```
         }
     )
 

@@ -233,6 +233,8 @@ as
         if instr(l_s, '<') > 0 then
             l_s := replace(l_s, chr(10), ' ');
             l_s := regexp_replace(l_s, '<br[^>]*>', chr(10), 1, 0, 'i');
+            l_s := regexp_replace(l_s, '<h[1-6]( [^>]*)?>', chr(10) || chr(1), 1, 0, 'i');     -- Ueberschrift fett
+            l_s := regexp_replace(l_s, '</h[1-6]>', chr(2) || chr(10), 1, 0, 'i');
             l_s := regexp_replace(l_s, '</(p|div|h[1-6]|li|ul|ol)>', chr(10), 1, 0, 'i');
             l_s := regexp_replace(l_s, '<li[^>]*>', chr(10) || chr(3), 1, 0, 'i');            -- Aufzaehlung
             l_s := regexp_replace(l_s, '<(strong|b)( [^>]*)?>', chr(1), 1, 0, 'i');             -- fett an

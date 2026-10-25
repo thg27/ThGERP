@@ -1141,7 +1141,7 @@ def seite_11():
     # Vor-/Schlusstext mit Fett/Kursiv/Aufzaehlung (Rich-Text-Editor, als HTML gespeichert – nicht Markdown, das ist die
     # Vorgabe des Editors). Klartext (Altdaten, Textvorlagen) wird nur fuer die Anzeige umgewandelt (Prozess titel-setzen,
     # FAKT_RECHNUNG.text_html); als HTML gespeichert erst beim naechsten Speichern der Rechnung
-    rte = "        settings {\n            format: html\n            toolbar: basic\n        }\n"
+    rte = "        settings {\n            format: html\n            toolbar: full\n        }\n" + RTE_LEISTE()
     s += item("P11_RECH_VORTEXT", "richTextEditor", "Vortext", 10, "vortext", col="RECH_VORTEXT", dtype="clob",
               spalten=12, extra=rte + txt("VORTEXT"), **f)
     s += item("P11_RECH_SCHLUSSTEXT", "richTextEditor", "Schlusstext", 10, "schlusstext", col="RECH_SCHLUSSTEXT",
@@ -1229,7 +1229,7 @@ def seite_11():
                           extra=nur_anzeige, **ohne))
     s += maske(item("P11_POS_PAUSCHAL", "numberField", "Pauschalsumme der Hauptposition (statt Summe)", 140, p, neue_zeile=False,
                     spalten=4, extra=ignorieren, **ohne), "999G999G990D00")
-    s += item("P11_POS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 150, p, spalten=12, extra=ignorieren, **ohne)
+    s += item("P11_POS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 150, p, spalten=12, extra=RTE_LEISTE("            warnOnUnsavedChanges: ignore\n"), **ohne)
 
     # Raster der Unterpositionen der gewaehlten Hauptposition (P11_HAUPT_ID, vom Browser gesetzt und mitgeschickt);
     # Artikel als Popup LOV: Suche/Einschraenkung nach Gruppe, Artikelnummer, Name (Spalten von LOV_ARTIKEL im Portal)
@@ -2845,6 +2845,23 @@ def seite_11():
 
 # --------------------------------------------------------------------------- Seite 14 Unterposition (Dialog)
 
+# Werkzeugleiste der Rich-Text-Editoren (Vor-/Schlusstext, Positionsbeschreibung): Ueberschrift, Fett, Kursiv,
+# Aufzaehlung, Nummerierung, Rueckgaengig/Wiederholen – ohne Code, Link, Blockzitat, Codeblock (CKEditor 5)
+RTE_LEISTE = lambda zusatz="": """        advanced {
+""" + zusatz + """            initJavaScriptFunction:
+                ```javascript-browser
+                function (options) {
+                    options.editorOptions = options.editorOptions || {};
+                    options.editorOptions.toolbar = {
+                        items: ["heading", "|", "bold", "italic", "|", "bulletedList", "numberedList", "|", "undo", "redo"]
+                    };
+                    return options;
+                }
+                ```
+        }
+"""
+
+
 def im_menue(btn, dom_id):
     """Button unsichtbar (u-hidden) mit fester DOM-ID: wird ueber das Aktionen-Menue (Kebab-Button) angeklickt und
     behaelt Bedingung, Bestaetigung und Verhalten."""
@@ -3212,7 +3229,7 @@ def seite_14():
               neue_zeile=False, spalten=3, **f)
     s += hervorheben(item("P14_SUMME", "displayOnly", "Summe", 130, r, neue_zeile=False, spalten=3, extra=nur_anzeige, **f))
     s += item("P14_RPOS_BESCHREIBUNG", "richTextEditor", "Beschreibung", 140, r, col="RPOS_BESCHREIBUNG", dtype="clob",
-              spalten=12, **f)
+              spalten=12, extra=RTE_LEISTE(), **f)
 
     # ------------------------------------------------ Buttons (Speichern/Anlegen nur, wenn die Rechnung aenderbar ist)
     aenderbar = lambda rpos_id: f"""        serverSideCondition {{
