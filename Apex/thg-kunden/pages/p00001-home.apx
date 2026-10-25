@@ -28,14 +28,14 @@ page 1 (
             type: sqlQuery
             sqlQuery:
                 ```sql
-                -- Kunden sind mandantenuebergreifend, Rechnungen gelten fuer den im Portal gewaehlten Mandanten
+                -- Kunden sind mandantenuebergreifend, Rechnungen und erhaltene Gutschriften (FAKT_BELEGE_V) gelten fuer den im Portal gewaehlten Mandanten
                 -- (Umsatz = Rechnungen OFFEN/TEILBEZAHLT/BEZAHLT netto, ohne Entwuerfe und stornierte)
                 with kunden as (
                     select k.KUND_ID, k.KUND_STATUS, k.KUND_KUNDE_SEIT
                       from KUND_KUNDEN k
                 ), rechnungen as (
                     select r.RECH_ID, r.RECH_KUND_ID, r.RECH_DATUM, r.RECH_SUMME_NETTO, r.OFFEN, r.IST_UEBERFAELLIG
-                      from FAKT_RECHNUNGEN_V r
+                      from FAKT_BELEGE_V r
                      where r.RECH_MAND_ID = :MANDANT_ID
                        and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
                 )
@@ -184,10 +184,13 @@ page 1 (
                        r.RECH_BETREFF,
                        r.OFFEN,
                        -- Rechnung in der Finanz-App (20050 Seite 11), Kunde im Kundendetail (Seite 11), mit Pruefsumme
-                       apex_page.get_url(p_application => '20050', p_page => 11, p_clear_cache => 11,
-                                         p_items => 'P11_RECH_ID', p_values => r.RECH_ID) as RECH_URL,
+                       case r.BELEGART
+                            when 'GUTSCHRIFT' then apex_page.get_url(p_application => '20050', p_page => 41, p_clear_cache => 41,
+                                                                      p_items => 'P41_GUTS_ID', p_values => r.RECH_ID)
+                            else apex_page.get_url(p_application => '20050', p_page => 11, p_clear_cache => 11,
+                                                   p_items => 'P11_RECH_ID', p_values => r.RECH_ID) end as RECH_URL,
                        apex_page.get_url(p_page => 11, p_clear_cache => 11, p_items => 'P11_KUND_ID', p_values => r.RECH_KUND_ID) as KUND_URL
-                  from FAKT_RECHNUNGEN_V r
+                  from FAKT_BELEGE_V r
                  where r.RECH_MAND_ID = :MANDANT_ID
                    and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')
                    and r.OFFEN > 0
@@ -401,7 +404,7 @@ page 1 (
                            || to_char(nvl(sum(r.RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
                       from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
                               from dual connect by level <= 12) m
-                      left join FAKT_RECHNUNGEN r
+                      left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
                        and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= m.monat
@@ -433,7 +436,7 @@ page 1 (
                            || to_char(nvl(sum(r.RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
                       from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
                               from dual connect by level <= 12) m
-                      left join FAKT_RECHNUNGEN r
+                      left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
                        and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= add_months(m.monat, -12)
@@ -504,7 +507,7 @@ page 1 (
                            sum(r.RECH_SUMME_NETTO) as VALUE,
                            k.KUND_NUMMER || ' – ' || coalesce(k.KUND_FIRMENNAME, k.KUND_NACHNAME) || ': '
                            || to_char(sum(r.RECH_SUMME_NETTO), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
-                      from FAKT_RECHNUNGEN r
+                      from FAKT_BELEGE_V r
                       join KUND_KUNDEN k on k.KUND_ID = r.RECH_KUND_ID
                      where r.RECH_MAND_ID = :MANDANT_ID
                        and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')

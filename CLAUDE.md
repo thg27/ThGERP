@@ -28,6 +28,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 
 ## APEX
 - Portal-App ist Master für Shared Components; Sub-Apps abonnieren.
+- Portal-Startseite (20000 Seite 1): Kennzahlen, Umsatz je Monat und Top 10 Kunden über **beide Mandanten summiert** (`FAKT_BELEGE_V` ohne
+  Mandantenfilter, Tooltip mit Aufteilung EDV/Holding, keine Links – die Finanz-Listen filtern auf den Mandanten der Sitzung), darunter die Modul-Kacheln.
 - **List of Values immer in der Portal-App anlegen**; in den Sub-Apps nur als Subscription (keine eigenen LOVs). LOV-Namen mit Präfix `LOV_`.
   APEXlang: `subscription { master: @/<portal-id>/<static-id> }` in der LOV und `"subscription": {"masterApps": {...}}` in `deployments/default.json` der Sub-App.
   Einspielen (einzeln nacheinander): 1. Portal, 2. Sub-Apps, 3. Subscriptions mit `apex_shared_component.refresh` aktualisieren, 4. `apex_subscribed_components` prüfen – alle `UP_TO_DATE`.
@@ -84,7 +86,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   fällig, Netto, Betrag, Skonto %, Verwendungszweck `/GSV/<Belegnummer>/<Vertragsnummer>`) → Bankabgleich bzw. „Bezahlt am“ → Bezahlt.
   Status ENTWURF → GESENDET → OFFEN → BEZAHLT (Trigger). Doppelte Datei/Nummer beim Aussteller → nur Hinweis; Löschen nur Entwurf ohne
   Nummer oder die zuletzt vergebene. Dashboard: `FAKT_BELEGE_V` (Rechnungen + erhaltene Gutschriften: offen wie Rechnung offen, bezahlt
-  = Umsatz). Hays-Gutschriften 06–10/2026 übernommen (GS 2026 - 1 … 5, `01_Finanz/Buchhaltung - ThG-edv/01_Belege/02_Ausgangsrechnungen/gesendet`).
+  = Umsatz; auch Kundenstamm-Dashboard und Kopfinfo des Kunden, Link je Belegart auf Seite 11 bzw. 41). Hays-Gutschriften 06–10/2026 übernommen (GS 2026 - 1 … 5, `01_Finanz/Buchhaltung - ThG-edv/01_Belege/02_Ausgangsrechnungen/gesendet`).
 - **Bankabgleich** (DDL 39, Menüpunkt „Bankdatei hochladen“, Seite 30): CAMT-Datei (camt.052/053/054, ELBA-Export) des Mandanten der Sitzung
   hochladen → `FAKT_BANK.einlesen` (Konto muss eine Bankverbindung des Mandanten sein, Datei je Nachrichten-ID nur einmal, jede Buchung nur
   einmal – `BKUM_SCHLUESSEL`), danach `FAKT_BANK.abgleichen`: Eingänge per 1. RF-Zahlungsreferenz, 2. Rechnungsnummer im Text,

@@ -2769,7 +2769,7 @@ def seite_30():
     Rechnungen ab (Zahlung anlegen bzw. vorhandene verknuepfen, Status der Rechnung per Trigger). Darunter die
     Zahlungseingaenge mit Zuordnung und die hochgeladenen Dateien. "Erneut abgleichen" prueft offene Eingaenge noch einmal
     (z.B. nachdem eine Rechnung erfasst wurde)."""
-    s = KOPF(30, "Bankdatei hochladen", "BANKDATEI") + BREADCRUMB("Bankdatei hochladen")
+    s = KOPF(30, "Bankdatei hochladen", "BANKDATEI").replace("cursorFocus: doNotFocusCursor\n", "cursorFocus: doNotFocusCursor\n        warnOnUnsavedChanges: false\n") + BREADCRUMB("Bankdatei hochladen")
     s += region("upload", "Bankdatei hochladen", 10, extra="""        source {
             htmlCode:
                 ```html
@@ -3247,6 +3247,9 @@ def seite_41():
             dropzoneTitle: PDF der Gutschrift hierher ziehen
             dropzoneDesc: oder klicken zum Auswählen
         }
+        advanced {
+            warnOnUnsavedChanges: ignore
+        }
         storage {
             type: appTempFiles
         }
@@ -3324,6 +3327,9 @@ def seite_41():
             displayAs: inlineDropzone
             dropzoneTitle: Datei hierher ziehen
             dropzoneDesc: Stundenzettel, Gutschrift des Ausstellers (PDF) oder sonstiges Dokument
+        }
+        advanced {
+            warnOnUnsavedChanges: ignore
         }
         storage {
             type: appTempFiles

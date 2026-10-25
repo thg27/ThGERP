@@ -200,6 +200,9 @@ page 41 (
             dropzoneTitle: PDF der Gutschrift hierher ziehen
             dropzoneDesc: oder klicken zum Auswählen
         }
+        advanced {
+            warnOnUnsavedChanges: ignore
+        }
         storage {
             type: appTempFiles
         }
@@ -675,6 +678,9 @@ page 41 (
             displayAs: inlineDropzone
             dropzoneTitle: Datei hierher ziehen
             dropzoneDesc: Stundenzettel, Gutschrift des Ausstellers (PDF) oder sonstiges Dokument
+        }
+        advanced {
+            warnOnUnsavedChanges: ignore
         }
         storage {
             type: appTempFiles

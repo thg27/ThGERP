@@ -62,12 +62,19 @@ page 11 (
                                case when count(*) = 0 then '–'
                                     else to_char(max(RECH_DATUM), 'DD.MM.YYYY')
                                          || ' (' || max(RECH_NUMMER) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER) || ')' end as LETZTE,
-                               -- Link auf die letzte Rechnung (App 20050 Seite 11, mit Pruefsumme)
+                               -- Link auf den letzten Beleg (App 20050 Seite 11 Rechnung bzw. 41 Gutschrift, mit Pruefsumme)
                                case when count(*) > 0 then
-                                   apex_page.get_url(p_application => '20050', p_page => 11, p_clear_cache => 11, p_items => 'P11_RECH_ID',
-                                                     p_values => max(RECH_ID) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER))
+                                   case max(BELEGART) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER)
+                                        when 'GUTSCHRIFT' then
+                                            apex_page.get_url(p_application => '20050', p_page => 41, p_clear_cache => 41, p_items => 'P41_GUTS_ID',
+                                                              p_values => max(RECH_ID) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER))
+                                        else
+                                            apex_page.get_url(p_application => '20050', p_page => 11, p_clear_cache => 11, p_items => 'P11_RECH_ID',
+                                                              p_values => max(RECH_ID) keep (dense_rank last order by RECH_DATUM, RECH_NUMMER))
+                                   end
                                end as LETZTE_URL
-                          from FAKT_RECHNUNGEN_V
+                          -- Rechnungen und erhaltene Gutschriften (z. B. Hays) des Mandanten der Sitzung
+                          from FAKT_BELEGE_V
                          where RECH_KUND_ID = :P11_KUND_ID
                            and RECH_MAND_ID = :MANDANT_ID
                            and RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')) k

@@ -34,6 +34,305 @@ page 1 (
         }
     )
 
+    region kennzahlen (
+        name: Kennzahlen
+        type: themeTemplateComponent/metricCard
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                -- Rechnungen und erhaltene Gutschriften (FAKT_BELEGE_V) beider Mandanten zusammen;
+                -- Umsatz = GEDRUCKT/GESENDET/TEILBEZAHLT/BEZAHLT netto (ohne Entwuerfe, stornierte)
+                with r as (
+                    select b.RECH_STATUS, b.RECH_DATUM, b.RECH_SUMME_NETTO, b.OFFEN, b.IST_UEBERFAELLIG, a.MAND_CODE
+                      from FAKT_BELEGE_V b
+                      join ADMIN_MANDANTEN a on a.MAND_ID = b.RECH_MAND_ID
+                ), u as (
+                    select * from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                )
+                select 1 as ID, 'Umsatz ' || to_char(sysdate, 'YYYY') as TITLE,
+                       to_char((select nvl(sum(RECH_SUMME_NETTO), 0) from u where RECH_DATUM >= trunc(sysdate, 'YYYY')),
+                               'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as METRIC,
+                       to_char((select nvl(sum(RECH_SUMME_NETTO), 0) from u
+                                 where RECH_DATUM >= add_months(trunc(sysdate, 'YYYY'), -12)
+                                   and RECH_DATUM < add_months(trunc(sysdate), -12) + 1),
+                               'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' € im Vorjahr bis heute' as META
+                  from dual
+                union all
+                select 2, 'Umsatz ' || to_char(sysdate, 'YYYY') || ' je Mandant',
+                       'EDV ' || to_char((select nvl(sum(RECH_SUMME_NETTO), 0) from u
+                                           where MAND_CODE = 'EDV' and RECH_DATUM >= trunc(sysdate, 'YYYY')),
+                                         'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €',
+                       'Holding ' || to_char((select nvl(sum(RECH_SUMME_NETTO), 0) from u
+                                               where MAND_CODE = 'HOLDING' and RECH_DATUM >= trunc(sysdate, 'YYYY')),
+                                             'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €'
+                  from dual
+                union all
+                select 3, 'Rechnungen ' || to_char(sysdate, 'YYYY'),
+                       to_char((select count(*) from u where RECH_DATUM >= trunc(sysdate, 'YYYY')), 'FM999G999'),
+                       to_char((select count(*) from u
+                                 where RECH_DATUM >= add_months(trunc(sysdate, 'YYYY'), -12)
+                                   and RECH_DATUM < trunc(sysdate, 'YYYY')), 'FM999G999') || ' im Vorjahr'
+                  from dual
+                union all
+                select 4, 'Offene Rechnungen',
+                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')),
+                               'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €',
+                       to_char((select count(*) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')), 'FM999G999') || ' Rechnungen'
+                  from dual
+                union all
+                select 5, 'Überfällig',
+                       to_char((select nvl(sum(OFFEN), 0) from r where IST_UEBERFAELLIG = 'Y'),
+                               'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €',
+                       to_char((select count(*) from r where IST_UEBERFAELLIG = 'Y'), 'FM999G999') || ' Rechnungen'
+                  from dual
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        advanced {
+            htmlDomId: kennzahlen
+        }
+        componentAppearance {
+            display: report
+        }
+        settings {
+            title: &TITLE.
+            metric: &METRIC.
+            meta: &META.
+            layout: 5Columns
+        }
+
+        column ID (
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TITLE (
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: TITLE
+                dataType: varchar2
+            }
+        )
+
+        column METRIC (
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: METRIC
+                dataType: varchar2
+            }
+        )
+
+        column META (
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: META
+                dataType: varchar2
+            }
+        )
+    )
+
+    region umsatz-je-monat (
+        name: Umsatz je Monat (netto, beide Mandanten)
+        type: chart
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        chart {
+            type: bar
+        }
+        legend {
+            show: true
+        }
+
+        series umsatz (
+            name: Umsatz
+            execution {
+                sequence: 10
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    -- letzte 12 Monate, Summe beider Mandanten (Tooltip mit Aufteilung je Mandant)
+                    select to_char(m.monat, 'YYYY-MM') as LABEL,
+                           nvl(sum(r.RECH_SUMME_NETTO), 0) as VALUE,
+                           to_char(m.monat, 'MM/YYYY') || ': '
+                           || to_char(nvl(sum(r.RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' € (EDV '
+                           || to_char(nvl(sum(case a.MAND_CODE when 'EDV' then r.RECH_SUMME_NETTO end), 0), 'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €, Holding '
+                           || to_char(nvl(sum(case a.MAND_CODE when 'HOLDING' then r.RECH_SUMME_NETTO end), 0), 'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €)' as TOOLTIP
+                      from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
+                              from dual connect by level <= 12) m
+                      left join FAKT_BELEGE_V r
+                        on r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_DATUM >= m.monat
+                       and r.RECH_DATUM < add_months(m.monat, 1)
+                      left join ADMIN_MANDANTEN a on a.MAND_ID = r.RECH_MAND_ID
+                     group by m.monat
+                     order by m.monat
+                    ```
+            }
+            columnMapping {
+                label: LABEL
+                value: VALUE
+                customTooltip: TOOLTIP
+            }
+        )
+
+        series vorjahr (
+            name: Vorjahr
+            execution {
+                sequence: 20
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    -- letzte 12 Monate, Summe beider Mandanten (Tooltip mit Aufteilung je Mandant)
+                    select to_char(m.monat, 'YYYY-MM') as LABEL,
+                           nvl(sum(r.RECH_SUMME_NETTO), 0) as VALUE,
+                           'Vorjahr ' || to_char(add_months(m.monat, -12), 'MM/YYYY') || ': '
+                           || to_char(nvl(sum(r.RECH_SUMME_NETTO), 0), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' € (EDV '
+                           || to_char(nvl(sum(case a.MAND_CODE when 'EDV' then r.RECH_SUMME_NETTO end), 0), 'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €, Holding '
+                           || to_char(nvl(sum(case a.MAND_CODE when 'HOLDING' then r.RECH_SUMME_NETTO end), 0), 'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €)' as TOOLTIP
+                      from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
+                              from dual connect by level <= 12) m
+                      left join FAKT_BELEGE_V r
+                        on r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_DATUM >= add_months(m.monat, -12)
+                       and r.RECH_DATUM < add_months(m.monat, -11)
+                      left join ADMIN_MANDANTEN a on a.MAND_ID = r.RECH_MAND_ID
+                     group by m.monat
+                     order by m.monat
+                    ```
+            }
+            columnMapping {
+                label: LABEL
+                value: VALUE
+                customTooltip: TOOLTIP
+            }
+        )
+
+        axis x (
+            name: x
+            value {
+            }
+            majorTicks {
+                show: false
+            }
+        )
+
+        axis y (
+            name: y
+            value {
+                format: decimal
+                decimalPlaces: 0
+                formatScaling: none
+            }
+            majorTicks {
+                show: true
+            }
+        )
+    )
+
+    region top-kunden (
+        name: Top 10 Kunden (Umsatz letzte 12 Monate, beide Mandanten)
+        type: chart
+        layout {
+            sequence: 40
+            slot: body
+            startNewRow: false
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        chart {
+            type: bar
+        }
+        legend {
+            show: false
+        }
+
+        series kunden (
+            name: Umsatz
+            execution {
+                sequence: 10
+            }
+            source {
+                type: sqlQuery
+                sqlQuery:
+                    ```sql
+                    -- Summe beider Mandanten je Kunde (Kunden sind mandantenuebergreifend)
+                    select b.KUNDE as LABEL,
+                           sum(b.RECH_SUMME_NETTO) as VALUE,
+                           b.KUND_NUMMER || ' – ' || b.KUNDE || ': '
+                           || to_char(sum(b.RECH_SUMME_NETTO), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' € (EDV '
+                           || to_char(nvl(sum(case a.MAND_CODE when 'EDV' then b.RECH_SUMME_NETTO end), 0), 'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €, Holding '
+                           || to_char(nvl(sum(case a.MAND_CODE when 'HOLDING' then b.RECH_SUMME_NETTO end), 0), 'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €)' as TOOLTIP
+                      from FAKT_BELEGE_V b
+                      join ADMIN_MANDANTEN a on a.MAND_ID = b.RECH_MAND_ID
+                     where b.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and b.RECH_DATUM >= add_months(trunc(sysdate), -12)
+                     group by b.RECH_KUND_ID, b.KUNDE, b.KUND_NUMMER
+                     order by 2 desc
+                     fetch first 10 rows only
+                    ```
+            }
+            columnMapping {
+                label: LABEL
+                value: VALUE
+                customTooltip: TOOLTIP
+            }
+        )
+
+        axis x (
+            name: x
+            value {
+            }
+            majorTicks {
+                show: false
+            }
+        )
+
+        axis y (
+            name: y
+            value {
+                format: decimal
+                decimalPlaces: 0
+                formatScaling: none
+            }
+            majorTicks {
+                show: true
+            }
+        )
+    )
+
     region module (
         name: Module
         title: Module
@@ -42,7 +341,7 @@ page 1 (
             list: @module
         }
         layout {
-            sequence: 20
+            sequence: 50
             slot: body
         }
         componentAppearance {

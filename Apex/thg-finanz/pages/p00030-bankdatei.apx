@@ -8,6 +8,7 @@ page 30 (
     }
     navigation {
         cursorFocus: doNotFocusCursor
+        warnOnUnsavedChanges: false
     }
     security {
         pageAccessProtection: argumentsMustHaveChecksum
