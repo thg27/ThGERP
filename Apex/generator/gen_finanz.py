@@ -5000,7 +5000,7 @@ def seite_51():
     def in_tab(txt, seq):
         return txt.replace(f"            sequence: {seq}\n            slot: body\n",
                            f"            sequence: {seq}\n            parentRegion: @zahlungen\n            slot: subRegions\n", 1)
-    s += in_tab(bericht("faelligkeiten", "Fälligkeiten&P51_SALDO!RAW.", 10, """                -- Zahlungen decken die aeltesten Posten zuerst (FAKT_DEBITOR_POSTEN_V); neueste Faelligkeit oben
+    s += in_tab(bericht("faelligkeiten", 'Fälligkeiten<span class="thg-titel-saldo u-danger-text">&P51_SALDO.</span>', 10, """                -- Zahlungen decken die aeltesten Posten zuerst (FAKT_DEBITOR_POSTEN_V); neueste Faelligkeit oben
                 select to_char(v.FAELLIG_AM, 'DD.MM.YYYY') as FAELLIG_AM,
                        FAKT_HISTORIE.betrag(v.BETRAG) as BETRAG,
                        FAKT_HISTORIE.betrag(v.BEZAHLT) as BEZAHLT,
@@ -5159,8 +5159,7 @@ def seite_51():
                         FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID, :P51_DEBI_ID);
                         -- offener Saldo bis heute (Titel der Faelligkeiten, Saldo 0 wird nicht angezeigt)
                         select case when sum(v.OFFEN) > 0
-                                    then '<span class="thg-titel-saldo u-danger-text">Offen per ' || to_char(sysdate, 'DD.MM.YYYY')
-                                         || ': ' || FAKT_HISTORIE.betrag(sum(v.OFFEN)) || '</span>' end
+                                    then 'Offen per ' || to_char(sysdate, 'DD.MM.YYYY') || ': ' || FAKT_HISTORIE.betrag(sum(v.OFFEN)) end
                           into :P51_SALDO
                           from FAKT_DEBITOR_POSTEN_V v
                          where v.DEBI_ID = :P51_DEBI_ID

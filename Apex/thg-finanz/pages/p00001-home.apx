@@ -15,6 +15,8 @@ page 1 (
             /* Summe offen rechts im Titel der offenen Rechnungen (rot, nur wenn > 0) */
             .t-Region-title:has(.thg-titel-saldo) { display: flex; align-items: baseline; gap: 1rem; }
             .thg-titel-saldo { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+            /* Hinweis "in Bearbeitung" (Rechnung nach "Rechnung bearbeiten", noch nicht neu gedruckt) */
+            .thg-badge--IN_BEARBEITUNG { background-color: var(--ut-palette-warning, #ef6c00); color: var(--ut-palette-warning-contrast, #fff); }
             ```
     }
     security {
@@ -169,7 +171,7 @@ page 1 (
     )
 
     region offene-rechnungen (
-        name: Offene Rechnungen&P1_OFFEN_SUMME!RAW.
+        name: Offene Rechnungen<span class="thg-titel-saldo u-danger-text">&P1_OFFEN_SUMME.</span>
         type: classicReport
         source {
             location: localDatabase
@@ -185,10 +187,12 @@ page 1 (
                        end as BELEG_URL,
                        r.RECH_DATUM,
                        r.RECH_FAELLIG_AM,
-                       case when r.IST_UEBERFAELLIG = 'Y' then 'UEBERFAELLIG'
+                       case when r.RECH_STATUS = 'IN_BEARBEITUNG' then 'IN_BEARBEITUNG'
+                            when r.IST_UEBERFAELLIG = 'Y' then 'UEBERFAELLIG'
                             when r.RECH_FAELLIG_AM <= trunc(sysdate) + 7 then 'FAELLIG'
                             else 'OFFEN' end as HINWEIS_CODE,
-                       case when r.IST_UEBERFAELLIG = 'Y' then 'überfällig'
+                       case when r.RECH_STATUS = 'IN_BEARBEITUNG' then 'in Bearbeitung'
+                            when r.IST_UEBERFAELLIG = 'Y' then 'überfällig'
                             when r.RECH_FAELLIG_AM <= trunc(sysdate) + 7 then 'fällig in 7 Tagen'
                             else 'offen' end as HINWEIS,
                        r.KUNDE,
@@ -393,8 +397,7 @@ page 1 (
                 ```plsql
                 -- gleiche Belege wie die Liste (netto); Summe 0 wird nicht angezeigt
                 select case when sum(r.OFFEN_NETTO) > 0
-                            then '<span class="thg-titel-saldo u-danger-text">Offen per ' || to_char(sysdate, 'DD.MM.YYYY')
-                                 || ': ' || FAKT_HISTORIE.betrag(sum(r.OFFEN_NETTO)) || '</span>' end
+                            then 'Offen per ' || to_char(sysdate, 'DD.MM.YYYY') || ': ' || FAKT_HISTORIE.betrag(sum(r.OFFEN_NETTO)) end
                   into :P1_OFFEN_SUMME
                   from FAKT_BELEGE_V r
                  where r.RECH_MAND_ID = :MANDANT_ID

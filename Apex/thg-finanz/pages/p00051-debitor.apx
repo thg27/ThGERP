@@ -528,7 +528,7 @@ page 51 (
     )
 
     region faelligkeiten (
-        name: Fälligkeiten&P51_SALDO!RAW.
+        name: Fälligkeiten<span class="thg-titel-saldo u-danger-text">&P51_SALDO.</span>
         type: classicReport
         source {
             location: localDatabase
@@ -1128,8 +1128,7 @@ page 51 (
                         FAKT_DEBITOR.posten_erzeugen(:MANDANT_ID, :P51_DEBI_ID);
                         -- offener Saldo bis heute (Titel der Faelligkeiten, Saldo 0 wird nicht angezeigt)
                         select case when sum(v.OFFEN) > 0
-                                    then '<span class="thg-titel-saldo u-danger-text">Offen per ' || to_char(sysdate, 'DD.MM.YYYY')
-                                         || ': ' || FAKT_HISTORIE.betrag(sum(v.OFFEN)) || '</span>' end
+                                    then 'Offen per ' || to_char(sysdate, 'DD.MM.YYYY') || ': ' || FAKT_HISTORIE.betrag(sum(v.OFFEN)) end
                           into :P51_SALDO
                           from FAKT_DEBITOR_POSTEN_V v
                          where v.DEBI_ID = :P51_DEBI_ID
