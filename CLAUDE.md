@@ -41,7 +41,7 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Kunden und Artikel sind mandantenübergreifend; Finanz (FAKT_*) ist mandantenabhängig (`RECH_MAND_ID = :MANDANT_ID`).
 - Theme-Stil: Standard Redwood Light; Stilauswahl im Portal speichert den Stil beim Mitarbeiter (`MITA_THEME_STIL`) und setzt ihn per `apex_theme.set_session_style` für die Sitzung in allen Apps (App-Prozess „Theme-Stil“ in jeder App, einmal je Anmeldung). Bannerfarbe kommt in allen Stilen vom Mandanten (`thg.css`).
 - **Finanz (THG-FINANZ 20050)** im Stil von Kundenstamm/Marchler (2026-10-24): Seite 1 Dashboard (Kennzahlen Umsatz/Rechnungen laufendes Jahr mit Vorjahr,
-  offene, überfällige, Entwürfe; Liste offene Rechnungen; Umsatz je Monat mit Vorjahr, Top 10 Kunden – Klick öffnet die gefilterte Liste), Seite 10 Rechnungsliste mit
+  offene, überfällige, Entwürfe; Liste offene Rechnungen (Summe offen netto rot rechts im Titel, `P1_OFFEN_SUMME`, auch im Kundenstamm-Dashboard; ebenso Saldo bis heute beim Debitor, `P51_SALDO`); Umsatz je Monat mit Vorjahr, Top 10 Kunden – Klick öffnet die gefilterte Liste), Seite 10 Rechnungsliste mit
   Facettensuche (Status, Überfällig, Jahr, Monat, Kunde; Nummer umrahmt als Link) – beide aus `Apex/generator/finanz_dashboard_liste.py`;
   Seite 11 Registerkarten direkt unter der Titelleiste (`thg-rds`, „Alle“ als Icon, Regionen ohne Kopf), Artikel Seite 20 Liste mit Facetten (Aktiv, Gruppe, Einheit, MwSt.),
   Seite 21 Registerkarten Stammdaten/Kommentar und Änderungsinformationen. Rechnungsliste zeigt nur Netto (Brutto und Hinweis ausgeblendet). Regionstitel in Mandantenfarbe (`thg.js`: 20020, 20050).

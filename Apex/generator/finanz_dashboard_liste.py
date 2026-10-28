@@ -27,6 +27,14 @@ def dashboard():
     navigation {
         cursorFocus: doNotFocusCursor
     }
+    css {
+        inline:
+            ```css
+            /* Summe offen rechts im Titel der offenen Rechnungen (rot, nur wenn > 0) */
+            .t-Region-title:has(.thg-titel-saldo) { display: flex; align-items: baseline; gap: 1rem; }
+            .thg-titel-saldo { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+            ```
+    }
     security {
         pageAccessProtection: argumentsMustHaveChecksum
         formAutoComplete: false
@@ -179,7 +187,7 @@ def dashboard():
     )
 
     region offene-rechnungen (
-        name: Offene Rechnungen
+        name: Offene Rechnungen&P1_OFFEN_SUMME!RAW.
         type: classicReport
         source {
             location: localDatabase
@@ -384,6 +392,37 @@ def dashboard():
             }
         )
 
+    )
+
+    pageItem P1_OFFEN_SUMME (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @offene-rechnungen
+            slot: regionBody
+        }
+    )
+
+    process offen-summe (
+        name: Summe offen (Titel Offene Rechnungen)
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- gleiche Belege wie die Liste (netto); Summe 0 wird nicht angezeigt
+                select case when sum(r.OFFEN_NETTO) > 0
+                            then '<span class="thg-titel-saldo u-danger-text">Offen per ' || to_char(sysdate, 'DD.MM.YYYY')
+                                 || ': ' || FAKT_HISTORIE.betrag(sum(r.OFFEN_NETTO)) || '</span>' end
+                  into :P1_OFFEN_SUMME
+                  from FAKT_BELEGE_V r
+                 where r.RECH_MAND_ID = :MANDANT_ID
+                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT');
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
     )
 
     region umsatz-je-monat (
