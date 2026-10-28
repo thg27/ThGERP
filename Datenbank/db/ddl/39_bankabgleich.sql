@@ -746,8 +746,8 @@ create or replace package body FAKT_BANK as
         if l_mand <> l_u.BKUM_MAND_ID then
             raise_application_error(-20265, 'Der Beleg gehört zu einem anderen Mandanten.');
         end if;
-        if l_status in ('ENTWURF', 'STORNIERT') then
-            raise_application_error(-20266, 'Entwürfe und stornierte Belege können nicht zugeordnet werden.');
+        if l_status in ('ENTWURF', 'IN_BEARBEITUNG', 'STORNIERT') then
+            raise_application_error(-20266, 'Entwürfe, Rechnungen in Bearbeitung und stornierte Belege können nicht zugeordnet werden.');
         end if;
         -- bestehende Zuordnung zuerst aufheben
         if l_u.BKUM_STATUS not in ('OFFEN', 'AUSGANG', 'IGNORIERT') then

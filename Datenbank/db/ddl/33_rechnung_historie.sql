@@ -184,6 +184,8 @@ begin
   end if;
   l_aktion := case
                 when :old.RECH_STATUS = 'ENTWURF' and :new.RECH_STATUS = 'GEDRUCKT' then 'Abgeschlossen'
+                when :new.RECH_STATUS = 'IN_BEARBEITUNG' and :old.RECH_STATUS <> 'IN_BEARBEITUNG' then 'Zur Bearbeitung geöffnet'
+                when :old.RECH_STATUS = 'IN_BEARBEITUNG' and :new.RECH_STATUS <> 'IN_BEARBEITUNG' then 'Bearbeitung abgeschlossen'
                 when :new.RECH_STATUS = 'STORNIERT' and :old.RECH_STATUS <> 'STORNIERT' then 'Storniert'
                 when :old.RECH_STATUS = 'GEDRUCKT' and :new.RECH_STATUS = 'GESENDET' then 'Gesendet'
                 when :old.RECH_STATUS <> :new.RECH_STATUS and :new.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')

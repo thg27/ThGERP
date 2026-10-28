@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-24): alle DDL-Skripte 01–45 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-28): alle DDL-Skripte 01–46 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -51,6 +51,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   STORNIERT über Button „Rechnung stornieren“ (Dialogseite 15 mit Pflicht-Grund – kein Inline-Dialog, der blitzte auf; `FAKT_RECHNUNG.stornieren`; nur GEDRUCKT/GESENDET ohne Zahlung, behält Nummer/Datum,
   gesperrt, PDF mit Wasserzeichen STORNIERT, Grund in der Historie). Löschen nur Entwurf bzw. letzte vergebene Rechnung.
   teilbezahlte Rechnungen zählen als offen/überfällig und zum Umsatz.
+  IN_BEARBEITUNG („In Bearbeitung“, DDL 46): „Rechnung bearbeiten“ nur bei GEDRUCKT/GESENDET ohne Zahlung (`FAKT_RECHNUNG.bearbeitbar`/`bearbeiten`),
+  bleibt gespeichert bis „Rechnung drucken“ (`bearbeitung_abschliessen` → GEDRUCKT, neue Dokumentversion); zählt als offen, Zahlungen gesperrt
+  (Trigger ZAHL_STATUS_AIUD, `FAKT_BANK.zuordnen`, Seite 16/31). Das frühere Sitzungs-Item `P11_BEARBEITEN` entfällt.
 - Kopf der Rechnung (Seite 11): Kopieren, Stornieren, Löschen im Kebab-Menü „Weitere Aktionen“ (⋮, versteckte Buttons `thg-akt-*`,
   Funktion `im_menue` in `gen_finanz.py`). Breadcrumb: letzter Pfadeintrag per `thg.css` ausgeblendet (sonst „Rechnung \ Rechnung 2026 - 203“).
 - „Rechnung kopieren“ (Kebab-Menü im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,

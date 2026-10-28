@@ -10,6 +10,7 @@ Alle Werte nur fuer den im Portal gewaehlten Mandanten (:MANDANT_ID). Umsatz = R
 _STATUS_ICON = """case r.RECH_STATUS when 'ENTWURF' then 'fa-pencil u-warning-text'
                                           when 'GEDRUCKT' then 'fa-print u-info-text'
                                           when 'GESENDET' then 'fa-paper-plane-o u-info-text'
+                                          when 'IN_BEARBEITUNG' then 'fa-unlock u-warning-text'
                                           when 'TEILBEZAHLT' then 'fa-adjust u-warning-text'
                                           when 'BEZAHLT' then 'fa-check-circle u-success-text'
                                           else 'fa-ban u-danger-text' end"""
@@ -61,7 +62,7 @@ def dashboard():
                       from FAKT_BELEGE_V
                      where RECH_MAND_ID = :MANDANT_ID
                 ), u as (
-                    select * from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                    select * from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                 )
                 select 1 as ID, 'Umsatz ' || to_char(sysdate, 'YYYY') as TITLE,
                        to_char((select nvl(sum(RECH_SUMME_NETTO), 0) from u where RECH_DATUM >= trunc(sysdate, 'YYYY')),
@@ -82,9 +83,9 @@ def dashboard():
                   from dual
                 union all
                 select 3, 'Offene Rechnungen',
-                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')),
+                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT')),
                                'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €',
-                       to_char((select count(*) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')), 'FM999G999') || ' Rechnungen',
+                       to_char((select count(*) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT')), 'FM999G999') || ' Rechnungen',
                        apex_page.get_url(p_page => 10, p_clear_cache => 10, p_items => 'P10_STATUS', p_values => 'Offen – gedruckt:Offen – gesendet:Teilweise bezahlt')
                   from dual
                 union all
@@ -217,7 +218,7 @@ def dashboard():
                                          p_items => 'P11_KUND_ID', p_values => r.RECH_KUND_ID) as KUND_URL
                   from FAKT_BELEGE_V r
                  where r.RECH_MAND_ID = :MANDANT_ID
-                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')
+                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT')
                  order by r.RECH_FAELLIG_AM nulls last, r.RECH_NUMMER
                 ```
         }
@@ -416,7 +417,7 @@ def dashboard():
                   into :P1_OFFEN_SUMME
                   from FAKT_BELEGE_V r
                  where r.RECH_MAND_ID = :MANDANT_ID
-                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT');
+                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT');
                 ```
         }
         execution {
@@ -461,7 +462,7 @@ def dashboard():
                               from dual connect by level <= 12) m
                       left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= m.monat
                        and r.RECH_DATUM < add_months(m.monat, 1)
                      group by m.monat
@@ -503,7 +504,7 @@ def dashboard():
                               from dual connect by level <= 12) m
                       left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= add_months(m.monat, -12)
                        and r.RECH_DATUM < add_months(m.monat, -11)
                      group by m.monat
@@ -574,7 +575,7 @@ def dashboard():
                            || to_char(sum(RECH_SUMME_NETTO), 'FM999G999G990D00', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €' as TOOLTIP
                       from FAKT_BELEGE_V
                      where RECH_MAND_ID = :MANDANT_ID
-                       and RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and RECH_DATUM >= add_months(trunc(sysdate), -12)
                      group by KUNDE, KUND_NUMMER
                      order by 2 desc

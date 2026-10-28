@@ -63,8 +63,8 @@ select r.RECH_ID,
        r.RECH_SUMME_MWST,
        r.RECH_SUMME_BRUTTO,
        nvl(z.BEZAHLT, 0) as BEZAHLT,
-       case when r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT') then r.RECH_SUMME_BRUTTO - nvl(z.BEZAHLT, 0) end as OFFEN,
-       case when r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT') and r.RECH_FAELLIG_AM < trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) then 'Y' else 'N' end as IST_UEBERFAELLIG,
+       case when r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT') then r.RECH_SUMME_BRUTTO - nvl(z.BEZAHLT, 0) end as OFFEN,
+       case when r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT') and r.RECH_FAELLIG_AM < trunc(cast(systimestamp at time zone 'Europe/Vienna' as date)) then 'Y' else 'N' end as IST_UEBERFAELLIG,
        r.RECH_UPDATED_ON,
        r.RECH_UPDATED_BY
   from FAKT_RECHNUNGEN r
@@ -126,6 +126,14 @@ create or replace package FAKT_RECHNUNG as
     -- Rechnung stornieren: nur abgeschlossene, offene Rechnungen ohne Zahlung; Grund ist Pflicht. Die Rechnung behaelt
     -- Nummer und Datum, zaehlt nicht mehr zum Umsatz und ist gesperrt; der Grund steht in der Historie.
     procedure stornieren(p_rech_id in number, p_grund in varchar2);
+    -- Y = abgeschlossene Rechnung darf noch bearbeitet werden: offen (GEDRUCKT/GESENDET) und ohne Zahlung
+    function bearbeitbar(p_rech_id in number) return varchar2;
+    -- "Rechnung bearbeiten": Status IN_BEARBEITUNG (Nummer und Datum bleiben, keine Zahlungen moeglich, Historie
+    -- "Zur Bearbeitung geoeffnet" per Trigger); nur wenn bearbeitbar
+    procedure bearbeiten(p_rech_id in number);
+    -- "Rechnung drucken" nach "Rechnung bearbeiten": Status wieder GEDRUCKT (neue Dokumentversion beim Druck,
+    -- Historie "Bearbeitung abgeschlossen" per Trigger); ohne Wirkung, wenn die Rechnung nicht in Bearbeitung ist
+    procedure bearbeitung_abschliessen(p_rech_id in number);
     -- Anzeigetext des Status (ENTWURF -> Entwurf, GEDRUCKT -> Offen – gedruckt, GESENDET -> Offen – gesendet, ...)
     function status_text(p_status in varchar2) return varchar2 deterministic;
     -- Vor-/Schlusstext fuer den Rich-Text-Editor: HTML unveraendert, Klartext (Altdaten, Textvorlagen) maskiert mit
@@ -393,6 +401,34 @@ create or replace package body FAKT_RECHNUNG as
         execute immediate 'begin FAKT_HISTORIE.protokoll(:1, :2, :3); end;' using p_rech_id, 'Stornogrund', trim(p_grund);
     end stornieren;
 
+    function bearbeitbar(p_rech_id in number) return varchar2 is
+        l_anz pls_integer;
+    begin
+        select count(*) into l_anz
+          from FAKT_RECHNUNGEN r
+         where r.RECH_ID = p_rech_id
+           and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET')
+           and not exists (select 1 from FAKT_ZAHLUNGEN z where z.ZAHL_RECH_ID = r.RECH_ID);
+        return case when l_anz > 0 then 'Y' else 'N' end;
+    end bearbeitbar;
+
+    procedure bearbeiten(p_rech_id in number) is
+        l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+    begin
+        select RECH_STATUS into l_status from FAKT_RECHNUNGEN where RECH_ID = p_rech_id for update;
+        if bearbeitbar(p_rech_id) = 'N' then
+            raise_application_error(-20243, 'Bearbeiten ist nur bei offenen Rechnungen ohne Zahlung möglich (Status '
+                                            || status_text(l_status) || ').');
+        end if;
+        update FAKT_RECHNUNGEN set RECH_STATUS = 'IN_BEARBEITUNG' where RECH_ID = p_rech_id;
+    end bearbeiten;
+
+    procedure bearbeitung_abschliessen(p_rech_id in number) is
+    begin
+        update FAKT_RECHNUNGEN set RECH_STATUS = 'GEDRUCKT'
+         where RECH_ID = p_rech_id and RECH_STATUS = 'IN_BEARBEITUNG';
+    end bearbeitung_abschliessen;
+
     function position_kopieren(p_rpos_id in number) return number is
         o     FAKT_RECHNUNGSPOSITIONEN%rowtype;
         l_neu FAKT_RECHNUNGSPOSITIONEN.RPOS_ID%type;
@@ -545,6 +581,7 @@ create or replace package body FAKT_RECHNUNG as
         return case p_status when 'ENTWURF'     then 'Entwurf'
                              when 'GEDRUCKT'    then 'Offen – gedruckt'
                              when 'GESENDET'    then 'Offen – gesendet'
+                             when 'IN_BEARBEITUNG' then 'In Bearbeitung'
                              when 'TEILBEZAHLT' then 'Teilweise bezahlt'
                              when 'BEZAHLT'     then 'Bezahlt'
                              when 'STORNIERT'   then 'Storniert'

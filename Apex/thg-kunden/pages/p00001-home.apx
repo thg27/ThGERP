@@ -45,7 +45,7 @@ page 1 (
                     select r.RECH_ID, r.RECH_KUND_ID, r.RECH_DATUM, r.RECH_SUMME_NETTO, r.OFFEN_NETTO as OFFEN, r.IST_UEBERFAELLIG
                       from FAKT_BELEGE_V r
                      where r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                 )
                 select 1 as ID, 'Aktive Kunden' as TITLE,
                        to_char((select count(*) from kunden where KUND_STATUS = 'AKTIV'), 'FM999G999') as METRIC,
@@ -200,7 +200,7 @@ page 1 (
                        apex_page.get_url(p_page => 11, p_clear_cache => 11, p_items => 'P11_KUND_ID', p_values => r.RECH_KUND_ID) as KUND_URL
                   from FAKT_BELEGE_V r
                  where r.RECH_MAND_ID = :MANDANT_ID
-                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')
+                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT')
                    and r.OFFEN > 0
                  order by r.RECH_FAELLIG_AM nulls last, r.RECH_NUMMER
                 ```
@@ -400,7 +400,7 @@ page 1 (
                   into :P1_OFFEN_SUMME
                   from FAKT_BELEGE_V r
                  where r.RECH_MAND_ID = :MANDANT_ID
-                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')
+                   and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT')
                    and r.OFFEN > 0;
                 ```
         }
@@ -446,7 +446,7 @@ page 1 (
                               from dual connect by level <= 12) m
                       left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= m.monat
                        and r.RECH_DATUM < add_months(m.monat, 1)
                      group by m.monat
@@ -478,7 +478,7 @@ page 1 (
                               from dual connect by level <= 12) m
                       left join FAKT_BELEGE_V r
                         on r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= add_months(m.monat, -12)
                        and r.RECH_DATUM < add_months(m.monat, -11)
                      group by m.monat
@@ -550,7 +550,7 @@ page 1 (
                       from FAKT_BELEGE_V r
                       join KUND_KUNDEN k on k.KUND_ID = r.RECH_KUND_ID
                      where r.RECH_MAND_ID = :MANDANT_ID
-                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                       and r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= add_months(trunc(sysdate), -12)
                      group by k.KUND_ID, k.KUND_NUMMER, k.KUND_KURZNAME, k.KUND_FIRMENNAME, k.KUND_NACHNAME
                      order by 3 desc

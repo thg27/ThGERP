@@ -459,7 +459,7 @@ page 31 (
                   from FAKT_BELEGE_V b
                   join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID
                  where b.RECH_MAND_ID = u.BKUM_MAND_ID
-                   and b.RECH_STATUS not in ('ENTWURF', 'STORNIERT')
+                   and b.RECH_STATUS not in ('ENTWURF', 'IN_BEARBEITUNG', 'STORNIERT')
                  order by case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
                           case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 0 else 1 end,
                           b.RECH_DATUM desc

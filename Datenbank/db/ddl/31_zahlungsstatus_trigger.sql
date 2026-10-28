@@ -21,6 +21,19 @@ create or replace trigger ZAHL_STATUS_AIUD
   type t_ids is table of boolean index by varchar2(40);
   g_rech t_ids;
 
+  -- Zahlungen nur zu abgeschlossenen Rechnungen (nicht Entwurf, in Bearbeitung oder storniert); Loeschen immer
+  before each row is
+    l_status FAKT_RECHNUNGEN.RECH_STATUS%type;
+  begin
+    if inserting or updating then
+      select max(RECH_STATUS) into l_status from FAKT_RECHNUNGEN where RECH_ID = :new.ZAHL_RECH_ID;
+      if l_status not in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT') then
+        raise_application_error(-20251, 'Zahlungen können nur zu abgeschlossenen Rechnungen erfasst werden (Status '
+                                        || FAKT_RECHNUNG.status_text(l_status) || ').');
+      end if;
+    end if;
+  end before each row;
+
   after each row is
   begin
     if :new.ZAHL_RECH_ID is not null then

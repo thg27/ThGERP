@@ -157,11 +157,11 @@ def ig_region(sid, name, seq, sql, spalten, anzeige, bedingung, ops="add\n      
 """
 
 
-# Abgeschlossene Rechnung (Status <> ENTWURF) nur lesen – ausser nach bewusstem "Rechnung bearbeiten" (P11_BEARBEITEN = Y)
+# Abgeschlossene Rechnung nur lesen – ausser im Entwurf und nach "Rechnung bearbeiten" (Status IN_BEARBEITUNG, DDL 46)
 NUR_LESEN = """        readOnly {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_STATUS <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+            plsqlExpression: :P11_RECH_STATUS not in ('ENTWURF', 'IN_BEARBEITUNG')
         }
 """
 
@@ -832,15 +832,6 @@ def seite_11():
         }
     )
 
-    pageItem P11_BEARBEITEN (
-        type: hidden
-        layout {
-            sequence: 4
-            region: @kunde
-            slot: regionBody
-        }
-    )
-
     pageItem P11_KUND_ID_ALT (
         type: hidden
         layout {
@@ -938,7 +929,7 @@ def seite_11():
             sqlQuery:
                 ```sql
                 select FAKT_RECHNUNG.status_text(column_value) d, column_value r
-                  from table(sys.odcivarchar2list('ENTWURF', 'GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT'))
+                  from table(sys.odcivarchar2list('ENTWURF', 'GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT', 'STORNIERT'))
                 ```
         }
         default {
@@ -1458,7 +1449,7 @@ def seite_11():
                 bedingung="""        serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and (:P11_RECH_STATUS = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y')
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('ENTWURF', 'IN_BEARBEITUNG')
         }
 """)
     s += button("bearbeiten", "BEARBEITEN", "Rechnung bearbeiten", 18, "breadcrumb", "next", "@/text-with-icon",
@@ -1469,10 +1460,10 @@ def seite_11():
 """, bedingung="""        serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS not in ('ENTWURF', 'STORNIERT') and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+            plsqlExpression: :P11_RECH_ID is not null and FAKT_RECHNUNG.bearbeitbar(:P11_RECH_ID) = 'Y'
         }
         confirmation {
-            message: Die Rechnung &P11_RECH_NUMMER. ist abgeschlossen. Wirklich ändern? Rechnungsnummer und Rechnungsdatum bleiben unverändert.
+            message: Die Rechnung &P11_RECH_NUMMER. ist abgeschlossen. Wirklich ändern? Rechnungsnummer und Rechnungsdatum bleiben unverändert; bis zum erneuten Drucken ist die Rechnung in Bearbeitung und es können keine Zahlungen zugeordnet werden.
             style: warning
         }
 """)
@@ -1492,7 +1483,7 @@ def seite_11():
 """, bedingung="""        serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET') and nvl(:P11_BEARBEITEN, 'N') <> 'Y'
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET')
         }
 """), "thg-akt-stornieren")
     # Rechnung 1:1 als neuen Entwurf kopieren (FAKT_RECHNUNG.kopieren), danach die Kopie oeffnen
@@ -1802,10 +1793,9 @@ def seite_11():
         source {
             plsqlCode:
                 ```plsql
-                -- bewusste Aktion "Rechnung bearbeiten": Maske und Positionen fuer diese Rechnung wieder aenderbar
-                :P11_BEARBEITEN := 'Y';
-                FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Zur Bearbeitung geöffnet',
-                                        'Rechnung ' || :P11_RECH_NUMMER || ' (Status ' || FAKT_RECHNUNG.status_text(:P11_RECH_STATUS) || ')');
+                -- bewusste Aktion "Rechnung bearbeiten": Status IN_BEARBEITUNG (bleibt bis "Rechnung drucken"), Maske und
+                -- Positionen wieder aenderbar; Historie "Zur Bearbeitung geöffnet" per Trigger
+                FAKT_RECHNUNG.bearbeiten(:P11_RECH_ID);
                 ```
         }
         execution {
@@ -1829,14 +1819,10 @@ def seite_11():
                 :P11_PDF_URL := case when :P11_PDF_OEFFNEN = 'Y' and :P11_RECH_ID is not null then
                                     apex_page.get_url(p_page => 13, p_clear_cache => 13, p_items => 'P13_RECH_ID', p_values => :P11_RECH_ID)
                                 end;
-                -- "Rechnung drucken" nach "Rechnung bearbeiten" schliesst die Bearbeitung ab: Rechnung wieder gesperrt,
-                -- Button "Rechnung bearbeiten" wieder sichtbar (Aenderungen sind vorher gespeichert)
-                if :P11_PDF_OEFFNEN = 'Y' and nvl(:P11_BEARBEITEN, 'N') = 'Y' then
-                    :P11_BEARBEITEN := null;
-                    -- Nummer aus der Tabelle (das Formular ist vor dem Kopf noch nicht geladen)
-                    for r in (select RECH_NUMMER from FAKT_RECHNUNGEN where RECH_ID = :P11_RECH_ID) loop
-                        FAKT_HISTORIE.protokoll(:P11_RECH_ID, 'Bearbeitung abgeschlossen', 'Rechnung ' || r.RECH_NUMMER);
-                    end loop;
+                -- "Rechnung drucken" nach "Rechnung bearbeiten" schliesst die Bearbeitung ab: Status wieder GEDRUCKT, Rechnung
+                -- gesperrt (Aenderungen sind vorher gespeichert); der Druck legt eine neue Dokumentversion ab
+                if :P11_PDF_OEFFNEN = 'Y' and :P11_RECH_ID is not null then
+                    FAKT_RECHNUNG.bearbeitung_abschliessen(:P11_RECH_ID);
                 end if;
                 :P11_PDF_OEFFNEN := null;
                 -- eigene URL (mit Pruefsumme, ohne P11_PDF_OEFFNEN) zum Neuladen nach dem Schliessen des PDF-Dialogs
@@ -1989,7 +1975,7 @@ def seite_11():
                         raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
                     apex_json.open_object;
-                    apex_json.write('aenderbar', l_status = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y');
+                    apex_json.write('aenderbar', l_status in ('ENTWURF', 'IN_BEARBEITUNG'));
                     apex_json.open_array('positionen');
                     for h in (select * from FAKT_RECHNUNGSPOSITIONEN
                                where RPOS_RECH_ID = :P11_RECH_ID and RPOS_HAUPT_RPOS_ID is null
@@ -2172,7 +2158,7 @@ def seite_11():
                     if l_mand <> :MANDANT_ID then
                         raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
-                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                    if l_status not in ('ENTWURF', 'IN_BEARBEITUNG') then
                         raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
                     if l_name is null then
@@ -2286,7 +2272,7 @@ def seite_11():
                     if l_mand <> :MANDANT_ID then
                         raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
-                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                    if l_status not in ('ENTWURF', 'IN_BEARBEITUNG') then
                         raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
                     delete from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID
@@ -2332,7 +2318,7 @@ def seite_11():
                     if l_mand <> :MANDANT_ID then
                         raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
-                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                    if l_status not in ('ENTWURF', 'IN_BEARBEITUNG') then
                         raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
                     select count(*) into l_anz from FAKT_RECHNUNGSPOSITIONEN where RPOS_ID = l_id and RPOS_RECH_ID = :P11_RECH_ID;
@@ -2403,7 +2389,7 @@ def seite_11():
                     if l_mand <> :MANDANT_ID then
                         raise_application_error(-20240, 'Diese Rechnung gehört zu einem anderen Mandanten. Bitte den Mandanten im Portal wechseln.');
                     end if;
-                    if l_status <> 'ENTWURF' and nvl(:P11_BEARBEITEN, 'N') <> 'Y' then
+                    if l_status not in ('ENTWURF', 'IN_BEARBEITUNG') then
                         raise_application_error(-20210, 'Positionen können nur im Entwurf oder nach „Rechnung bearbeiten“ geändert werden.');
                     end if;
                     if l_id = l_ziel or l_art not in ('vor', 'nach', 'in') then
@@ -2502,7 +2488,7 @@ def seite_11():
         serverSideCondition {
             type: expression
             language: plsql
-            plsqlExpression: :REQUEST in ('CREATE', 'SAVE', 'ABSCHLIESSEN') or (:REQUEST in ('PDF', 'VORSCHAU') and (:P11_RECH_STATUS = 'ENTWURF' or nvl(:P11_BEARBEITEN, 'N') = 'Y'))
+            plsqlExpression: :REQUEST in ('CREATE', 'SAVE', 'ABSCHLIESSEN') or (:REQUEST in ('PDF', 'VORSCHAU') and :P11_RECH_STATUS in ('ENTWURF', 'IN_BEARBEITUNG'))
         }
         successMessage {
             successMessage: Rechnung gespeichert.
@@ -3169,7 +3155,7 @@ def seite_31():
                   from FAKT_BELEGE_V b
                   join FAKT_BANKUMSAETZE u on u.BKUM_ID = :P31_BKUM_ID and u.BKUM_MAND_ID = :MANDANT_ID
                  where b.RECH_MAND_ID = u.BKUM_MAND_ID
-                   and b.RECH_STATUS not in ('ENTWURF', 'STORNIERT')
+                   and b.RECH_STATUS not in ('ENTWURF', 'IN_BEARBEITUNG', 'STORNIERT')
                  order by case when FAKT_DEBITOR.ist_kunde(b.KUNDE, u.BKUM_GEGEN_NAME) = 'Y' then 0 else 1 end,
                           case when u.BKUM_BETRAG in (b.RECH_SUMME_BRUTTO, b.OFFEN) then 0 else 1 end,
                           b.RECH_DATUM desc"""

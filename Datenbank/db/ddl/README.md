@@ -53,6 +53,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 43_gutschrift_ablauf.sql | Gutschriften wie Rechnungen: interne Nummer „GS 2026 - 1“ (Nummernkreis GUTSCHRIFT, eindeutig je Mandant), Bestand nachnummeriert, View FAKT_BELEGE_V (Rechnungen + erhaltene Gutschriften, Dashboard); wiederholbar |
 | 45_debitoren.sql | Debitoren ohne Rechnung (z. B. Mieter): FAKT_DEBITOREN (DEBI), FAKT_DEBITOR_POSTEN (DPOS, aus dem Intervall erzeugt), FAKT_DEBITOR_ZAHLUNGEN (DZAH, aus der Bankdatei), Views FAKT_DEBITOR_POSTEN_V/FAKT_DEBITOREN_V (Zahlungen decken die ältesten Posten zuerst), BKUM_DEBI_ID + Status DEBITOR, Package FAKT_DEBITOR (Abgleich per IBAN/Name, zuweisen/aufheben, aus_buchung); FAKT_BANK.abgleichen ruft den Debitoren-Abgleich auf (39); wiederholbar |
 | 44_offen_netto.sql | FAKT_BELEGE_V um OFFEN_NETTO (offener Betrag netto, anteilig) – alle Dashboards zeigen Nettobeträge; wiederholbar |
+| 46_rechnung_in_bearbeitung.sql | Rechnungsstatus IN_BEARBEITUNG („In Bearbeitung“): „Rechnung bearbeiten“ nur offen ohne Zahlung, dauerhaft bis „Rechnung drucken“ (wieder GEDRUCKT, neue Dokumentversion); zählt als offen, Zahlungen gesperrt; ruft 21, 31, 33, 39 auf; wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA

@@ -187,6 +187,7 @@ page 10 (
                        case r.RECH_STATUS when 'ENTWURF' then 'fa-pencil u-warning-text'
                                           when 'GEDRUCKT' then 'fa-print u-info-text'
                                           when 'GESENDET' then 'fa-paper-plane-o u-info-text'
+                                          when 'IN_BEARBEITUNG' then 'fa-unlock u-warning-text'
                                           when 'TEILBEZAHLT' then 'fa-adjust u-warning-text'
                                           when 'BEZAHLT' then 'fa-check-circle u-success-text'
                                           else 'fa-ban u-danger-text' end as STATUS_ICON,

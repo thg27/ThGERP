@@ -49,7 +49,7 @@ page 1 (
                       from FAKT_BELEGE_V b
                       join ADMIN_MANDANTEN a on a.MAND_ID = b.RECH_MAND_ID
                 ), u as (
-                    select * from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                    select * from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                 )
                 select 1 as ID, 'Umsatz ' || to_char(sysdate, 'YYYY') as TITLE,
                        to_char((select nvl(sum(RECH_SUMME_NETTO), 0) from u where RECH_DATUM >= trunc(sysdate, 'YYYY')),
@@ -77,9 +77,9 @@ page 1 (
                   from dual
                 union all
                 select 4, 'Offene Rechnungen',
-                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')),
+                       to_char((select nvl(sum(OFFEN), 0) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT')),
                                'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €',
-                       to_char((select count(*) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT')), 'FM999G999') || ' Rechnungen'
+                       to_char((select count(*) from r where RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT')), 'FM999G999') || ' Rechnungen'
                   from dual
                 union all
                 select 5, 'Überfällig',
@@ -189,7 +189,7 @@ page 1 (
                       from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
                               from dual connect by level <= 12) m
                       left join FAKT_BELEGE_V r
-                        on r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                        on r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= m.monat
                        and r.RECH_DATUM < add_months(m.monat, 1)
                       left join ADMIN_MANDANTEN a on a.MAND_ID = r.RECH_MAND_ID
@@ -223,7 +223,7 @@ page 1 (
                       from (select add_months(trunc(sysdate, 'MM'), -level + 1) as monat
                               from dual connect by level <= 12) m
                       left join FAKT_BELEGE_V r
-                        on r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                        on r.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and r.RECH_DATUM >= add_months(m.monat, -12)
                        and r.RECH_DATUM < add_months(m.monat, -11)
                       left join ADMIN_MANDANTEN a on a.MAND_ID = r.RECH_MAND_ID
@@ -297,7 +297,7 @@ page 1 (
                            || to_char(nvl(sum(case a.MAND_CODE when 'HOLDING' then b.RECH_SUMME_NETTO end), 0), 'FM999G999G990', 'NLS_NUMERIC_CHARACTERS='',.''') || ' €)' as TOOLTIP
                       from FAKT_BELEGE_V b
                       join ADMIN_MANDANTEN a on a.MAND_ID = b.RECH_MAND_ID
-                     where b.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+                     where b.RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'IN_BEARBEITUNG', 'TEILBEZAHLT', 'BEZAHLT')
                        and b.RECH_DATUM >= add_months(trunc(sysdate), -12)
                      group by b.RECH_KUND_ID, b.KUNDE, b.KUND_NUMMER
                      order by 2 desc
