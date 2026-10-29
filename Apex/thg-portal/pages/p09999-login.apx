@@ -162,6 +162,33 @@ page 9999 (
         }
     )
 
+    button anmelden-microsoft (
+        buttonName: ANMELDEN_MICROSOFT
+        label: Mit Microsoft anmelden
+        layout {
+            sequence: 50
+            region: @app-name
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--stretch
+                t-Button--gapTop
+            ]
+            icon: fa-windows
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 1
+                request: APEX_AUTHENTICATION=Microsoft Entra ID
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
     process clear-page-s-cache (
         name: Clear Page(s) Cache
         type: clearSessionState

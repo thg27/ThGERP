@@ -13,7 +13,8 @@ app THG-ALLGEMEIN (
             page: 1
         }
         loginUrl: {
-            page: LOGIN
+            type: url
+            url: f?p=20000:LOGIN:&SESSION.
         }
     }
     navigationMenu {

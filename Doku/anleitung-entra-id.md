@@ -53,7 +53,7 @@ Im Entra Admin Center (<https://entra.microsoft.com>) mit einem Administrator de
    neue Spalte `MITA_EMAIL` (eindeutig, per Trigger in Kleinbuchstaben). Pflege in THG-ADMIN bei den Mitarbeitern,
    Anzeige in den Einstellungen (Portal Seite 20). Danach für jeden Mitarbeiter die Office-365-Adresse eintragen
    (Thomas: `thomas@thg-edv.com` → Benutzer `ADMIN_THG`).
-3. **Web Credential** im Workspace THGERP: Static ID `entra_thgerp`, Typ „OAuth2 Client Credentials“, Client-ID aus
+3. **Web Credential** im Workspace THGERP: Static ID `entra-thgerp`, Typ „OAuth2 Client Credentials“, Client-ID aus
    A.2. Quelle `Apex/thg-portal/workspace-components/credentials/entra-thgerp.apx` (ohne Schlüssel).
    **Thomas** trägt danach den geheimen Schlüssel ein: App Builder > Workspace Utilities > Web Credentials >
    „Entra ThGERP“ > Client Secret.
@@ -109,4 +109,4 @@ Fehlerbilder:
   APEX-Konto-Zugang (falls vorhanden) zusätzlich sperren.
 - **Schlüssel sichtbar geworden** (Chat, Mail, Datei): sofort in Entra einen neuen erzeugen und den alten löschen.
 
-Stand: 2026-10-29, APEX 26.2.
+Stand: 2026-10-29, APEX 26.2. Teil A und B erledigt (App-Registrierung „ThG-Portal“, Client-ID `3c1fabc9-d2e8-40cb-b452-05c4a63813e7`, Tenant `c93caac8-248c-440d-afb2-3777aed55fe9`); offen: Test C mit Microsoft-Konto.

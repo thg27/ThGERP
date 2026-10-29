@@ -5,3 +5,44 @@ authentication oracle-apex-accounts (
         type: workspaceSharing
     }
 )
+
+authentication microsoft-entra-id (
+    name: Microsoft Entra ID
+    type: socialSignIn
+    settings {
+        credentialStore: @entra-thgerp
+        discoveryUrl: https://login.microsoftonline.com/c93caac8-248c-440d-afb2-3777aed55fe9/v2.0/.well-known/openid-configuration
+        scope: profile,email
+        username: preferred_username
+    }
+    source {
+        plsqlCode:
+            ```plsql
+            -- Anmeldung mit Office 365 (Microsoft Entra ID, Tenant thg-edv.com; Anleitung Doku/anleitung-entra-id.md):
+            -- APP_USER ist zunaechst die Microsoft-Adresse (preferred_username). Gesucht wird der Mitarbeiter mit dieser
+            -- Adresse (ALLG_MITARBEITER.MITA_EMAIL, DDL 47); weitergearbeitet wird mit seinem Benutzernamen (Mandant,
+            -- Theme-Stil, Einstellungen, Audit-Spalten wie bei der Anmeldung mit Benutzername/Kennwort).
+            procedure nach_anmeldung is
+                l_benutzer ALLG_MITARBEITER.MITA_BENUTZERNAME%type;
+            begin
+                select MITA_BENUTZERNAME
+                  into l_benutzer
+                  from ALLG_MITARBEITER
+                 where MITA_EMAIL = lower(trim(:APP_USER))
+                   and MITA_BENUTZERNAME is not null;
+                apex_custom_auth.set_user(p_user => l_benutzer);
+            exception
+                when no_data_found then
+                    raise_application_error(-20001, 'Für ' || :APP_USER || ' ist kein Mitarbeiter eingetragen. '
+                                                    || 'Bitte an den Administrator wenden.');
+            end nach_anmeldung;
+            ```
+    }
+    loginProcessing {
+        postAuthenticationProcedureName: nach_anmeldung
+        switchInSession: true
+    }
+    sessionSharing {
+        type: workspaceSharing
+    }
+)

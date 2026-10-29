@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-28): alle DDL-Skripte 01–46 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-29, APEX 26.2, Bilder vom Oracle-CDN): alle DDL-Skripte 01–47 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -158,6 +158,12 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   192 randlos/maskable) in allen Apps unter `shared-components/static-files/icons/`.
 - **Einstellungen** (wie Marchler): Benutzermenü rechts oben in allen Apps → Portal Seite 20, eigene Mitarbeiterdaten (Name, Standard-Mandant,
   Kommunikation; nur der eigene Datensatz über `MITA_BENUTZERNAME = upper(:APP_USER)`). Eintrag in den Sub-Apps auch in `mandant_in_apps.py`.
+- **Anmeldung mit Office 365 (Microsoft Entra ID)** (2026-10-29, Anleitung `Doku/anleitung-entra-id.md`): Tenant thg-edv.com
+  (`c93caac8-248c-440d-afb2-3777aed55fe9`), App-Registrierung „ThG-Portal“ (Client-ID `3c1fabc9-d2e8-40cb-b452-05c4a63813e7`),
+  Web Credential `entra-thgerp` (Quelle `thg-portal/workspace-components/credentials/`, ohne Schlüssel – Import lässt ihn unverändert).
+  Portal 20000: Schema „Microsoft Entra ID“ (Social Sign-In, `preferred_username`) zusätzlich zu „Oracle APEX Accounts“ (aktuell, Notzugang),
+  Prozedur `nach_anmeldung` sucht den Mitarbeiter über `ALLG_MITARBEITER.MITA_EMAIL` (DDL 47) und setzt seinen `MITA_BENUTZERNAME`;
+  Button „Mit Microsoft anmelden“ (Request `APEX_AUTHENTICATION=Microsoft Entra ID`). Sub-Apps: Login-URL `f?p=20000:LOGIN:&SESSION.`.
 - **Navigationsmenü** in allen Apps standardmäßig aufgeklappt (Template-Option `js-defaultCollapsed` entfernt, `thg.js` setzt die gemerkte Vorgabe je Seite zurück).
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).
