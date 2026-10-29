@@ -201,6 +201,36 @@ page 31 (
         }
     )
 
+    pageItem P31_MITA_EMAIL (
+        type: textField
+        label {
+            label: Office-365-Adresse (Anmeldung mit Microsoft)
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @mitarbeiter
+            slot: regionBody
+            columnSpan: 6
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mitarbeiter
+            column: MITA_EMAIL
+            dataType: varchar2
+        }
+        settings {
+            subtype: email
+        }
+        validation {
+            maxLength: 255
+        }
+    )
+
     region kommunikation (
         name: Kommunikation
         type: interactiveGrid

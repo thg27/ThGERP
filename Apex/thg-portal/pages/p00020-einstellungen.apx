@@ -221,6 +221,34 @@ page 20 (
         }
     )
 
+    pageItem P20_MITA_EMAIL (
+        type: displayOnly
+        label {
+            label: Office-365-Adresse
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @mitarbeiter
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            formRegion: @mitarbeiter
+            column: MITA_EMAIL
+            dataType: varchar2
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+    )
+
     region kommunikation (
         name: Kommunikation
         type: interactiveGrid

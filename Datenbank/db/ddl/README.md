@@ -54,6 +54,7 @@ Installation (SQLcl, nur DEV-Verbindung):
 | 45_debitoren.sql | Debitoren ohne Rechnung (z. B. Mieter): FAKT_DEBITOREN (DEBI), FAKT_DEBITOR_POSTEN (DPOS, aus dem Intervall erzeugt), FAKT_DEBITOR_ZAHLUNGEN (DZAH, aus der Bankdatei), Views FAKT_DEBITOR_POSTEN_V/FAKT_DEBITOREN_V (Zahlungen decken die ältesten Posten zuerst), BKUM_DEBI_ID + Status DEBITOR, Package FAKT_DEBITOR (Abgleich per IBAN/Name, zuweisen/aufheben, aus_buchung); FAKT_BANK.abgleichen ruft den Debitoren-Abgleich auf (39); wiederholbar |
 | 44_offen_netto.sql | FAKT_BELEGE_V um OFFEN_NETTO (offener Betrag netto, anteilig) – alle Dashboards zeigen Nettobeträge; wiederholbar |
 | 46_rechnung_in_bearbeitung.sql | Rechnungsstatus IN_BEARBEITUNG („In Bearbeitung“): „Rechnung bearbeiten“ nur offen ohne Zahlung, dauerhaft bis „Rechnung drucken“ (wieder GEDRUCKT, neue Dokumentversion); zählt als offen, Zahlungen gesperrt; ruft 21, 31, 33, 39 auf; wiederholbar |
+| 47_mitarbeiter_office365.sql | Office-365-Adresse des Mitarbeiters `MITA_EMAIL` (eindeutig, Kleinbuchstaben per Trigger MITA_BIU) für die Anmeldung mit Microsoft Entra ID (Doku/anleitung-entra-id.md); wiederholbar |
 | 99_drop.sql | entfernt alle Objekte (löscht Daten!) |
 
 ## Achtung: Namenskonflikt mit dem Schema SIPA
