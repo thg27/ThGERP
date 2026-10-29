@@ -90,3 +90,33 @@ appItem THEME_STIL_BENUTZER (
             ```
     }
 )
+
+appItem MITARBEITER_NAME (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Ausgeschriebener Name des angemeldeten Mitarbeiters (ALLG_MITARBEITER.MITA_NAME) für die Navigationsleiste rechts oben;
+            gesetzt vom App-Prozess "Mitarbeitername" bei jedem Seitenaufruf (Änderungen in den Einstellungen gelten sofort).
+            ```
+    }
+)
+
+appItem EINSTELLUNGEN_URL (
+    scope: global
+    security {
+        sessionStateProtection: restricted
+        escapeSpecialChars: true
+    }
+    comments {
+        comments:
+            ```
+            Link auf die Einstellungen (Portal 20000 Seite 20, Schublade) für die Navigationsleiste aller Apps –
+            apex_page.get_url erzeugt den Aufruf als Dialog; gesetzt vom App-Prozess "Mitarbeitername".
+            ```
+    }
+)

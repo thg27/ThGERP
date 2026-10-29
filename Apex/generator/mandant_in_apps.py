@@ -151,7 +151,7 @@ NAV_EINSTELLUNGEN = '''    entry einstellungen (
         link {
             target: {
                 type: url
-                url: f?p=20000:20:&SESSION.
+                url: &EINSTELLUNGEN_URL.
             }
         }
         serverSideCondition {

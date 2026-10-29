@@ -156,8 +156,11 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - **Als App installierbar (PWA):** nur das Portal 20000 (`progressiveWebApp` in `thg-portal/application.apx`, Scope `/ords/r/thgerp/` – deckt alle ThGERP-Apps
   inkl. Anmeldung ab und ist genauer als der Scope `/ords/` der SIPA-App auf demselben Host). Icons `app-icon-*.png` (aus `Apex/workspace-files/thg-app-icon.svg`,
   192 randlos/maskable) in allen Apps unter `shared-components/static-files/icons/`.
-- **Einstellungen** (wie Marchler): Benutzermenü rechts oben in allen Apps → Portal Seite 20, eigene Mitarbeiterdaten (Name, Standard-Mandant,
-  Kommunikation; nur der eigene Datensatz über `MITA_BENUTZERNAME = upper(:APP_USER)`). Eintrag in den Sub-Apps auch in `mandant_in_apps.py`.
+- **Einstellungen** (wie Marchler): Benutzermenü rechts oben in allen Apps → Portal Seite 20 als **Schublade** (Drawer von rechts),
+  eigene Mitarbeiterdaten (Name, Standard-Mandant, Office-365-Adresse nur Anzeige, Kommunikation; nur der eigene Datensatz über
+  `MITA_BENUTZERNAME = upper(:APP_USER)`). Link aus allen Apps über das globale Item `EINSTELLUNGEN_URL` (`apex_page.get_url` → Dialog-Aufruf).
+  Rechts oben steht der ausgeschriebene Name (`MITARBEITER_NAME` = `MITA_NAME`) statt des Benutzernamens; beide Items setzt der App-Prozess
+  „Mitarbeitername“ (in jeder App, bei jedem Seitenaufruf). Eintrag in den Sub-Apps auch in `mandant_in_apps.py`.
 - **Anmeldung mit Office 365 (Microsoft Entra ID)** (2026-10-29, Anleitung `Doku/anleitung-entra-id.md`): Tenant thg-edv.com
   (`c93caac8-248c-440d-afb2-3777aed55fe9`), App-Registrierung „ThG-Portal“ (Client-ID `3c1fabc9-d2e8-40cb-b452-05c4a63813e7`),
   Web Credential `entra-thgerp` (Quelle `thg-portal/workspace-components/credentials/`, ohne Schlüssel – Import lässt ihn unverändert).

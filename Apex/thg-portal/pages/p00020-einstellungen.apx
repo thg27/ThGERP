@@ -3,8 +3,17 @@ page 20 (
     alias: EINSTELLUNGEN
     title: Einstellungen
     appearance {
-        pageTemplate: @/standard
-        templateOptions: #DEFAULT#
+        pageMode: modalDialog
+        dialogTemplate: @/drawer
+        templateOptions: [
+            #DEFAULT#
+            js-dialog-class-t-Drawer--pullOutEnd
+        ]
+    }
+    dialog {
+        width: 760
+        chained: false
+        resizable: false
     }
     navigation {
         cursorFocus: doNotFocusCursor
@@ -14,24 +23,19 @@ page 20 (
         formAutoComplete: false
     }
 
-    region breadcrumb (
-        name: Breadcrumb
-        title: Einstellungen
-        type: breadcrumb
-        source {
-            breadcrumb: @breadcrumb
-        }
+    region buttons (
+        name: Buttons
+        type: staticContent
         layout {
-            sequence: 10
-            slot: breadcrumbBar
+            sequence: 90
+            slot: dialogFooter
         }
         appearance {
-            template: @/title-bar
+            template: @/buttons-container
             templateOptions: #DEFAULT#
         }
-        componentAppearance {
-            breadcrumbTemplate: @/breadcrumb
-            templateOptions: #DEFAULT#
+        settings {
+            outputAs: text
         }
     )
 
@@ -46,7 +50,7 @@ page 20 (
         }
         layout {
             sequence: 15
-            slot: body
+            slot: contentBody
         }
         appearance {
             template: @/alert
@@ -70,7 +74,7 @@ page 20 (
         }
         layout {
             sequence: 20
-            slot: body
+            slot: contentBody
         }
         appearance {
             template: @/standard
@@ -267,7 +271,7 @@ page 20 (
         }
         layout {
             sequence: 30
-            slot: body
+            slot: contentBody
         }
         appearance {
             template: @/standard
@@ -461,7 +465,7 @@ page 20 (
         label: Speichern
         layout {
             sequence: 10
-            region: @breadcrumb
+            region: @buttons
             slot: next
         }
         appearance {
@@ -548,15 +552,14 @@ page 20 (
         }
     )
 
-    branch zurueck-einstellungen (
-        name: Zurück zu den Einstellungen
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
         execution {
-            sequence: 10
+            sequence: 90
         }
-        behavior {
-            target: {
-                page: 20
-            }
+        serverSideCondition {
+            whenButtonPressed: @save
         }
     )
 

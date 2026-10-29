@@ -90,3 +90,24 @@ appProcess theme-stil (
         point: beforeHeader
     }
 )
+
+appProcess mitarbeitername (
+    name: Mitarbeitername
+    type: executeCode
+    source {
+        plsqlCode:
+            ```plsql
+            -- Navigationsleiste: ausgeschriebener Name statt Benutzername, Einstellungen als Schublade (Portal Seite 20)
+            if :APP_USER <> 'nobody' then
+                select coalesce(max(MITA_NAME), :APP_USER) into :MITARBEITER_NAME
+                  from ALLG_MITARBEITER
+                 where MITA_BENUTZERNAME = upper(:APP_USER);
+                :EINSTELLUNGEN_URL := apex_page.get_url(p_application => '20000', p_page => 20);
+            end if;
+            ```
+    }
+    execution {
+        sequence: 7
+        point: beforeHeader
+    }
+)

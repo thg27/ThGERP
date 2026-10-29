@@ -36,7 +36,7 @@ list navigation-bar (
     )
 
     entry app-user (
-        label: &APP_USER.
+        label: &MITARBEITER_NAME.
         icon {
             imageIconCssClasses: fa-user
         }
@@ -66,7 +66,7 @@ list navigation-bar (
         link {
             target: {
                 type: url
-                url: f?p=20000:20:&SESSION.
+                url: &EINSTELLUNGEN_URL.
             }
         }
         serverSideCondition {
