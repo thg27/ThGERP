@@ -60,7 +60,7 @@ app THG-PORTAL (
         sourceForRoleOrGroupSchemes: authenticationScheme
     }
     sessionManagement {
-        maxSessionIdleTime: 3600
+        maxSessionIdleTime: 14400
         maxSessionLength: 28800
     }
     security {
