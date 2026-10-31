@@ -65,8 +65,9 @@ Im Entra Admin Center (<https://entra.microsoft.com>) mit einem Administrator de
    - Prozedur `nach_anmeldung` (nach der Anmeldung): Mitarbeiter mit `MITA_EMAIL = lower(:APP_USER)` suchen und mit
      `apex_custom_auth.set_user` auf seinen `MITA_BENUTZERNAME` umstellen; ohne Treffer Meldung „Für … ist kein
      Mitarbeiter eingetragen“.
-5. **Anmeldeseite** des Portals (Seite 9999): Button „Mit Microsoft anmelden“ → Request
-   `APEX_AUTHENTICATION=Microsoft Entra ID` (der **Name** des Schemas, nicht die Static ID).
+5. **Anmeldeseite** des Portals (Seite 9999): Standard-Button „Mit Office 365 anmelden“ → Request
+   `APEX_AUTHENTICATION=Microsoft Entra ID` (der **Name** des Schemas, nicht die Static ID). Benutzername/Kennwort
+   (Oracle APEX Accounts) nur nach Klick auf „Notfallanmeldung“ – für den Fall, dass Microsoft nicht erreichbar ist.
 6. **Sub-Apps** (20010, 20020, 20030, 20050): Login-URL auf die Portal-Anmeldung umstellen (`f?p=20000:LOGIN:&SESSION.`,
    wie `anmeldung_ueber_portal.py` im Projekt Marchler). Sonst landet man bei einem Direktaufruf ohne Sitzung auf der
    Anmeldeseite der Sub-App, die nur Benutzername/Kennwort kennt. Mit Session Sharing gilt die Anmeldung im Portal
@@ -80,7 +81,7 @@ Im Entra Admin Center (<https://entra.microsoft.com>) mit einem Administrator de
 Immer in einem **privaten Fenster** (mit einer bestehenden Sitzung übernimmt APEX diese, und der Microsoft-Weg ist
 nicht zu sehen).
 
-1. `https://erp.thg-edv.com/ords/r/thgerp/thg-portal/login` → „Mit Microsoft anmelden“ → Microsoft-Anmeldung
+1. `https://erp.thg-edv.com/ords/r/thgerp/thg-portal/login` → „Mit Office 365 anmelden“ → Microsoft-Anmeldung
    mit `thomas@thg-edv.com` (beim ersten Mal Zustimmung bestätigen).
 2. Erwartet: Portal-Startseite, rechts oben `ADMIN_THG`, Standard-Mandant und gespeicherter Stil sind gesetzt.
 3. In eine Sub-App wechseln (z. B. Finanz) – keine erneute Anmeldung.

@@ -166,7 +166,8 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   Web Credential `entra-thgerp` (Quelle `thg-portal/workspace-components/credentials/`, ohne Schlüssel – Import lässt ihn unverändert).
   Portal 20000: Schema „Microsoft Entra ID“ (Social Sign-In, `preferred_username`) zusätzlich zu „Oracle APEX Accounts“ (aktuell, Notzugang),
   Prozedur `nach_anmeldung` sucht den Mitarbeiter über `ALLG_MITARBEITER.MITA_EMAIL` (DDL 47) und setzt seinen `MITA_BENUTZERNAME`;
-  Button „Mit Microsoft anmelden“ (Request `APEX_AUTHENTICATION=Microsoft Entra ID`). Sub-Apps: Login-URL `f?p=20000:LOGIN:&SESSION.`.
+  Anmeldeseite 9999: Standard ist der Button „Mit Office 365 anmelden“ (Request `APEX_AUTHENTICATION=Microsoft Entra ID`);
+  Benutzername/Kennwort erscheinen erst nach Klick auf „Notfallanmeldung“ (CSS/JS auf der Seite, bleibt im Tab offen – `sessionStorage`). Sub-Apps: Login-URL `f?p=20000:LOGIN:&SESSION.`.
 - **Navigationsmenü** in allen Apps standardmäßig aufgeklappt (Template-Option `js-defaultCollapsed` entfernt, `thg.js` setzt die gemerkte Vorgabe je Seite zurück).
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).

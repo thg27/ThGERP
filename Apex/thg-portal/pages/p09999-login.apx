@@ -9,6 +9,37 @@ page 9999 (
     navigation {
         warnOnUnsavedChanges: false
     }
+    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            // Standard ist die Anmeldung mit Office 365 (Microsoft Entra ID). Benutzername/Kennwort (Oracle APEX Accounts)
+            // erscheinen erst nach Klick auf "Notfallanmeldung" und bleiben im Tab offen, z. B. nach einem falschen Kennwort.
+            (function () {
+                function oeffnen() {
+                    document.body.classList.add("thg-notfall-offen");
+                    $("#P9999_USERNAME").trigger("focus");
+                }
+                $("#thg-notfall").on("click", function () {
+                    try { sessionStorage.setItem("thgNotfall", "1"); } catch (e) {}
+                    oeffnen();
+                });
+                $("#thg-anmelden-microsoft").on("click", function () {
+                    try { sessionStorage.removeItem("thgNotfall"); } catch (e) {}
+                });
+                try { if (sessionStorage.getItem("thgNotfall")) { oeffnen(); } } catch (e) {}
+            })();
+            ```
+    }
+    css {
+        inline:
+            ```css
+            body:not(.thg-notfall-offen) #P9999_USERNAME_CONTAINER,
+            body:not(.thg-notfall-offen) #P9999_PASSWORD_CONTAINER,
+            body:not(.thg-notfall-offen) #P9999_REMEMBER_CONTAINER,
+            body:not(.thg-notfall-offen) #thg-login-notfall,
+            .thg-notfall-offen #thg-notfall { display: none; }
+            ```
+    }
     security {
         authentication: public
         pageAccessProtection: argumentsMustHaveChecksum
@@ -152,10 +183,15 @@ page 9999 (
             region: @app-name
             slot: next
         }
+        advanced {
+            htmlDomId: thg-login-notfall
+        }
         appearance {
             buttonTemplate: @/text
-            hot: true
-            templateOptions: #DEFAULT#
+            templateOptions: [
+                #DEFAULT#
+                t-Button--stretch
+            ]
         }
         behavior {
             warnOnUnsavedChanges: doNotCheck
@@ -164,18 +200,21 @@ page 9999 (
 
     button anmelden-microsoft (
         buttonName: ANMELDEN_MICROSOFT
-        label: Mit Microsoft anmelden
+        label: Mit Office 365 anmelden
         layout {
-            sequence: 50
+            sequence: 10
             region: @app-name
             slot: next
         }
+        advanced {
+            htmlDomId: thg-anmelden-microsoft
+        }
         appearance {
             buttonTemplate: @/text-with-icon
+            hot: true
             templateOptions: [
                 #DEFAULT#
                 t-Button--stretch
-                t-Button--gapTop
             ]
             icon: fa-windows
         }
@@ -186,6 +225,31 @@ page 9999 (
                 request: APEX_AUTHENTICATION=Microsoft Entra ID
             }
             warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button notfall (
+        buttonName: NOTFALL
+        label: Notfallanmeldung
+        layout {
+            sequence: 60
+            region: @app-name
+            slot: next
+        }
+        advanced {
+            htmlDomId: thg-notfall
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--link
+                t-Button--stretch
+                t-Button--gapTop
+            ]
+        }
+        behavior {
+            action: definedByDynamicAction
         }
     )
 
