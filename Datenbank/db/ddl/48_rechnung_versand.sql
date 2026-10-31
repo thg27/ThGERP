@@ -156,7 +156,8 @@ create or replace package body FAKT_RECHNUNG_VERSAND as
         l_ergebnis varchar2(4000);
         l_adresse  varchar2(500);
     begin
-        for i in 1 .. regexp_count(p_liste, '[^,;[:space:]]+') loop
+        -- leere Liste (z. B. kein Cc): regexp_count liefert NULL, die Schleife braucht 0
+        for i in 1 .. nvl(regexp_count(p_liste, '[^,;[:space:]]+'), 0) loop
             l_adresse := lower(regexp_substr(p_liste, '[^,;[:space:]]+', 1, i));
             if not regexp_like(l_adresse, '^[^@]+@[^@]+\.[a-z]{2,}$') then
                 raise_application_error(-20263, p_feld || ': „' || l_adresse || '“ ist keine gültige E-Mail-Adresse.');
@@ -284,7 +285,7 @@ create or replace package body FAKT_RECHNUNG_VERSAND as
                 return;
             end if;
             apex_json.open_array(p_name);
-            for i in 1 .. regexp_count(p_liste, '[^; ]+') loop
+            for i in 1 .. nvl(regexp_count(p_liste, '[^; ]+'), 0) loop
                 apex_json.open_object;
                 apex_json.open_object('emailAddress');
                 apex_json.write('address', regexp_substr(p_liste, '[^; ]+', 1, i));
