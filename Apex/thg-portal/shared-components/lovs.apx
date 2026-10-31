@@ -728,3 +728,17 @@ lov lov-debitor-intervall (
     )
 
 )
+
+lov lov-mail-typ (
+    name: LOV_MAIL_TYP
+    source {
+        location: staticValues
+    }
+
+    entry rechnung (
+        sequence: 1
+        display: Rechnungsversand
+        return: RECHNUNG
+    )
+
+)

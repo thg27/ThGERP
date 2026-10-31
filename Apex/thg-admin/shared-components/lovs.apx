@@ -193,3 +193,20 @@ lov lov-icons (
         icon: ICON
     }
 )
+
+lov lov-mail-typ (
+    name: LOV_MAIL_TYP
+    source {
+        location: staticValues
+    }
+    subscription {
+        master: @/20000/lov-mail-typ
+    }
+
+    entry rechnung (
+        sequence: 1
+        display: Rechnungsversand
+        return: RECHNUNG
+    )
+
+)

@@ -62,6 +62,22 @@ breadcrumb breadcrumb (
         }
     )
 
+    entry email-templates (
+        name: E-Mail-Templates
+        pageNumber: 40
+        appearance {
+            parentEntry: @home
+        }
+        execution {
+            sequence: 28
+        }
+        link {
+            target: {
+                page: 40
+            }
+        }
+    )
+
     entry aktivitaetsprotokoll (
         name: Aktivitätsprotokoll
         pageNumber: 50

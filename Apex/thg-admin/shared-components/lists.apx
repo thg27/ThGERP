@@ -192,6 +192,25 @@ list admin-konfiguration (
         }
     )
 
+    entry email-templates (
+        label: E-Mail-Templates
+        icon {
+            imageIconCssClasses: fa-envelope-o
+        }
+        layout {
+            sequence: 40
+        }
+        link {
+            target: {
+                page: 40
+                clearCache: 40
+            }
+        }
+        userDefinedAttributes {
+            1: E-Mail-Vorlagen je Mandant und Typ (z. B. Rechnungsversand): Betreff, Text mit Platzhaltern, Bcc
+        }
+    )
+
 )
 
 list admin-monitoring (

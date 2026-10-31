@@ -60,7 +60,9 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   wird er erzeugt). „E-Mail senden“ → `FAKT_RECHNUNG_VERSAND.senden`: Microsoft Graph `POST /users/{absender}/sendMail` über das Web Credential
   `entra-thgerp` (Anwendungsberechtigung Mail.Send), Kopie in den Gesendeten Elementen; Status GEDRUCKT → GESENDET, Historie „E-Mail versendet“.
   Vorlagen je Mandant in `FAKT_MAIL_VORLAGEN` (MVOR; Bcc EDV office@thg-edv.com, HOLDING office@gesslbauer.com; Platzhalter #ANREDE#
-  #RECHNUNGSNUMMER# #RECHNUNGSDATUM# #BETRAG# #FAELLIG_AM# #ZAHLUNGSHINWEIS# #KUNDE# #ABSENDER#), noch ohne Pflegemaske.
+  #RECHNUNGSNUMMER# #RECHNUNGSDATUM# #BETRAG# #FAELLIG_AM# #ZAHLUNGSHINWEIS# #KUNDE# #ABSENDER#). Pflege in THG-ADMIN: Startseite → Konfiguration
+  „E-Mail-Templates“ (Seiten 40 Liste / 41 Dialog mit Mandant, Typ (`LOV_MAIL_TYP` im Portal: RECHNUNG = Rechnungsversand), Bcc, Betreff, Text,
+  Platzhalterliste), Generator `Apex/generator/gen_admin_mail_vorlagen.py`; neuer Typ: dort `TYPEN`, Check `MVOR_BELEGART_CK` und Versand-Package.
 - Kopf der Rechnung (Seite 11): Kopieren, Stornieren, Löschen im Kebab-Menü „Weitere Aktionen“ (⋮, versteckte Buttons `thg-akt-*`,
   Funktion `im_menue` in `gen_finanz.py`). Breadcrumb: letzter Pfadeintrag per `thg.css` ausgeblendet (sonst „Rechnung \ Rechnung 2026 - 203“).
 - „Rechnung kopieren“ (Kebab-Menü im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,
