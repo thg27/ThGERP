@@ -1343,7 +1343,7 @@ def seite_11():
                                                               'Abgeschlossen') then 'Druck'
                                        when h.RHIS_AKTION in ('Zur Bearbeitung geöffnet', 'Bearbeitung abgeschlossen') then 'Bearbeitung'
                                        when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'Storno'
-                                       when h.RHIS_AKTION = 'Gesendet' then 'Versand'
+                                       when h.RHIS_AKTION in ('Gesendet', 'E-Mail versendet') then 'Versand'
                                        else 'Rechnung'
                                      end as TYP,
                                      case
@@ -1355,6 +1355,7 @@ def seite_11():
                                        when h.RHIS_AKTION = 'Bearbeitung abgeschlossen' then 'fa-lock'
                                        when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'fa-ban'
                                        when h.RHIS_AKTION = 'Gesendet' then 'fa-paper-plane-o'
+                                       when h.RHIS_AKTION = 'E-Mail versendet' then 'fa-envelope-o'
                                        when h.RHIS_AKTION in ('Angelegt', 'Kopiert') then 'fa-plus-circle'
                                        else 'fa-pencil'
                                      end as ICON,
@@ -1363,7 +1364,7 @@ def seite_11():
                                        when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'u-danger'
                                        when h.RHIS_AKTION in ('Zur Bearbeitung geöffnet', 'Bearbeitung abgeschlossen') then 'u-warning'
                                        when h.RHIS_AKTION in ('Rechnung gedruckt', 'Vorschau gedruckt', 'Dokument abgelegt',
-                                                              'Abgeschlossen', 'Gesendet') then 'u-info'
+                                                              'Abgeschlossen', 'Gesendet', 'E-Mail versendet') then 'u-info'
                                        else 'u-color-14'
                                      end as FARBE
                                 from dual) e
@@ -1513,6 +1514,25 @@ def seite_11():
             plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS <> 'ENTWURF'
         }
 """)
+    # Rechnungsversand per E-Mail (abgeschlossene Rechnung, nicht in Bearbeitung): Dialog Seite 17 mit Vorschau der
+    # E-Mail und des Anhangs, dort "E-Mail senden" (Status GESENDET, Historie)
+    s += button("versenden", "VERSENDEN", "Rechnung versenden", 18, "breadcrumb", "next", "@/text-with-icon",
+                icon="fa-envelope-o", options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="""            action: redirectThisApp
+            target: {
+                page: 17
+                items: {
+                    P17_RECH_ID: &P11_RECH_ID.
+                }
+                clearCache: 17
+            }
+            warnOnUnsavedChanges: doNotCheck
+""", bedingung="""        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+        }
+""")
     # Rechnungsvorschau (nur Entwurf): PDF mit Wasserzeichen "VORSCHAU", beliebig oft, Rechnung bleibt Entwurf
     # (Seite abschicken: ungespeicherte Aenderungen speichern, danach oeffnet die Seite das PDF - P11_PDF_OEFFNEN)
     s += button("vorschau", "VORSCHAU", "Rechnungsvorschau", 17, "breadcrumb", "next", "@/text-with-icon",
@@ -1650,6 +1670,34 @@ def seite_11():
         }
 
         action storno-neu-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.navigation.redirect($v("P11_SELBST_URL"));
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+"""
+    s += """    dynamicAction versand-nach-dialog (
+        name: Nach dem Versenden die Rechnung neu laden
+        execution {
+            sequence: 7
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @versenden
+        }
+
+        action versand-neu-laden (
             action: executeJsCode
             settings {
                 jsCode:
@@ -4729,6 +4777,269 @@ def seite_15():
 """
     return s
 
+def seite_17():
+    """Dialog "Rechnung versenden" (Button im Kopf von Seite 11, abgeschlossene Rechnung): Vorschau der E-Mail aus der
+    Vorlage des Mandanten (FAKT_MAIL_VORLAGEN, DDL 48) – Von (angemeldeter Mitarbeiter), An/Cc/Betreff/Text aenderbar,
+    Bcc aus der Vorlage – und rechts der Anhang (zuletzt abgelegter Druck, per Blob geladen wie Seite 13).
+    "E-Mail senden": FAKT_RECHNUNG_VERSAND.senden (Microsoft Graph, Status GESENDET, Historie); danach laedt Seite 11
+    neu (DA versand-nach-dialog)."""
+    ohne = dict(form=None)
+    s = """page 17 (
+    name: Rechnung versenden
+    alias: VERSENDEN
+    title: Rechnung versenden
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1300
+        height: 860
+        chained: false
+        resizable: true
+    }
+    navigation {
+        cursorFocus: doNotFocusCursor
+    }
+    security {
+        pageAccessProtection: argumentsMustHaveChecksum
+        formAutoComplete: false
+    }
+
+    region buttons (
+        name: Buttons
+        type: staticContent
+        layout {
+            sequence: 30
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+        settings {
+            outputAs: text
+        }
+    )
+
+    region mail (
+        name: E-Mail
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: contentBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region anhang (
+        name: Anhang
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                -- Anhang = abgelegter Druck (Seite 12 mit P12_RDOK_ID, inline); per JavaScript als Blob geladen
+                -- (DA "Anhang laden"), da die App das Einbetten eigener Seiten in Frames verbietet
+                return '<div class="thg-anhang-titel"><span class="fa fa-paperclip" aria-hidden="true"></span> '
+                    || apex_escape.html(FAKT_RECHNUNG_DOKUMENT.dateiname(:P17_RECH_ID, :P17_RDOK_ID)) || '</div>'
+                    || '<iframe id="anhang-pdf" title="Anhang" style="width:100%;height:calc(100vh - 150px);border:0;display:block" data-src="'
+                    || apex_escape.html_attribute(
+                           apex_page.get_url(p_page      => 12,
+                                             p_items     => 'P12_RECH_ID,P12_RDOK_ID',
+                                             p_values    => :P17_RECH_ID || ',' || :P17_RDOK_ID,
+                                             p_plain_url => true))
+                    || '"></iframe>';
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P17_RDOK_ID
+        }
+    )
+
+    pageItem P17_RECH_ID (
+        type: hidden
+        layout {
+            sequence: 1
+            region: @mail
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P17_RDOK_ID (
+        type: hidden
+        layout {
+            sequence: 2
+            region: @mail
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+"""
+    s += item("P17_VON", "displayOnly", "Von", 10, "mail", spalten=12, **ohne)
+    s += item("P17_AN", "textField", "An", 20, "mail", req=True, maxlen=1000, spalten=12, extra="""        help {
+            helpText: Mehrere Empfänger mit ; trennen.
+        }
+""", **ohne)
+    s += item("P17_CC", "textField", "Cc", 30, "mail", maxlen=1000, spalten=12, **ohne)
+    s += item("P17_BCC", "displayOnly", "Bcc (immer)", 40, "mail", spalten=12, **ohne)
+    s += item("P17_BETREFF", "textField", "Betreff", 50, "mail", req=True, maxlen=500, spalten=12, **ohne)
+    s += item("P17_TEXT", "richTextEditor", "Text", 60, "mail", spalten=12,
+              extra="        settings {\n            format: html\n            toolbar: full\n        }\n" + RTE_LEISTE(), **ohne)
+    s += button("cancel", "CANCEL", "Abbrechen", 10, "buttons", "close", verhalten="            action: definedByDynamicAction\n")
+    s += button("senden", "SENDEN", "E-Mail senden", 20, "buttons", "next", "@/text-with-icon", hot=True, icon="fa-paper-plane-o",
+                options="[\n                #DEFAULT#\n                t-Button--iconLeft\n            ]",
+                verhalten="            warnOnUnsavedChanges: doNotCheck\n")
+    s += """    dynamicAction cancel-dialog (
+        name: Dialog abbrechen
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @cancel
+        }
+
+        action native-dialog-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction anhang-laden (
+        name: Anhang laden
+        execution {
+            sequence: 20
+        }
+        when {
+            event: ready
+        }
+
+        action native-js-anhang-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    // PDF holen und als Blob-URL anzeigen (Frame-Sperre der App greift fuer blob: nicht)
+                    var f = document.getElementById('anhang-pdf');
+                    if (f) {
+                        fetch(f.dataset.src, { credentials: 'same-origin', cache: 'no-store' })
+                            .then(function (r) {
+                                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                                return r.blob();
+                            })
+                            .then(function (b) {
+                                f.src = URL.createObjectURL(new Blob([b], { type: 'application/pdf' })) + '#toolbar=0&navpanes=0&view=FitH';
+                            })
+                            .catch(function (e) {
+                                apex.message.showErrors([{ type: 'error', location: 'page',
+                                    message: 'Anhang konnte nicht geladen werden (' + e.message + ').' }]);
+                            });
+                    }
+                    ```
+            }
+            execution {
+                sequence: 10
+            }
+        )
+
+    )
+
+    process vorbelegen (
+        name: E-Mail aus der Vorlage vorbelegen
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                -- nur beim Oeffnen (nach einem Fehler beim Senden bleiben die Eingaben erhalten)
+                declare
+                    l_text clob;
+                begin
+                    FAKT_RECHNUNG_VERSAND.vorbelegen(:P17_RECH_ID, :P17_VON, :P17_AN, :P17_BCC, :P17_BETREFF, l_text,
+                                                     :P17_RDOK_ID);
+                    :P17_TEXT := l_text;
+                exception
+                    when others then
+                        if sqlcode between -20299 and -20200 then
+                            apex_error.add_error(p_message          => regexp_replace(sqlerrm, '^ORA-\\d+: '),
+                                                 p_display_location => apex_error.c_on_error_page);
+                        else
+                            raise;
+                        end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        serverSideCondition {
+            type: itemIsNull
+            item: P17_VON
+        }
+    )
+
+    process senden (
+        name: E-Mail senden
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    FAKT_RECHNUNG_VERSAND.senden(:P17_RECH_ID, :P17_AN, :P17_CC, :P17_BETREFF, :P17_TEXT, :P17_RDOK_ID);
+""" + FEHLER.replace("\\\\", "\\") + """
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        serverSideCondition {
+            whenButtonPressed: @senden
+        }
+    )
+
+    process close-dialog (
+        name: Dialog schließen
+        type: closeDialog
+        execution {
+            sequence: 20
+        }
+        serverSideCondition {
+            whenButtonPressed: @senden
+        }
+    )
+
+)
+"""
+    return s
+
+
 FEHLER = """                exception
                     when others then
                         if sqlcode between -20299 and -20200 then
@@ -5815,6 +6126,7 @@ if __name__ == "__main__":
     (FIN / "pages" / "p00011-rechnung.apx").write_text(seite_11(), encoding="utf-8")
     (FIN / "pages" / "p00015-stornieren.apx").write_text(seite_15(), encoding="utf-8")
     (FIN / "pages" / "p00016-zahlungseingang.apx").write_text(seite_16(), encoding="utf-8")
+    (FIN / "pages" / "p00017-versenden.apx").write_text(seite_17(), encoding="utf-8")
     (FIN / "pages" / "p00030-bankdatei.apx").write_text(seite_30(), encoding="utf-8")
     (FIN / "pages" / "p00031-zahlung-zuordnen.apx").write_text(seite_31(), encoding="utf-8")
     (FIN / "pages" / "p00040-gutschriften.apx").write_text(seite_40(), encoding="utf-8")

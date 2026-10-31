@@ -52,6 +52,7 @@ Jeder Alias ist 4-stellig und im gesamten Projekt eindeutig. Neue Tabellen hier 
 | FAKT | FAKT_DEBITOREN | DEBI | Debitoren ohne Rechnung (z. B. Mieter) mit Betrag und Intervall |
 | FAKT | FAKT_DEBITOR_POSTEN | DPOS | Fällige Beträge eines Debitors |
 | FAKT | FAKT_DEBITOR_ZAHLUNGEN | DZAH | Zahlungen eines Debitors (aus der Bankdatei) |
+| FAKT | FAKT_MAIL_VORLAGEN | MVOR | E-Mail-Vorlagen je Mandant und Belegart (Rechnungsversand) |
 
 ## Gruppencodes
 

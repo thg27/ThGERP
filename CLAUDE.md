@@ -10,7 +10,7 @@ Basis: Portal- und Sub-Apps mit Kundenstamm-Datenmodell sowie die Strategic-Plan
   Werteliste Artikelgruppen 120/121 (Seiten aus `gen_artikel.py`, eingebaut von `gen_finanz.py`); DDL 28 entfernt die Portal-Kachel.
   Artikelmaske nur Stammdaten (Nummer zuerst) und Kommentar; Zusatzfelder, Artikeldateien und Artikelbild entfernt (DDL 29, auch aus dem Datenmodell).
   Die Apps 10000–10030 im Workspace SIPA (gleiche APEX-Instanz) gehören zu einem Kundenprojekt und dürfen **nicht** verwendet werden.
-- Installiert (Stand 2026-10-29, APEX 26.2, Bilder vom Oracle-CDN): alle DDL-Skripte 01–47 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
+- Installiert (Stand 2026-10-29, APEX 26.2, Bilder vom Oracle-CDN): alle DDL-Skripte 01–48 (ohne 14, stammt aus einem anderen Projekt), Workspace-Dateien, Apps 20000–20050; Kunden und Artikel aus Kingbill (Access) übernommen.
 
 Offen:
 - DEV/PROD-Trennung
@@ -54,6 +54,13 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
   IN_BEARBEITUNG („In Bearbeitung“, DDL 46): „Rechnung bearbeiten“ nur bei GEDRUCKT/GESENDET ohne Zahlung (`FAKT_RECHNUNG.bearbeitbar`/`bearbeiten`),
   bleibt gespeichert bis „Rechnung drucken“ (`bearbeitung_abschliessen` → GEDRUCKT, neue Dokumentversion); zählt als offen, Zahlungen gesperrt
   (Trigger ZAHL_STATUS_AIUD, `FAKT_BANK.zuordnen`, Seite 16/31). Das frühere Sitzungs-Item `P11_BEARBEITEN` entfällt.
+- **Rechnungsversand per E-Mail** (DDL 48, 2026-10-31): Button „Rechnung versenden“ (Seite 11, Status GEDRUCKT/GESENDET/TEILBEZAHLT/BEZAHLT)
+  → Dialog Seite 17 (`gen_finanz.py` `seite_17`): links E-Mail-Vorschau (Von = angemeldeter Mitarbeiter `MITA_EMAIL`, An = `KUND_EMAIL_RECHNUNG`
+  bzw. E-Mail des Ansprechpartners, Cc, Bcc fix aus der Vorlage, Betreff/Text änderbar), rechts der Anhang (zuletzt abgelegter Druck, fehlt er,
+  wird er erzeugt). „E-Mail senden“ → `FAKT_RECHNUNG_VERSAND.senden`: Microsoft Graph `POST /users/{absender}/sendMail` über das Web Credential
+  `entra-thgerp` (Anwendungsberechtigung Mail.Send), Kopie in den Gesendeten Elementen; Status GEDRUCKT → GESENDET, Historie „E-Mail versendet“.
+  Vorlagen je Mandant in `FAKT_MAIL_VORLAGEN` (MVOR; Bcc EDV office@thg-edv.com, HOLDING office@gesslbauer.com; Platzhalter #ANREDE#
+  #RECHNUNGSNUMMER# #RECHNUNGSDATUM# #BETRAG# #FAELLIG_AM# #ZAHLUNGSHINWEIS# #KUNDE# #ABSENDER#), noch ohne Pflegemaske.
 - Kopf der Rechnung (Seite 11): Kopieren, Stornieren, Löschen im Kebab-Menü „Weitere Aktionen“ (⋮, versteckte Buttons `thg-akt-*`,
   Funktion `im_menue` in `gen_finanz.py`). Breadcrumb: letzter Pfadeintrag per `thg.css` ausgeblendet (sonst „Rechnung \ Rechnung 2026 - 203“).
 - „Rechnung kopieren“ (Kebab-Menü im Kopf jeder Rechnung, Seite 11): `FAKT_RECHNUNG.kopieren` legt einen neuen Entwurf 1:1 an (Empfänger, Texte, Kennzeichen,

@@ -2534,7 +2534,7 @@ page 11 (
                                                               'Abgeschlossen') then 'Druck'
                                        when h.RHIS_AKTION in ('Zur Bearbeitung geöffnet', 'Bearbeitung abgeschlossen') then 'Bearbeitung'
                                        when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'Storno'
-                                       when h.RHIS_AKTION = 'Gesendet' then 'Versand'
+                                       when h.RHIS_AKTION in ('Gesendet', 'E-Mail versendet') then 'Versand'
                                        else 'Rechnung'
                                      end as TYP,
                                      case
@@ -2546,6 +2546,7 @@ page 11 (
                                        when h.RHIS_AKTION = 'Bearbeitung abgeschlossen' then 'fa-lock'
                                        when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'fa-ban'
                                        when h.RHIS_AKTION = 'Gesendet' then 'fa-paper-plane-o'
+                                       when h.RHIS_AKTION = 'E-Mail versendet' then 'fa-envelope-o'
                                        when h.RHIS_AKTION in ('Angelegt', 'Kopiert') then 'fa-plus-circle'
                                        else 'fa-pencil'
                                      end as ICON,
@@ -2554,7 +2555,7 @@ page 11 (
                                        when h.RHIS_AKTION in ('Storniert', 'Stornogrund') then 'u-danger'
                                        when h.RHIS_AKTION in ('Zur Bearbeitung geöffnet', 'Bearbeitung abgeschlossen') then 'u-warning'
                                        when h.RHIS_AKTION in ('Rechnung gedruckt', 'Vorschau gedruckt', 'Dokument abgelegt',
-                                                              'Abgeschlossen', 'Gesendet') then 'u-info'
+                                                              'Abgeschlossen', 'Gesendet', 'E-Mail versendet') then 'u-info'
                                        else 'u-color-14'
                                      end as FARBE
                                 from dual) e
@@ -2914,6 +2915,40 @@ page 11 (
         }
     )
 
+    button versenden (
+        buttonName: VERSENDEN
+        label: Rechnung versenden
+        layout {
+            sequence: 18
+            region: @breadcrumb
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-envelope-o
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 17
+                items: {
+                    P17_RECH_ID: &P11_RECH_ID.
+                }
+                clearCache: 17
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: expression
+            language: plsql
+            plsqlExpression: :P11_RECH_ID is not null and :P11_RECH_STATUS in ('GEDRUCKT', 'GESENDET', 'TEILBEZAHLT', 'BEZAHLT')
+        }
+    )
+
     button vorschau (
         buttonName: VORSCHAU
         label: Rechnungsvorschau
@@ -3170,6 +3205,33 @@ page 11 (
         }
 
         action storno-neu-laden (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.navigation.redirect($v("P11_SELBST_URL"));
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction versand-nach-dialog (
+        name: Nach dem Versenden die Rechnung neu laden
+        execution {
+            sequence: 7
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: button
+            button: @versenden
+        }
+
+        action versand-neu-laden (
             action: executeJsCode
             settings {
                 jsCode:

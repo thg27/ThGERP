@@ -55,5 +55,6 @@ whenever sqlerror exit failure rollback
 @@45_debitoren.sql
 @@46_rechnung_in_bearbeitung.sql
 @@47_mitarbeiter_office365.sql
+@@48_rechnung_versand.sql
 
 prompt Installation abgeschlossen.
