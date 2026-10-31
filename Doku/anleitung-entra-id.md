@@ -67,7 +67,8 @@ Im Entra Admin Center (<https://entra.microsoft.com>) mit einem Administrator de
      Mitarbeiter eingetragen“.
 5. **Anmeldeseite** des Portals (Seite 9999): Standard-Button „Mit Office 365 anmelden“ → Request
    `APEX_AUTHENTICATION=Microsoft Entra ID` (der **Name** des Schemas, nicht die Static ID). Benutzername/Kennwort
-   (Oracle APEX Accounts) nur nach Klick auf „Notfallanmeldung“ – für den Fall, dass Microsoft nicht erreichbar ist.
+   (Oracle APEX Accounts) sind von der Anmeldeseite entfernt. Fällt Microsoft aus: im App Builder das Portal auf
+   „Oracle APEX Accounts“ lassen und das Anmeldeformular (Seite 9999 aus Git, Commit 4ad0999) wieder einspielen.
 6. **Sub-Apps** (20010, 20020, 20030, 20050): Login-URL auf die Portal-Anmeldung umstellen (`f?p=20000:LOGIN:&SESSION.`,
    wie `anmeldung_ueber_portal.py` im Projekt Marchler). Sonst landet man bei einem Direktaufruf ohne Sitzung auf der
    Anmeldeseite der Sub-App, die nur Benutzername/Kennwort kennt. Mit Session Sharing gilt die Anmeldung im Portal

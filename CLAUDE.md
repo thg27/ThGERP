@@ -164,10 +164,11 @@ Es gelten die THG-EDV-Datenbankstandards (Skill `thg-oracle-db-standards`).
 - **Anmeldung mit Office 365 (Microsoft Entra ID)** (2026-10-29, Anleitung `Doku/anleitung-entra-id.md`): Tenant thg-edv.com
   (`c93caac8-248c-440d-afb2-3777aed55fe9`), App-Registrierung „ThG-Portal“ (Client-ID `3c1fabc9-d2e8-40cb-b452-05c4a63813e7`),
   Web Credential `entra-thgerp` (Quelle `thg-portal/workspace-components/credentials/`, ohne Schlüssel – Import lässt ihn unverändert).
-  Portal 20000: Schema „Microsoft Entra ID“ (Social Sign-In, `preferred_username`) zusätzlich zu „Oracle APEX Accounts“ (aktuell, Notzugang),
+  Portal 20000: Schema „Microsoft Entra ID“ (Social Sign-In, `preferred_username`) zusätzlich zu „Oracle APEX Accounts“ (aktuell, ohne Anmeldeformular),
   Prozedur `nach_anmeldung` sucht den Mitarbeiter über `ALLG_MITARBEITER.MITA_EMAIL` (DDL 47) und setzt seinen `MITA_BENUTZERNAME`;
-  Anmeldeseite 9999: Standard ist der Button „Mit Office 365 anmelden“ (Request `APEX_AUTHENTICATION=Microsoft Entra ID`);
-  Benutzername/Kennwort erscheinen erst nach Klick auf „Notfallanmeldung“ (CSS/JS auf der Seite, bleibt im Tab offen – `sessionStorage`). Sub-Apps: Login-URL `f?p=20000:LOGIN:&SESSION.`.
+  Anmeldeseite 9999: nur der Button „Mit Office 365 anmelden“ (Request `APEX_AUTHENTICATION=Microsoft Entra ID`); Benutzername/Kennwort
+  sind seit 2026-10-31 entfernt (Schema „Oracle APEX Accounts“ bleibt aktuelles Schema, damit die Anmeldeseite erscheint – ohne Formular
+  ist damit keine Anmeldung mehr möglich; Notzugang nur über den App Builder). Sub-Apps: Login-URL `f?p=20000:LOGIN:&SESSION.`.
 - **Navigationsmenü** in allen Apps standardmäßig aufgeklappt (Template-Option `js-defaultCollapsed` entfernt, `thg.js` setzt die gemerkte Vorgabe je Seite zurück).
 - Quellen im APEXlang-Format; Einspielen per SQLcl `apex validate` + `apex import`. Vorher in derselben SQLcl-Sitzung
   `apex_application_install.set_keep_sessions(p_keep_sessions => true)` – sonst löscht der Import die Sitzungen der App (Anwender muss sich neu anmelden).
